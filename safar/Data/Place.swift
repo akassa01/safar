@@ -1,0 +1,33 @@
+//
+//  Place.swift
+//  safar
+//
+//  Created by Arman Kassam on 2025-07-09.
+//
+
+import SwiftData
+import Foundation
+
+@Model
+class Place {
+    var id: UUID = UUID()
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var category: PlaceCategory
+    var city: City?
+
+    init(name: String, latitude: Double, longitude: Double, category: PlaceCategory, city: City? = nil) {
+        self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
+        self.category = category
+        self.city = city
+    }
+}
+
+enum PlaceCategory: String, Codable {
+    case hotel
+    case restaurant
+    case activity
+}
