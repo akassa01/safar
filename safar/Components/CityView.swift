@@ -56,10 +56,13 @@ struct CityView: View {
                         }
                 }
                 .padding(.top, 80)
-                    
+               
             }
             Spacer()
-        }
+            Text("images")
+                .foregroundStyle(Color("Background"))
+                .font(.title)
+        }.background(Color("Background"))
     }
 }
 

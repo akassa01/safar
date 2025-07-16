@@ -21,8 +21,9 @@ class City {
     var bucketList: Bool
     var isVisited: Bool
     
-    var rating: Int?
+    var rating: Double?
     var notes: String?
+    @Relationship(deleteRule: .cascade) var photos: [Photo] = []
     @Relationship(deleteRule: .cascade) var places: [Place] = []
 
     init(name: String, latitude: Double, longitude: Double, bucketList: Bool, isVisited: Bool, country: String, admin: String) {

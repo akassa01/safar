@@ -71,22 +71,6 @@ struct SearchListMember: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.accent)
             } else {
-//                Button(action: {
-//                    saveCity(
-//                        name: result.title,
-//                        latitude: result.latitude,
-//                        longitude: result.longitude,
-//                        country: result.country,
-//                        admin: result.admin,
-//                        bucket: false,
-//                        visit: true
-//                    )
-//                }) {
-//                    Image(systemName: "plus.circle")
-//                        .foregroundColor(.accent)
-//                        .imageScale(.large)
-//                }
-//                .buttonStyle(BorderlessButtonStyle())
                 Button(action: {
                     tempCityResult = result
                     addingToVisited = true

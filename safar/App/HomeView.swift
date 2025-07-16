@@ -113,7 +113,7 @@ struct HomeView: View {
                                 .foregroundColor(.primary)
                         }
                         .opacity(0.8)
-                        .padding(.top, 320)
+                        .padding(.top, 325)
                     }
                     Spacer()
                 

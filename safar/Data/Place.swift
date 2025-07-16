@@ -26,8 +26,45 @@ class Place {
     }
 }
 
-enum PlaceCategory: String, Codable {
+enum PlaceCategory: String, Codable, CaseIterable {
     case hotel
     case restaurant
     case activity
+    case shop
+    
+    var displayName: String {
+        switch self {
+        case .hotel: return "Hotel"
+        case .restaurant: return "Restaurant"
+        case .activity: return "Activity"
+        case .shop: return "Shop"
+        }
+    }
+    
+    var pluralDisplayName: String {
+        switch self {
+        case .hotel: return "Hotels"
+        case .restaurant: return "Restaurants"
+        case .activity: return "Activities"
+        case .shop: return "Shops"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .hotel: return "bed.double"
+        case .restaurant: return "fork.knife"
+        case .activity: return "figure.walk"
+        case .shop: return "bag"
+        }
+    }
+    
+    var color: String {
+        switch self {
+        case .hotel: return "blue"
+        case .restaurant: return "orange"
+        case .activity: return "green"
+        case .shop: return "purple"
+        }
+    }
 }

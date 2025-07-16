@@ -31,13 +31,14 @@ struct CityListMember: View {
             .frame(width: 250, alignment: .leading)
             .layoutPriority(1)
             
-            Text(String(city.rating ?? 0)).font(.subheadline)
-                .bold()
-                .foregroundStyle(Color("Background")).padding()
-                .background(Color(.accent))
-                .clipShape(Circle())
-                .frame(width: 70)
-            
+            if (!bucketList) {
+                Text(String(Double(round(10 * (city.rating!)) / 10))).font(.subheadline)
+                    .bold()
+                    .foregroundStyle(Color("Background")).padding()
+                    .background(Color(.accent))
+                    .clipShape(Circle())
+                    .frame(width: 70)
+            }
         }
         .background(Color("Background"))
     }
