@@ -28,15 +28,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		64C360952E13632A00CA5CE5 /* safar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = safar.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		64C360A22E13632B00CA5CE5 /* safarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = safarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		64C360AC2E13632B00CA5CE5 /* safarUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = safarUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		64C360952E13632A00CA5CE5 /* Safar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Safar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		64C360A22E13632B00CA5CE5 /* SafarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SafarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		64C360AC2E13632B00CA5CE5 /* SafarUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SafarUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		64C360972E13632A00CA5CE5 /* safar */ = {
+		64C360972E13632A00CA5CE5 /* Safar */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = safar;
+			path = Safar;
 			sourceTree = "<group>";
 		};
 		64C360A52E13632B00CA5CE5 /* safarTests */ = {
@@ -80,7 +80,7 @@
 		64C3608C2E13632A00CA5CE5 = {
 			isa = PBXGroup;
 			children = (
-				64C360972E13632A00CA5CE5 /* safar */,
+				64C360972E13632A00CA5CE5 /* Safar */,
 				64C360A52E13632B00CA5CE5 /* safarTests */,
 				64C360AF2E13632B00CA5CE5 /* safarUITests */,
 				64C360962E13632A00CA5CE5 /* Products */,
@@ -90,9 +90,9 @@
 		64C360962E13632A00CA5CE5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				64C360952E13632A00CA5CE5 /* safar.app */,
-				64C360A22E13632B00CA5CE5 /* safarTests.xctest */,
-				64C360AC2E13632B00CA5CE5 /* safarUITests.xctest */,
+				64C360952E13632A00CA5CE5 /* Safar.app */,
+				64C360A22E13632B00CA5CE5 /* SafarTests.xctest */,
+				64C360AC2E13632B00CA5CE5 /* SafarUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,9 +100,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		64C360942E13632A00CA5CE5 /* safar */ = {
+		64C360942E13632A00CA5CE5 /* Safar */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 64C360B62E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "safar" */;
+			buildConfigurationList = 64C360B62E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "Safar" */;
 			buildPhases = (
 				64C360912E13632A00CA5CE5 /* Sources */,
 				64C360922E13632A00CA5CE5 /* Frameworks */,
@@ -113,19 +113,19 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				64C360972E13632A00CA5CE5 /* safar */,
+				64C360972E13632A00CA5CE5 /* Safar */,
 			);
-			name = safar;
+			name = Safar;
 			packageProductDependencies = (
 				647E801B2E161DF100E36B1F /* SQLite */,
 			);
 			productName = safar;
-			productReference = 64C360952E13632A00CA5CE5 /* safar.app */;
+			productReference = 64C360952E13632A00CA5CE5 /* Safar.app */;
 			productType = "com.apple.product-type.application";
 		};
-		64C360A12E13632B00CA5CE5 /* safarTests */ = {
+		64C360A12E13632B00CA5CE5 /* SafarTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 64C360B92E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "safarTests" */;
+			buildConfigurationList = 64C360B92E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "SafarTests" */;
 			buildPhases = (
 				64C3609E2E13632B00CA5CE5 /* Sources */,
 				64C3609F2E13632B00CA5CE5 /* Frameworks */,
@@ -139,16 +139,16 @@
 			fileSystemSynchronizedGroups = (
 				64C360A52E13632B00CA5CE5 /* safarTests */,
 			);
-			name = safarTests;
+			name = SafarTests;
 			packageProductDependencies = (
 			);
 			productName = safarTests;
-			productReference = 64C360A22E13632B00CA5CE5 /* safarTests.xctest */;
+			productReference = 64C360A22E13632B00CA5CE5 /* SafarTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		64C360AB2E13632B00CA5CE5 /* safarUITests */ = {
+		64C360AB2E13632B00CA5CE5 /* SafarUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 64C360BC2E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "safarUITests" */;
+			buildConfigurationList = 64C360BC2E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "SafarUITests" */;
 			buildPhases = (
 				64C360A82E13632B00CA5CE5 /* Sources */,
 				64C360A92E13632B00CA5CE5 /* Frameworks */,
@@ -162,11 +162,11 @@
 			fileSystemSynchronizedGroups = (
 				64C360AF2E13632B00CA5CE5 /* safarUITests */,
 			);
-			name = safarUITests;
+			name = SafarUITests;
 			packageProductDependencies = (
 			);
 			productName = safarUITests;
-			productReference = 64C360AC2E13632B00CA5CE5 /* safarUITests.xctest */;
+			productReference = 64C360AC2E13632B00CA5CE5 /* SafarUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -192,7 +192,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 64C360902E13632A00CA5CE5 /* Build configuration list for PBXProject "safar" */;
+			buildConfigurationList = 64C360902E13632A00CA5CE5 /* Build configuration list for PBXProject "Safar" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -209,9 +209,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				64C360942E13632A00CA5CE5 /* safar */,
-				64C360A12E13632B00CA5CE5 /* safarTests */,
-				64C360AB2E13632B00CA5CE5 /* safarUITests */,
+				64C360942E13632A00CA5CE5 /* Safar */,
+				64C360A12E13632B00CA5CE5 /* SafarTests */,
+				64C360AB2E13632B00CA5CE5 /* SafarUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -267,12 +267,12 @@
 /* Begin PBXTargetDependency section */
 		64C360A42E13632B00CA5CE5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 64C360942E13632A00CA5CE5 /* safar */;
+			target = 64C360942E13632A00CA5CE5 /* Safar */;
 			targetProxy = 64C360A32E13632B00CA5CE5 /* PBXContainerItemProxy */;
 		};
 		64C360AE2E13632B00CA5CE5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 64C360942E13632A00CA5CE5 /* safar */;
+			target = 64C360942E13632A00CA5CE5 /* Safar */;
 			targetProxy = 64C360AD2E13632B00CA5CE5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -418,7 +418,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.armankassam.safar;
+				PRODUCT_BUNDLE_IDENTIFIER = com.armankassam.Safar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -447,7 +447,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.armankassam.safar;
+				PRODUCT_BUNDLE_IDENTIFIER = com.armankassam.Safar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -469,7 +469,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/safar.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/safar";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Safar.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Safar";
 			};
 			name = Debug;
 		};
@@ -487,7 +487,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/safar.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/safar";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Safar.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Safar";
 			};
 			name = Release;
 		};
@@ -526,7 +526,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		64C360902E13632A00CA5CE5 /* Build configuration list for PBXProject "safar" */ = {
+		64C360902E13632A00CA5CE5 /* Build configuration list for PBXProject "Safar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				64C360B42E13632B00CA5CE5 /* Debug */,
@@ -535,7 +535,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		64C360B62E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "safar" */ = {
+		64C360B62E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "Safar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				64C360B72E13632B00CA5CE5 /* Debug */,
@@ -544,7 +544,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		64C360B92E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "safarTests" */ = {
+		64C360B92E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "SafarTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				64C360BA2E13632B00CA5CE5 /* Debug */,
@@ -553,7 +553,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		64C360BC2E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "safarUITests" */ = {
+		64C360BC2E13632B00CA5CE5 /* Build configuration list for PBXNativeTarget "SafarUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				64C360BD2E13632B00CA5CE5 /* Debug */,

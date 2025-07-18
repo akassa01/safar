@@ -11,6 +11,7 @@ struct CityListMember: View {
     var index: Int
     var city: City
     var bucketList: Bool
+    var locked: Bool
     var body: some View {
         HStack(alignment: .center) {
             Text(String(index + 1))
@@ -32,12 +33,18 @@ struct CityListMember: View {
             .layoutPriority(1)
             
             if (!bucketList) {
-                Text(String(Double(round(10 * (city.rating!)) / 10))).font(.subheadline)
-                    .bold()
-                    .foregroundStyle(Color("Background")).padding()
-                    .background(Color(.accent))
-                    .clipShape(Circle())
-                    .frame(width: 70)
+                if (locked) {
+                    Image(systemName: "lock.circle")
+                        .foregroundColor(.accent)
+                        .frame(width: 30)
+                } else {
+                    Text(String(Double(round(10 * (city.rating!)) / 10))).font(.subheadline)
+                        .bold()
+                        .foregroundStyle(Color("Background")).padding()
+                        .background(Color(.accent))
+                        .clipShape(Circle())
+                        .frame(width: 70)
+                }
             }
         }
         .background(Color("Background"))

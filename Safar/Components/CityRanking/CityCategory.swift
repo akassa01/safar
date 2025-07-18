@@ -36,21 +36,21 @@ enum CityCategory: String, CaseIterable {
     
     var baseRating: Double {
         switch self {
-        case .loved: return 8.5
-        case .enjoyed: return 7.5
-        case .decent: return 6.0
-        case .disappointed: return 4.5
-        case .disliked: return 3.0
+        case .loved: return 9.5
+        case .enjoyed: return 8.25
+        case .decent: return 6.25
+        case .disappointed: return 3.25
+        case .disliked: return 1.25
         }
     }
     
     var ratingRange: ClosedRange<Double> {
         switch self {
-        case .loved: return 7.5...10.0
-        case .enjoyed: return 6.5...8.5
-        case .decent: return 5.0...7.0
-        case .disappointed: return 3.5...5.5
-        case .disliked: return 1.0...4.0
+        case .loved: return 9.0...10.0
+        case .enjoyed: return 7.5...9.0
+        case .decent: return 5.0...7.5
+        case .disappointed: return 2.5...5.0
+        case .disliked: return 0.000001...2.5
         }
     }
     
@@ -68,10 +68,10 @@ enum CityCategory: String, CaseIterable {
 extension CityCategory {
     static func fromRating(_ rating: Double) -> CityCategory {
         switch rating {
-        case 8.0...10.0: return .loved
-        case 6.5..<8.0: return .enjoyed
-        case 5.0..<6.5: return .decent
-        case 3.0..<5.0: return .disappointed
+        case 9.0...10.0: return .loved
+        case 7.5..<9.0: return .enjoyed
+        case  5.0..<7.5: return .decent
+        case 2.5..<5.0: return .disappointed
         default: return .disliked
         }
     }

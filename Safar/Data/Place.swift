@@ -7,6 +7,8 @@
 
 import SwiftData
 import Foundation
+import MapKit
+import SwiftUI
 
 @Model
 class Place {
@@ -16,21 +18,29 @@ class Place {
     var longitude: Double
     var category: PlaceCategory
     var city: City?
+    var liked: Bool?
 
-    init(name: String, latitude: Double, longitude: Double, category: PlaceCategory, city: City? = nil) {
+    init(name: String, latitude: Double, longitude: Double, category: PlaceCategory, city: City? = nil, liked: Bool? = nil) {
         self.name = name
         self.latitude = latitude
         self.longitude = longitude
         self.category = category
         self.city = city
+        self.liked = liked
+    }
+    
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 
-enum PlaceCategory: String, Codable, CaseIterable {
-    case hotel
+enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
     case restaurant
+    case hotel
     case activity
     case shop
+    
+    var id: String { rawValue }
     
     var displayName: String {
         switch self {
@@ -52,19 +62,23 @@ enum PlaceCategory: String, Codable, CaseIterable {
     
     var icon: String {
         switch self {
-        case .hotel: return "bed.double"
+        case .hotel: return "bed.double.fill"
         case .restaurant: return "fork.knife"
-        case .activity: return "figure.walk"
+        case .activity: return "popcorn"
         case .shop: return "bag"
         }
     }
     
-    var color: String {
+    var systemColor: Color {
         switch self {
-        case .hotel: return "blue"
-        case .restaurant: return "orange"
-        case .activity: return "green"
-        case .shop: return "purple"
+        case .restaurant:
+            return .orange
+        case .hotel:
+            return .purple
+        case .activity:
+            return .green
+        case .shop:
+            return .yellow
         }
     }
 }

@@ -15,9 +15,11 @@ struct PlaceSearchView: View {
     let category: PlaceCategory
     let onPlacesSelected: ([Place]) -> Void
     
+    @State private var placeRatings: [String: Bool] = [:]
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedPlaces: Set<String> = []
+    @State private var allSelectedPlaces: [String: MKMapItem] = [:] // Store all selected places
     @State private var isSearching = false
     @State private var region: MKCoordinateRegion
     
@@ -48,16 +50,25 @@ struct PlaceSearchView: View {
                     )
                 } else {
                     List(searchResults, id: \.self) { mapItem in
+                        let placeId = createPlaceId(from: mapItem)
                         PlaceRowView(
                             mapItem: mapItem,
                             category: category,
-                            isSelected: selectedPlaces.contains(mapItem.name ?? "")
-                        ) {
-                            togglePlaceSelection(mapItem)
-                        }
+                            isSelected: selectedPlaces.contains(placeId),
+                            rating: placeRatings[placeId],
+                            onTap: {
+                                togglePlaceSelection(mapItem)
+                            },
+                            onRatingChanged: { newRating in
+                                placeRatings[placeId] = newRating
+                            }
+                        )
+                        .listRowBackground(Color("Background"))
                     }
+                    .listStyle(.plain)
                 }
             }
+            .background(Color("Background"))
             .navigationTitle("Add \(category.rawValue.capitalized)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -72,7 +83,7 @@ struct PlaceSearchView: View {
                         saveSelectedPlaces()
                     }
                     .fontWeight(.semibold)
-                    .disabled(selectedPlaces.isEmpty)
+                    .disabled(allSelectedPlaces.isEmpty) // Check allSelectedPlaces instead
                 }
             }
             .onAppear {
@@ -82,22 +93,31 @@ struct PlaceSearchView: View {
     }
     
     private func togglePlaceSelection(_ mapItem: MKMapItem) {
-        let placeName = mapItem.name ?? ""
-        if selectedPlaces.contains(placeName) {
-            selectedPlaces.remove(placeName)
+        let placeId = createPlaceId(from: mapItem)
+        if selectedPlaces.contains(placeId) {
+            selectedPlaces.remove(placeId)
+            allSelectedPlaces.removeValue(forKey: placeId) // Remove from persistent store
         } else {
-            selectedPlaces.insert(placeName)
+            selectedPlaces.insert(placeId)
+            allSelectedPlaces[placeId] = mapItem // Add to persistent store
         }
     }
     
+    private func createPlaceId(from mapItem: MKMapItem) -> String {
+        let coordinate = mapItem.placemark.coordinate
+        let name = mapItem.name ?? "Unknown"
+        return "\(name)_\(coordinate.latitude)_\(coordinate.longitude)"
+    }
+    
     private func saveSelectedPlaces() {
-        let places = searchResults.compactMap { mapItem -> Place? in
-            guard selectedPlaces.contains(mapItem.name ?? "") else { return nil }
+        let places = allSelectedPlaces.values.map { mapItem -> Place in
+            let placeId = createPlaceId(from: mapItem)
             return Place(
                 name: mapItem.name ?? "Unknown",
                 latitude: mapItem.placemark.coordinate.latitude,
                 longitude: mapItem.placemark.coordinate.longitude,
-                category: category
+                category: category,
+                liked: placeRatings[placeId]
             )
         }
         onPlacesSelected(places)
@@ -125,6 +145,9 @@ struct PlaceSearchView: View {
                 } else {
                     searchResults = []
                 }
+                
+                // Update selectedPlaces to reflect what's in the current search results
+                updateSelectedPlacesForCurrentResults()
             }
         }
     }
@@ -148,6 +171,21 @@ struct PlaceSearchView: View {
                 } else {
                     searchResults = []
                 }
+                
+                // Update selectedPlaces to reflect what's in the current search results
+                updateSelectedPlacesForCurrentResults()
+            }
+        }
+    }
+    
+    private func updateSelectedPlacesForCurrentResults() {
+        // Clear current selection and rebuild based on what's in current results
+        selectedPlaces.removeAll()
+        
+        for mapItem in searchResults {
+            let placeId = createPlaceId(from: mapItem)
+            if allSelectedPlaces.keys.contains(placeId) {
+                selectedPlaces.insert(placeId)
             }
         }
     }
@@ -188,95 +226,29 @@ struct SearchBar: View {
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundColor(.accent)
             
             TextField("Search places...", text: $text)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .onSubmit {
                     onSearchButtonClicked()
                 }
+                .autocorrectionDisabled()
             
             if !text.isEmpty {
                 Button("Search") {
                     onSearchButtonClicked()
                 }
+                .bold()
                 .buttonStyle(.borderedProminent)
             }
         }
         .padding()
+        .background(Color("Background"))
     }
 }
 
-struct PlaceRowView: View {
-    let mapItem: MKMapItem
-    let category: PlaceCategory
-    let isSelected: Bool
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Image(systemName: iconForCategory(category))
-                        .foregroundColor(colorForCategory(category))
-                        .font(.title2)
-                    
-                    Spacer()
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(mapItem.name ?? "Unknown")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    if let address = mapItem.placemark.formattedAddress {
-                        Text(address)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-                    
-                    if let category = mapItem.pointOfInterestCategory {
-                        Text(category.rawValue.capitalized)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.2))
-                            .cornerRadius(4)
-                    }
-                }
-                
-                Spacer()
-                
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? .accentColor : .secondary)
-                    .font(.title2)
-            }
-            .padding(.vertical, 4)
-            .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
-            .cornerRadius(8)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-    
-    private func iconForCategory(_ category: PlaceCategory) -> String {
-        switch category {
-        case .restaurant: return "fork.knife"
-        case .hotel: return "bed.double"
-        case .activity: return "figure.walk"
-        case .shop: return "cart.fill"
-        }
-    }
-    
-    private func colorForCategory(_ category: PlaceCategory) -> Color {
-        switch category {
-        case .restaurant: return .orange
-        case .hotel: return .blue
-        case .activity: return .green
-        case .shop: return .purple
-        }
-    }
-}
+
 
 extension CLPlacemark {
     var formattedAddress: String? {

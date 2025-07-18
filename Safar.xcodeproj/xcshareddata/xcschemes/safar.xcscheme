@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "64C360942E13632A00CA5CE5"
-               BuildableName = "safar.app"
-               BlueprintName = "safar"
+               BuildableName = "Safar.app"
+               BlueprintName = "Safar"
                ReferencedContainer = "container:safar.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -36,8 +36,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "64C360A12E13632B00CA5CE5"
-               BuildableName = "safarTests.xctest"
-               BlueprintName = "safarTests"
+               BuildableName = "SafarTests.xctest"
+               BlueprintName = "SafarTests"
                ReferencedContainer = "container:safar.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -47,8 +47,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "64C360AB2E13632B00CA5CE5"
-               BuildableName = "safarUITests.xctest"
-               BlueprintName = "safarUITests"
+               BuildableName = "SafarUITests.xctest"
+               BlueprintName = "SafarUITests"
                ReferencedContainer = "container:safar.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -69,8 +69,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "64C360942E13632A00CA5CE5"
-            BuildableName = "safar.app"
-            BlueprintName = "safar"
+            BuildableName = "Safar.app"
+            BlueprintName = "Safar"
             ReferencedContainer = "container:safar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -93,8 +93,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "64C360942E13632A00CA5CE5"
-            BuildableName = "safar.app"
-            BlueprintName = "safar"
+            BuildableName = "Safar.app"
+            BlueprintName = "Safar"
             ReferencedContainer = "container:safar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

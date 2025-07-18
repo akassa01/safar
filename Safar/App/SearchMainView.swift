@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import SwiftData
 
 struct SearchResult: Identifiable {
     let id = UUID()
@@ -35,6 +36,7 @@ enum SearchCategory: String, CaseIterable, Hashable, IconRepresentable {
 }
 
 struct SearchMainView: View {
+    @Query var cities: [City]
     @FocusState private var isSearchFieldFocused: Bool
     @State private var searchText: String = ""
     @State private var selectedCategory: SearchCategory = .cities
@@ -100,8 +102,23 @@ struct SearchMainView: View {
                         .padding()
                 } else {
                     List(searchResults.sorted(by: { $0.population > $1.population })) { result in
-                        SearchListMember(result: result)
-                            .listRowBackground(Color("Background"))
+                        
+                        let matchingCities = cities.filter {
+                                $0.latitude == result.latitude && $0.longitude == result.longitude
+                            }
+                        
+                        let searchedCity: City = matchingCities.first ?? City(name: result.title, latitude: result.latitude ?? 0, longitude: result.longitude ?? 0, bucketList: false, isVisited: false, country: result.country, admin: result.admin)
+                        
+                        ZStack {
+                            SearchListMember(result: result)
+                                .listRowBackground(Color("Background"))
+                            NavigationLink(destination: CityDetailView(city: searchedCity)) {
+                                EmptyView()
+                            }
+                        }
+                        .listRowBackground(Color("Background"))
+
+                        
                     }
                     .listStyle(.plain)
                     .background(Color("Background"))

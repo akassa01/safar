@@ -10,6 +10,7 @@ import SwiftData
 import MapKit
 import PhotosUI
 
+
 struct AddCityView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -18,11 +19,11 @@ struct AddCityView: View {
     let isVisited: Bool
     let onSave: (City) -> Void
     
+    @State private var activePlaceCategory: PlaceCategory? = nil
     @State private var notes: String = ""
     @State private var showingRating = false
     @State private var selectedRating: Double? = nil
     @State private var showingPlaceSearch = false
-    @State private var selectedPlaceCategory: PlaceCategory = .restaurant
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var loadedImages: [UIImage] = []
     
@@ -35,21 +36,16 @@ struct AddCityView: View {
     var body: some View {
         NavigationView {
             Form {
-                CityDetailsSection(baseResult: baseResult)
-                
-                if isVisited {
-                    RatingSection(
-                        selectedRating: selectedRating,
-                        showingRating: $showingRating
-                    )
-                }
+                CityDetailsSection(baseResult: baseResult) .listRowBackground(Color(.accent).opacity(0.07))
                 
                 NotesSection(notes: $notes)
+                    .listRowBackground(Color(.accent).opacity(0.07))
                 
                 PhotosSection(
                     selectedPhotos: $selectedPhotos,
                     loadedImages: $loadedImages
                 )
+                .listRowBackground(Color(.accent).opacity(0.07))
                 
                 PlacesSection(
                     restaurants: $restaurants,
@@ -57,11 +53,21 @@ struct AddCityView: View {
                     activities: $activities,
                     shops: $shops,
                     onAddPlaces: { category in
-                        selectedPlaceCategory = category
-                        showingPlaceSearch = true
+                        activePlaceCategory = category
                     }
                 )
+                .listRowBackground(Color(.accent).opacity(0.07))
+                
+                if isVisited {
+                    RatingSection(
+                        selectedRating: selectedRating,
+                        showingRating: $showingRating
+                    )
+                    .listRowBackground(Color("Background"))
+                }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color("Background"))
             .navigationTitle("Add City")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -70,33 +76,27 @@ struct AddCityView: View {
                         dismiss()
                     }
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveCity()
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(selectedRating == nil)
-                }
             }
             .sheet(isPresented: $showingRating) {
                 CityRatingView( isPresented: $showingRating,
                     cityName: baseResult.title,
                     onRatingSelected: { rating in
                         selectedRating = rating
+                        saveCity()
                     }
                 )
+                .presentationBackground(Color("Background"))
             }
-            .sheet(isPresented: $showingPlaceSearch) {
+            .sheet(item: $activePlaceCategory) { category in
                 PlaceSearchView(
                     cityCoordinate: CLLocationCoordinate2D(
                         latitude: baseResult.latitude ?? 0,
                         longitude: baseResult.longitude ?? 0
                     ),
-                    category: selectedPlaceCategory,
+                    category: category,
                     onPlacesSelected: { places in
                         addPlaces(places)
-                        showingPlaceSearch = false
+                        activePlaceCategory = nil
                     }
                 )
             }
@@ -199,22 +199,40 @@ struct RatingSection: View {
     @Binding var showingRating: Bool
     
     var body: some View {
-        Section("Rating") {
-            HStack {
-                Text("Rate this city")
-                Spacer()
-                if let rating = selectedRating {
-                    Text(String(format: "%.1f/10", rating))
-                        .font(.headline)
-                        .foregroundColor(.accentColor)
-                }
-                Button(selectedRating == nil ? "Add Rating" : "Change Rating") {
+        HStack {
+            Spacer()
+            Button("Rank & Save") {
                     showingRating = true
-                }
-                .buttonStyle(.borderless)
-                .foregroundColor(.accentColor)
             }
+            .foregroundStyle(.white)
+            .font(.title3)
+            .bold()
+            .background(
+                Rectangle()
+                    .foregroundStyle(.accent)
+                    .frame(width: 350, height: 40)
+                    .cornerRadius(20)
+            )
+            Spacer()
         }
+        
+        
+//        Section("Rating") {
+//            HStack {
+//                Text("Rate this city")
+//                Spacer()
+//                if let rating = selectedRating {
+//                    Text(String(format: "%.1f/10", rating))
+//                        .font(.headline)
+//                        .foregroundColor(.accentColor)
+//                }
+//                Button(selectedRating == nil ? "Add Rating" : "Change Rating") {
+//                    showingRating = true
+//                }
+//                .buttonStyle(.borderless)
+//                .foregroundColor(.accentColor)
+//            }
+//        }
     }
 }
 
@@ -303,7 +321,7 @@ struct PlacesSection: View {
                 title: "Hotels",
                 places: $hotels,
                 category: .hotel,
-                color: .blue,
+                color: .purple,
                 icon: "bed.double",
                 onAdd: onAddPlaces
             )
@@ -313,7 +331,7 @@ struct PlacesSection: View {
                 places: $activities,
                 category: .activity,
                 color: .green,
-                icon: "figure.walk",
+                icon: "popcorn",
                 onAdd: onAddPlaces
             )
             
@@ -321,8 +339,8 @@ struct PlacesSection: View {
                 title: "Shops",
                 places: $shops,
                 category: .shop,
-                color: .purple,
-                icon: "cart.fill",
+                color: .yellow,
+                icon: "bag",
                 onAdd: onAddPlaces
             )
         }
@@ -369,12 +387,19 @@ struct PlaceRowInList: View {
             Image(systemName: icon)
                 .foregroundColor(color)
             Text(place.name)
-            Spacer()
-            Button("Remove") {
-                onRemove()
+            if let liked = place.liked {
+                Image(systemName: liked ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
+                    .foregroundColor(.accent)
+                    .font(.caption)
             }
-            .foregroundColor(.red)
-            .font(.caption)
+            Spacer()
+            Button(action: {
+                onRemove()
+            }) {
+                Image(systemName: "xmark")
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
         }
     }
 }

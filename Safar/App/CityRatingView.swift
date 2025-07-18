@@ -26,7 +26,6 @@ struct CityRatingView: View {
     @State private var ratingBounds = RatingBounds()
     @State private var currentComparisonCity: City? = nil
     
-    // New state for handling first 5 cities
     @State private var isFirstFiveCitiesFlow = false
     @State private var tempCityRating: Double? = nil
     
@@ -46,6 +45,7 @@ struct CityRatingView: View {
                     }
                 }
             }
+            .background(Color("Background"))
             .padding()
             .navigationTitle("Rate \(cityName)")
             .navigationBarTitleDisplayMode(.inline)
@@ -57,6 +57,10 @@ struct CityRatingView: View {
                 }
             }
         }
+        .onAppear {
+            print("CityRatingView appeared")
+        }
+        .background(Color("Background"))
     }
     
     private var firstCitiesView: some View {
@@ -71,17 +75,17 @@ struct CityRatingView: View {
                     .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
                 
-                Text("Help us understand your travel preferences! Tell us how you felt about \(cityName) - we'll use this to create a personalized rating system.")
+                Text("Help us understand your travel preferences!")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
             
             VStack(spacing: 20) {
-                Text("Progress: \(ratedCities.count + 1)/\(minimumCitiesForRating)")
+                Text("Progress: \(ratedCities.count)/\(minimumCitiesForRating)")
                     .font(.headline)
                 
-                ProgressView(value: Double(ratedCities.count + 1), total: Double(minimumCitiesForRating))
+                ProgressView(value: Double(ratedCities.count), total: Double(minimumCitiesForRating))
                     .progressViewStyle(LinearProgressViewStyle())
                     .frame(maxWidth: 200)
                 
@@ -93,11 +97,62 @@ struct CityRatingView: View {
             
             if currentStep == .categorization {
                 firstCitiesCategorizationView
-            } else {
-                comparisonView
+            } else if currentStep == .comparison {
+                // Show comparison view for first cities flow
+                if currentComparisonCity != nil {
+                    firstCitiesComparisonView
+                } else {
+                    Text("Calculating your rating...")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .background(Color("Background"))
+    }
+    
+    private var firstCitiesComparisonView: some View {
+        VStack(spacing: 30) {
+            if let comparisonCity = currentComparisonCity {
+                VStack(spacing: 20) {
+                    Text("Which city do you prefer?")
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+
+                    HStack(spacing: 20) {
+                        // New city
+                        Button(action: {
+                            recordFirstCitiesComparison(newCityWins: true)
+                        }) {
+                            CityComparisonCard(
+                                name: cityName,
+                                rating: nil,
+                                isSelected: false
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        Text("vs")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+
+                        // Comparison city
+                        Button(action: {
+                            recordFirstCitiesComparison(newCityWins: false)
+                        }) {
+                            CityComparisonCard(
+                                name: comparisonCity.name,
+                                rating: comparisonCity.rating,
+                                isSelected: false
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
             }
         }
     }
+
     
     private var firstCitiesCategorizationView: some View {
         VStack(spacing: 16) {
@@ -120,6 +175,7 @@ struct CityRatingView: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
+        .background(Color("Background"))
     }
     
     private var categorizationView: some View {
@@ -157,23 +213,11 @@ struct CityRatingView: View {
                 }
             }
         }
+        .background(Color("Background"))
     }
     
     private var comparisonView: some View {
         VStack(spacing: 30) {
-            // Progress indicator
-            HStack {
-                Text("Comparison \(currentComparisonIndex + 1) of \(comparisonCities.count)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("Skip") {
-                    nextComparison()
-                }
-                .font(.caption)
-                .foregroundColor(.accentColor)
-            }
-            
             if let comparisonCity = currentComparisonCity {
                 VStack(spacing: 40) {
                     Text("Which city do you prefer?")
@@ -212,6 +256,7 @@ struct CityRatingView: View {
                 }
             }
         }
+        .background(Color("Background"))
     }
     
     private func handleFirstCitiesRating(category: CityCategory) {
@@ -220,6 +265,7 @@ struct CityRatingView: View {
         
         // Always do comparisons for first 5 cities if there are cities to compare with
         if ratedCities.count > 0 {
+            currentStep = .comparison // ADDED: Set step to comparison
             startFirstCitiesComparison()
         } else {
             // First city ever - just assign the base rating
@@ -227,12 +273,12 @@ struct CityRatingView: View {
             completeRating()
         }
     }
-    
+
+    // CHANGE 4: Fix startFirstCitiesComparison to properly set up comparison
     private func startFirstCitiesComparison() {
         guard let category = selectedCategory else { return }
         
         // For first 5 cities, we compare with all existing cities
-        // Start with cities in the same category, then expand to similar ratings
         let categoryRange = category.ratingRange
         let relevantCities = ratedCities.filter { city in
             guard let rating = city.rating else { return false }
@@ -240,16 +286,10 @@ struct CityRatingView: View {
         }
         
         var citiesToCompare = relevantCities
-        citiesToCompare = citiesToCompare.filter { city in
-            guard let rating = city.rating else { return false }
-            return rating > ratingBounds.lowerBound && rating < ratingBounds.upperBound
-        }
-
-        if citiesToCompare.count < min(3, ratedCities.count) {
-            // Expand to include cities with similar ratings
-            citiesToCompare = ratedCities.sorted {
-                abs(($0.rating ?? 0) - category.baseRating) < abs(($1.rating ?? 0) - category.baseRating)
-            }
+        
+        if citiesToCompare.isEmpty {
+            // If no cities in same category, use all cities
+            citiesToCompare = ratedCities
         }
         
         // Limit to reasonable number of comparisons
@@ -257,14 +297,39 @@ struct CityRatingView: View {
         comparisonCities = Array(citiesToCompare.shuffled().prefix(maxComparisons))
         comparisonResults = []
         currentComparisonIndex = 0
-        currentStep = .comparison
+        
+        // CHANGED: Set the first comparison city immediately
+        if let firstCity = comparisonCities.first {
+            currentComparisonCity = firstCity
+            currentStep = .comparison
+        } else {
+            // No cities to compare with - shouldn't happen but handle gracefully
+            selectedRating = tempCityRating
+            completeRating()
+        }
     }
-    
+
+    // CHANGE 5: Add separate comparison recording for first cities
+    private func recordFirstCitiesComparison(newCityWins: Bool) {
+        guard let opponent = currentComparisonCity else { return }
+        
+        comparisonResults.append(.init(comparedCity: opponent, newCityWins: newCityWins))
+        currentComparisonIndex += 1
+        
+        // Move to next comparison or finish
+        if currentComparisonIndex < comparisonCities.count {
+            currentComparisonCity = comparisonCities[currentComparisonIndex]
+        } else {
+            // All comparisons done
+            calculateFirstCitiesRating()
+        }
+    }
+        
     private func startComparison() {
         guard let category = selectedCategory else { return }
 
-        ratingBounds.lowerBound = 0.1
-        ratingBounds.upperBound = 10
+        ratingBounds.lowerBound = 0.0000001
+        ratingBounds.upperBound = 10.0000001
 
         // Closest to category midpoint
         let seedRating = category.baseRating
@@ -452,8 +517,9 @@ struct CityRatingView: View {
     
     private func applyDynamicRatingAdjustments() {
         guard let newRating = selectedRating else { return }
+        print("Dynamically adjusting ratings...")
         
-        let adjustmentFactor = 0.05
+        let adjustmentFactor = 0.1
         
         for city in ratedCities {
             guard let currentRating = city.rating else { continue }
@@ -465,7 +531,7 @@ struct CityRatingView: View {
                 if currentRating > newRating {
                     city.rating = min(10.0, currentRating + adjustment)
                 } else {
-                    city.rating = max(1.0, currentRating - adjustment)
+                    city.rating = max(0.1, currentRating - adjustment)
                 }
             }
         }
@@ -542,7 +608,7 @@ struct CityRatingView: View {
             }
         
         onRatingSelected(rating)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 isPresented = false
         }
     }
@@ -572,4 +638,9 @@ extension Array {
     subscript(safe index: Int) -> Element? {
         return indices.contains(index) ? self[index] : nil
     }
+}
+
+#Preview {
+    @Previewable @State var isPresented: Bool = true
+    CityRatingView(isPresented: $isPresented, cityName: "Vancouver", onRatingSelected: {_ in })
 }

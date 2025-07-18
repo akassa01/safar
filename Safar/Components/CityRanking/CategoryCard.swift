@@ -30,17 +30,17 @@ struct CategoryCard: View {
             
             Spacer()
             
-            if showRating {
-                VStack(spacing: 2) {
-                    Text(String(format: "%.1f", category.baseRating))
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(.accentColor)
-                    Text("/ 10")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
+//            if showRating {
+//                VStack(spacing: 2) {
+//                    Text(String(format: "%.1f", category.baseRating))
+//                        .font(.title3)
+//                        .fontWeight(.bold)
+//                        .foregroundColor(.accentColor)
+//                    Text("/ 10")
+//                        .font(.caption2)
+//                        .foregroundColor(.secondary)
+//                }
+//            }
             
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
@@ -48,7 +48,7 @@ struct CategoryCard: View {
             }
         }
         .padding()
-        .background(isSelected ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.1))
+        .background(isSelected ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.12))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
