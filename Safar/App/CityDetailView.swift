@@ -13,6 +13,7 @@ import PhotosUI
 struct CityDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Query(filter: #Predicate<City> { $0.isVisited == true && $0.rating != nil}) private var visitedCities: [City]
     
     let city: City
     @State private var showingAddCityView = false
@@ -87,8 +88,33 @@ struct CityDetailView: View {
                     admin: city.admin
                 ),
                 isVisited: true,
-                onSave: { updatedCity in
-                    updateCity(with: updatedCity)
+                onSave: { city in
+                    let name = city.name
+                    let latitude = city.latitude
+                    let longitude = city.longitude
+                    let fetchDescriptor = FetchDescriptor<City>(predicate: #Predicate { $0.name == name && $0.latitude == latitude && $0.longitude == longitude })
+
+                    do {
+                        let existingCities = try modelContext.fetch(fetchDescriptor)
+                        if let existingCity = existingCities.first {
+                            modelContext.delete(existingCity)
+                                try modelContext.save()
+                            print("Updated existing city \(city.name) to visited.")
+                                return
+                        }
+                    } catch {
+                        print("Failed to check for existing city: \(error.localizedDescription)")
+                        return
+                    }
+                    
+                    modelContext.insert(city)
+                    
+                    do {
+                            try modelContext.save()
+                        print("Successfully saved city: \(city.name)")
+                    } catch {
+                        print("Failed to save city \(city.name): \(error.localizedDescription)")
+                    }
                 }
             )
         }
@@ -99,11 +125,14 @@ struct CityDetailView: View {
             CityRatingView(
                 isPresented: $showingRatingView,
                 cityName: city.name,
+                country: city.country,
+                cityID: city.uniqueID,
                 onRatingSelected: { rating in
                     city.rating = rating
                     saveContext()
                 }
             )
+            .presentationBackground(Color("Background"))
         }
         .sheet(isPresented: $showingPhotoViewer) {
             PhotoViewerView(
@@ -168,23 +197,24 @@ struct CityDetailView: View {
                         EnhancedStatusBadge(
                             icon: "checkmark.circle.fill",
                             text: "Visited",
-                            color: .green
+                            color: .accent
                         )
                         
                         if let rating = city.rating {
-                            EnhancedRatingDisplay(rating: rating)
+                            if visitedCities.count >= 5 {
+                                EnhancedRatingDisplay(rating: rating)
+                            } else {
+                                LockDisplay()
+                            }
                         }
                     } else if city.bucketList {
                         EnhancedStatusBadge(
                             icon: "star.fill",
                             text: "Bucket List",
-                            color: .yellow
+                            color: .accent
                         )
                     }
                 }
-                
-                Spacer()
-                    .frame(height: 20)
             }
        
     }
@@ -192,9 +222,9 @@ struct CityDetailView: View {
     private var visitedCityContent: some View {
         VStack(spacing: 20) {
             mapSection
-            photosSection
             placesSection
             notesSection
+            photosSection
         }
         .padding()
     }
@@ -257,7 +287,7 @@ struct CityDetailView: View {
             // Action Buttons
             VStack(spacing: 12) {
                 Button(action: {
-                    markAsVisited()
+                    showingAddCityView = true
                 }) {
                     Label("Mark as Visited", systemImage: "checkmark.circle.fill")
                         .frame(maxWidth: .infinity)
@@ -291,7 +321,7 @@ struct CityDetailView: View {
         VStack(spacing: 20) {
             VStack(spacing: 12) {
                 Button(action: {
-                    addToVisited()
+                    showingAddCityView = true
                 }) {
                     Label("Add to Visited", systemImage: "plus.circle.fill")
                         .frame(maxWidth: .infinity)
@@ -438,20 +468,6 @@ struct CityDetailView: View {
     
     // MARK: - Helper Functions
     
-    private func markAsVisited() {
-        city.isVisited = true
-        city.bucketList = false
-        saveContext()
-        showingAddCityView = true
-    }
-    
-    private func addToVisited() {
-        city.isVisited = true
-        city.bucketList = false
-        saveContext()
-        showingAddCityView = true
-    }
-    
     private func addToBucketList() {
         city.bucketList = true
         city.isVisited = false
@@ -462,6 +478,7 @@ struct CityDetailView: View {
         city.bucketList = false
         saveContext()
     }
+    
     
     private func updateCity(with updatedCity: City) {
         city.rating = updatedCity.rating

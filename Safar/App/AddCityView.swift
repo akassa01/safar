@@ -78,8 +78,11 @@ struct AddCityView: View {
                 }
             }
             .sheet(isPresented: $showingRating) {
+                let uniqueID = "\(baseResult.title)-\(String(baseResult.longitude ?? 0))-\(String(baseResult.latitude ?? 0))"
                 CityRatingView( isPresented: $showingRating,
                     cityName: baseResult.title,
+                    country: baseResult.country,
+                    cityID: uniqueID,
                     onRatingSelected: { rating in
                         selectedRating = rating
                         saveCity()

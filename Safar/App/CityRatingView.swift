@@ -11,10 +11,12 @@ import SwiftData
 struct CityRatingView: View {
     @Binding var isPresented: Bool
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<City> { $0.isVisited == true && $0.rating != nil })
-    private var ratedCities: [City]
+    @Query(filter: #Predicate<City> { $0.isVisited == true && $0.rating != nil})
+    private var allRatedCities: [City]
     
     let cityName: String
+    let country: String
+    let cityID: String
     let onRatingSelected: (Double) -> Void
     
     @State private var selectedRating: Double? = nil
@@ -30,6 +32,9 @@ struct CityRatingView: View {
     @State private var tempCityRating: Double? = nil
     
     private let minimumCitiesForRating = 5
+    private var ratedCities: [City] {
+        allRatedCities.filter { $0.uniqueID != cityID }
+    }
     
     var body: some View {
         NavigationView {
@@ -56,9 +61,6 @@ struct CityRatingView: View {
                     }
                 }
             }
-        }
-        .onAppear {
-            print("CityRatingView appeared")
         }
         .background(Color("Background"))
     }
@@ -126,6 +128,7 @@ struct CityRatingView: View {
                         }) {
                             CityComparisonCard(
                                 name: cityName,
+                                country: country,
                                 rating: nil,
                                 isSelected: false
                             )
@@ -142,7 +145,8 @@ struct CityRatingView: View {
                         }) {
                             CityComparisonCard(
                                 name: comparisonCity.name,
-                                rating: comparisonCity.rating,
+                                country: comparisonCity.country,
+                                rating: nil,
                                 isSelected: false
                             )
                         }
@@ -231,6 +235,7 @@ struct CityRatingView: View {
                         }) {
                             CityComparisonCard(
                                 name: cityName,
+                                country: country,
                                 rating: nil,
                                 isSelected: false
                             )
@@ -243,10 +248,12 @@ struct CityRatingView: View {
 
                         // Comparison city
                         Button(action: {
+                            print("\(comparisonCity.name) \(comparisonCity.country)")
                             recordComparison(newCityWins: false)
                         }) {
                             CityComparisonCard(
                                 name: comparisonCity.name,
+                                country: comparisonCity.country,
                                 rating: comparisonCity.rating,
                                 isSelected: false
                             )
@@ -263,26 +270,22 @@ struct CityRatingView: View {
         selectedCategory = category
         tempCityRating = category.baseRating
         
-        // Always do comparisons for first 5 cities if there are cities to compare with
         if ratedCities.count > 0 {
-            currentStep = .comparison // ADDED: Set step to comparison
+            currentStep = .comparison
             startFirstCitiesComparison()
         } else {
-            // First city ever - just assign the base rating
             selectedRating = tempCityRating
             completeRating()
         }
     }
 
-    // CHANGE 4: Fix startFirstCitiesComparison to properly set up comparison
     private func startFirstCitiesComparison() {
         guard let category = selectedCategory else { return }
         
-        // For first 5 cities, we compare with all existing cities
         let categoryRange = category.ratingRange
         let relevantCities = ratedCities.filter { city in
             guard let rating = city.rating else { return false }
-            return rating >= categoryRange.lowerBound && rating <= categoryRange.upperBound
+            return (rating >= categoryRange.lowerBound && rating <= categoryRange.upperBound) && city.uniqueID != self.cityID
         }
         
         var citiesToCompare = relevantCities
@@ -298,7 +301,6 @@ struct CityRatingView: View {
         comparisonResults = []
         currentComparisonIndex = 0
         
-        // CHANGED: Set the first comparison city immediately
         if let firstCity = comparisonCities.first {
             currentComparisonCity = firstCity
             currentStep = .comparison
@@ -309,18 +311,15 @@ struct CityRatingView: View {
         }
     }
 
-    // CHANGE 5: Add separate comparison recording for first cities
     private func recordFirstCitiesComparison(newCityWins: Bool) {
         guard let opponent = currentComparisonCity else { return }
         
         comparisonResults.append(.init(comparedCity: opponent, newCityWins: newCityWins))
         currentComparisonIndex += 1
         
-        // Move to next comparison or finish
         if currentComparisonIndex < comparisonCities.count {
             currentComparisonCity = comparisonCities[currentComparisonIndex]
         } else {
-            // All comparisons done
             calculateFirstCitiesRating()
         }
     }
@@ -335,6 +334,7 @@ struct CityRatingView: View {
         let seedRating = category.baseRating
         let closestCity = ratedCities
             .filter { $0.rating != nil }
+//            .filter { $0.uniqueID != uniqueID }
             .min(by: { abs(($0.rating ?? 0) - seedRating) < abs(($1.rating ?? 0) - seedRating) })
 
         if let seed = closestCity {
@@ -639,8 +639,8 @@ extension Array {
         return indices.contains(index) ? self[index] : nil
     }
 }
-
-#Preview {
-    @Previewable @State var isPresented: Bool = true
-    CityRatingView(isPresented: $isPresented, cityName: "Vancouver", onRatingSelected: {_ in })
-}
+//
+//#Preview {
+//    @Previewable @State var isPresented: Bool = true
+//    CityRatingView(isPresented: $isPresented, cityName: "Vancouver", cityCountry: "Canada", cityAdmin: "British Columbia", onRatingSelected: {_ in })
+//}

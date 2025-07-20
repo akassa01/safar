@@ -73,8 +73,6 @@ struct SearchListMember: View {
             } else {
                 Button(action: {
                     tempCityResult = result
-                    addingToVisited = true
-                    showAddCitySheet = true
                 }) {
                     Image(systemName: "plus.circle")
                         .foregroundColor(.accent)
@@ -88,10 +86,35 @@ struct SearchListMember: View {
                 baseResult: result,
                 isVisited: true,
                 onSave: { city in
-                    modelContext.insert(city)
+                    let name = city.name
+                    let latitude = city.latitude
+                    let longitude = city.longitude
+                    let fetchDescriptor = FetchDescriptor<City>(predicate: #Predicate { $0.name == name && $0.latitude == latitude && $0.longitude == longitude })
+
                     do {
-                        try modelContext.save()
+                        let existingCities = try modelContext.fetch(fetchDescriptor)
+                        if let existingCity = existingCities.first {
+                            modelContext.delete(existingCity)
+                            modelContext.insert(city)
+                                try modelContext.save()
+                            print("Updated existing city \(city.name) to visited.")
+                                return
+                        }
                     } catch {
+                        print("Failed to check for existing city: \(error.localizedDescription)")
+                        alertTitle = "Fetch Error"
+                        alertMessage = "Failed to check for duplicate city: \(error.localizedDescription)"
+                        showAlert = true
+                        return
+                    }
+                    
+                    modelContext.insert(city)
+                    
+                    do {
+                            try modelContext.save()
+                        print("Successfully saved city: \(city.name)")
+                    } catch {
+                        print("Failed to save city \(city.name): \(error.localizedDescription)")
                         alertTitle = "Save Error"
                         alertMessage = "Failed to save the city: \(error.localizedDescription)"
                         showAlert = true
@@ -167,7 +190,7 @@ struct SearchListMember: View {
         let newCity = City(name: name, latitude: latitude, longitude: longitude, bucketList: bucket, isVisited: visit, country: country, admin: admin)
         modelContext.insert(newCity)
         
-        do { // Use do-catch for robust error handling
+        do {
                 try modelContext.save()
                 print("Successfully saved city: \(name)")
         } catch {
@@ -182,5 +205,3 @@ struct SearchListMember: View {
 #Preview("Search List Member") {
     SearchListMember(result: SearchResult(title: "Vancouver", subtitle: "British Columbia, Canada", latitude: 100, longitude: 100, population: 10000, country: "Canada", admin: "British Columbia"))
 }
-
-

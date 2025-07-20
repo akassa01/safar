@@ -66,6 +66,23 @@ struct EnhancedRatingDisplay: View {
     }
 }
 
+struct LockDisplay: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "lock.circle")
+                .foregroundColor(.white)
+                .font(.system(size: 16))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.black.opacity(0.3))
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+        )
+    }
+}
+
 struct StatusBadge: View {
     let icon: String
     let text: String

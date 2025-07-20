@@ -39,4 +39,8 @@ class City {
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
+    
+    var uniqueID: String { // theres an id already in the db
+        "\(name)-\(String(longitude))-\(String(latitude))"
+    }
 }

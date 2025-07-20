@@ -10,15 +10,23 @@ import Foundation
 
 struct CityComparisonCard: View {
     let name: String
+    let country: String
     let rating: Double?
     let isSelected: Bool
     
     var body: some View {
         VStack(spacing: 12) {
-            Text(name)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
+            VStack(spacing: 4) {
+                Text(name)
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                
+                Text("\(country)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             
             if let rating = rating {
                 VStack(spacing: 4) {
@@ -30,13 +38,9 @@ struct CityComparisonCard: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-            } else {
-                Text("New City")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
         }
-        .frame(width: 120, height: 100)
+        .frame(width: 120, height: 115)
         .background(isSelected ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.1))
         .cornerRadius(12)
         .overlay(
@@ -44,4 +48,8 @@ struct CityComparisonCard: View {
                 .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
         )
     }
+}
+
+#Preview {
+    CityComparisonCard(name: "New York", country: "United States", rating: 9.2, isSelected: true)
 }

@@ -30,9 +30,13 @@ class DatabaseManager {
         }
     }    
     
+    private func normalizeForSearch(_ text: String) -> String {
+           return text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+       }
     
     func searchCities(query: String) -> [SearchResult] {
         guard let db = citiesDB else { return [] }
+        let normalizedQuery = normalizeForSearch(query)
 
         var results: [SearchResult] = []
         let citiesTable = Table("cities")
@@ -42,10 +46,11 @@ class DatabaseManager {
         let latitude = Expression<Double>("latitude")
         let longitude = Expression<Double>("longitude")
         let population = Expression<Int>("population")
+        let plain_name = Expression<String>("plain_name")
 
         do {
             let queryResults = try db.prepare(
-                citiesTable.filter(name.like("%\(query)%")).limit(50)
+                citiesTable.filter(plain_name.like("%\(normalizedQuery)%")).limit(50)
             )
             for row in queryResults {
                 if let cityName = row[name] {
