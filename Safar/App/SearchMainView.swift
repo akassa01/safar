@@ -46,7 +46,6 @@ struct SearchMainView: View {
     @State private var searchResults = [SearchResult]()
     @State private var debounceTask: DispatchWorkItem?
 
-    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {

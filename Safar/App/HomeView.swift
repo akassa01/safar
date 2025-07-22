@@ -14,11 +14,17 @@ struct HomeView: View {
     @State private var isMapExpanded = false
     @State private var showSearchScreen = false
     
+    // Navigation paths for each tab
+    @State private var homeNavigationPath = NavigationPath()
+    @State private var citiesNavigationPath = NavigationPath()
+    @State private var exploreNavigationPath = NavigationPath()
+    @State private var feedNavigationPath = NavigationPath()
+    
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<City> { $0.isVisited == true }) private var visitedCities: [City]
     
     private var visitedCountries: Set<String> {
-        Set(visitedCities.compactMap { $0.country }) 
+        Set(visitedCities.compactMap { $0.country })
     }
     private var visitedContinents: Set<String> {
         var continents = Set<String>()
@@ -32,7 +38,7 @@ struct HomeView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationView {
+            NavigationStack(path: $homeNavigationPath) {
                 VStack {
                      TopBar()
                      Button(action: {
@@ -117,22 +123,22 @@ struct HomeView: View {
                     }
                     Spacer()
                 
-            }
-            .background(Color("Background"))
-            .fullScreenCover(isPresented: $showSearchScreen) {
+                }
+                .background(Color("Background"))
+                .fullScreenCover(isPresented: $showSearchScreen) {
                     SearchMainView()
-            }
-            .fullScreenCover(isPresented: $isMapExpanded) {
-                FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation)
-            }
-                    .toolbar(.hidden, for: .navigationBar)
+                }
+                .fullScreenCover(isPresented: $isMapExpanded) {
+                    FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation)
+                }
+                .toolbar(.hidden, for: .navigationBar)
             }
             .tabItem {
                 Label("Home", systemImage: "house.fill")
             }
             .tag(0)
 
-            NavigationView {
+            NavigationStack(path: $citiesNavigationPath) {
                 YourCitiesView()
             }
             .tabItem {
@@ -140,24 +146,43 @@ struct HomeView: View {
             }
             .tag(1)
 
-            NavigationView {
+            NavigationStack(path: $exploreNavigationPath) {
                 ExploreView()
             }
-                .tabItem {
-                    Label("Explore", systemImage: "safari")
-                }
+            .tabItem {
+                Label("Explore", systemImage: "safari")
+            }
             .tag(2)
 
-            NavigationView {
+            NavigationStack(path: $feedNavigationPath) {
                 FeedView()
             }
-                .tabItem {
-                    Label("Feed", systemImage: "airplane.departure")
-                }
+            .tabItem {
+                Label("Feed", systemImage: "airplane.departure")
+            }
             .tag(3)
         }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            // If the same tab is selected again, pop to root
+            if oldValue == newValue {
+                switch newValue {
+                case 0:
+                    homeNavigationPath = NavigationPath()
+                    // Also reset any modal states for Home tab
+                    showSearchScreen = false
+                    isMapExpanded = false
+                case 1:
+                    citiesNavigationPath = NavigationPath()
+                case 2:
+                    exploreNavigationPath = NavigationPath()
+                case 3:
+                    feedNavigationPath = NavigationPath()
+                default:
+                    break
+                }
+            }
+        }
     }
-    
 }
 
 #Preview {
