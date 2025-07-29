@@ -130,6 +130,7 @@ struct CityDetailView: View {
                 onRatingSelected: { rating in
                     city.rating = rating
                     saveContext()
+                    print("Successfully updated city \(city.name), \(city.country)'s rating to \(rating) (unique ID: \(city.uniqueID))")
                 }
             )
             .presentationBackground(Color("Background"))

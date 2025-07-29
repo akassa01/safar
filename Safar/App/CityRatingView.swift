@@ -57,10 +57,14 @@ struct CityRatingView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        print("Cancelling rating for ")
                         isPresented = false
                     }
                 }
             }
+        }
+        .onAppear {
+            print("Entered city rating view")
         }
         .background(Color("Background"))
     }
@@ -248,7 +252,6 @@ struct CityRatingView: View {
 
                         // Comparison city
                         Button(action: {
-                            print("\(comparisonCity.name) \(comparisonCity.country)")
                             recordComparison(newCityWins: false)
                         }) {
                             CityComparisonCard(
@@ -267,6 +270,7 @@ struct CityRatingView: View {
     }
     
     private func handleFirstCitiesRating(category: CityCategory) {
+        print("Rating first city in category: \(category)")
         selectedCategory = category
         tempCityRating = category.baseRating
         
@@ -305,7 +309,6 @@ struct CityRatingView: View {
             currentComparisonCity = firstCity
             currentStep = .comparison
         } else {
-            // No cities to compare with - shouldn't happen but handle gracefully
             selectedRating = tempCityRating
             completeRating()
         }
@@ -344,7 +347,6 @@ struct CityRatingView: View {
         } else {
             // No cities to compare
             selectedRating = seedRating
-            applyDynamicRatingAdjustments()
             completeRating()
         }
     }
@@ -387,6 +389,7 @@ struct CityRatingView: View {
 
     
     private func calculateFirstCitiesRating() {
+        print("Calculating first cities rating...")
         guard let category = selectedCategory else { return }
         
         let wins = comparisonResults.filter { $0.newCityWins }.count
@@ -442,17 +445,14 @@ struct CityRatingView: View {
     
     private func revealAllRatings() {
         // This is called when the 5th city is being rated
-        // Perform final adjustments to all ratings
         ensureBestCityHas10()
         
         // Apply any final scaling or adjustments
         normalizeRatingsDistribution()
-        
-        // Note: Don't save here - let completeRating() handle the saving
-        // The new city needs to be saved along with the rating adjustments
     }
     
     private func normalizeRatingsDistribution() {
+        print("Normalizing ratings")
         // Ensure good distribution across the rating scale
         var allRatings: [(city: City?, rating: Double)] = []
         
@@ -489,32 +489,6 @@ struct CityRatingView: View {
         }
     }
     
-    private func calculateFinalRating() {
-        guard let category = selectedCategory else { return }
-        
-        let wins = comparisonResults.filter { $0.newCityWins }.count
-        let total = comparisonResults.count
-        
-        if total == 0 {
-            selectedRating = category.baseRating
-        } else {
-            let winPercentage = Double(wins) / Double(total)
-            let averageOpponentRating = comparisonResults.compactMap { $0.comparedCity.rating }.reduce(0.0, +) / Double(comparisonResults.count)
-            
-            let baseRating = category.baseRating
-            let comparisonAdjustment = (winPercentage - 0.5) * 2.0
-            let opponentAdjustment = (averageOpponentRating - baseRating) * 0.3
-            
-            let finalRating = baseRating + comparisonAdjustment + opponentAdjustment
-            selectedRating = max(1.0, min(10.0, finalRating))
-        }
-        
-        applyDynamicRatingAdjustments()
-        ensureUniqueRatings()
-        
-        completeRating()
-    }
-    
     private func applyDynamicRatingAdjustments() {
         guard let newRating = selectedRating else { return }
         print("Dynamically adjusting ratings...")
@@ -533,6 +507,7 @@ struct CityRatingView: View {
                 } else {
                     city.rating = max(0.1, currentRating - adjustment)
                 }
+                print("Adjusted rating of \(city.name) from \(currentRating) to \(city.rating ?? 0)")
             }
         }
         
@@ -540,6 +515,7 @@ struct CityRatingView: View {
         
         do {
             try modelContext.save()
+            print("Adjusted ratings dynamically")
         } catch {
             print("Failed to save dynamic rating adjustments: \(error)")
         }
@@ -597,24 +573,26 @@ struct CityRatingView: View {
     
     private func completeRating() {
         guard let rating = selectedRating else { return }
+        applyDynamicRatingAdjustments()
         
-        if let city = findCityByName(cityName) {
+        if let city = findCityByID(cityID) {
                 city.rating = rating
                 do {
                     try modelContext.save()
+                    print("Successfully saved \(city.name) with rating \(rating)")
                 } catch {
                     print("Failed to save city rating: \(error)")
                 }
             }
         
         onRatingSelected(rating)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isPresented = false
         }
     }
     
-    private func findCityByName(_ name: String) -> City? {
-        ratedCities.first(where: { $0.name == name })
+    private func findCityByID(_ id: String) -> City? {
+        ratedCities.first(where: { $0.uniqueID == id })
     }
 }
 
@@ -639,8 +617,8 @@ extension Array {
         return indices.contains(index) ? self[index] : nil
     }
 }
-//
-//#Preview {
-//    @Previewable @State var isPresented: Bool = true
-//    CityRatingView(isPresented: $isPresented, cityName: "Vancouver", cityCountry: "Canada", cityAdmin: "British Columbia", onRatingSelected: {_ in })
-//}
+
+#Preview {
+    @Previewable @State var isPresented: Bool = true
+    CityRatingView(isPresented: $isPresented, cityName: "Vancouver", country: "Canada", cityID: "1234", onRatingSelected: {_ in })
+}

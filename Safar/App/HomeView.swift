@@ -14,7 +14,6 @@ struct HomeView: View {
     @State private var isMapExpanded = false
     @State private var showSearchScreen = false
     
-    // Navigation paths for each tab
     @State private var homeNavigationPath = NavigationPath()
     @State private var citiesNavigationPath = NavigationPath()
     @State private var exploreNavigationPath = NavigationPath()
