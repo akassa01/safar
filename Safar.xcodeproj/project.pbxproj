@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6462E2582E395D64005B4AAA /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E2572E395D64005B4AAA /* Auth */; };
+		6462E25A2E395D64005B4AAA /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E2592E395D64005B4AAA /* Functions */; };
+		6462E25C2E395D64005B4AAA /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E25B2E395D64005B4AAA /* PostgREST */; };
+		6462E25E2E395D64005B4AAA /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E25D2E395D64005B4AAA /* Realtime */; };
+		6462E2602E395D64005B4AAA /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E25F2E395D64005B4AAA /* Storage */; };
+		6462E2622E395D64005B4AAA /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E2612E395D64005B4AAA /* Supabase */; };
 		647E801C2E161DF100E36B1F /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 647E801B2E161DF100E36B1F /* SQLite */; };
 /* End PBXBuildFile section */
 
@@ -33,9 +39,22 @@
 		64C360AC2E13632B00CA5CE5 /* SafarUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SafarUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6462E2712E396D18005B4AAA /* Exceptions for "Safar" folder in "Safar" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 64C360942E13632A00CA5CE5 /* Safar */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		64C360972E13632A00CA5CE5 /* Safar */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6462E2712E396D18005B4AAA /* Exceptions for "Safar" folder in "Safar" target */,
+			);
 			path = Safar;
 			sourceTree = "<group>";
 		};
@@ -56,6 +75,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6462E2622E395D64005B4AAA /* Supabase in Frameworks */,
+				6462E2602E395D64005B4AAA /* Storage in Frameworks */,
+				6462E25C2E395D64005B4AAA /* PostgREST in Frameworks */,
+				6462E25A2E395D64005B4AAA /* Functions in Frameworks */,
+				6462E2582E395D64005B4AAA /* Auth in Frameworks */,
+				6462E25E2E395D64005B4AAA /* Realtime in Frameworks */,
 				647E801C2E161DF100E36B1F /* SQLite in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -118,6 +143,12 @@
 			name = Safar;
 			packageProductDependencies = (
 				647E801B2E161DF100E36B1F /* SQLite */,
+				6462E2572E395D64005B4AAA /* Auth */,
+				6462E2592E395D64005B4AAA /* Functions */,
+				6462E25B2E395D64005B4AAA /* PostgREST */,
+				6462E25D2E395D64005B4AAA /* Realtime */,
+				6462E25F2E395D64005B4AAA /* Storage */,
+				6462E2612E395D64005B4AAA /* Supabase */,
 			);
 			productName = safar;
 			productReference = 64C360952E13632A00CA5CE5 /* Safar.app */;
@@ -203,6 +234,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				647E801A2E161DF100E36B1F /* XCRemoteSwiftPackageReference "SQLite" */,
+				6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 64C360962E13632A00CA5CE5 /* Products */;
@@ -407,6 +439,9 @@
 				DEVELOPMENT_TEAM = FGW6Q324TL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Safar/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Safar;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -436,6 +471,9 @@
 				DEVELOPMENT_TEAM = FGW6Q324TL;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Safar/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Safar;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -565,6 +603,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
 		647E801A2E161DF100E36B1F /* XCRemoteSwiftPackageReference "SQLite" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/stephencelis/SQLite.swift";
@@ -576,6 +622,36 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		6462E2572E395D64005B4AAA /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		6462E2592E395D64005B4AAA /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		6462E25B2E395D64005B4AAA /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		6462E25D2E395D64005B4AAA /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		6462E25F2E395D64005B4AAA /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		6462E2612E395D64005B4AAA /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
 		647E801B2E161DF100E36B1F /* SQLite */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 647E801A2E161DF100E36B1F /* XCRemoteSwiftPackageReference "SQLite" */;

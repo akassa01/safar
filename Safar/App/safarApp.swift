@@ -12,7 +12,7 @@ import SwiftData
 struct safarApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            AppView()
         }
         .modelContainer(for: [City.self])
         
