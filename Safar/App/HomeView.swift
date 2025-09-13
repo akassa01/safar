@@ -1,6 +1,5 @@
 import SwiftUI
 import MapKit
-import SwiftData
 
 struct HomeView: View {
     @State private var cameraPosition: MapCameraPosition = .region(MKCoordinateRegion(
@@ -19,21 +18,7 @@ struct HomeView: View {
     @State private var exploreNavigationPath = NavigationPath()
     @State private var feedNavigationPath = NavigationPath()
     
-    @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<City> { $0.isVisited == true }) private var visitedCities: [City]
-    
-    private var visitedCountries: Set<String> {
-        Set(visitedCities.compactMap { $0.country })
-    }
-    private var visitedContinents: Set<String> {
-        var continents = Set<String>()
-        for country in visitedCountries {
-            if let continent = DatabaseManager.shared.getCountryAndContinent(forCountry: country).continent {
-                continents.insert(continent)
-            }
-        }
-        return continents
-    }
+    @StateObject var viewModel = UserCitiesViewModel()
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -62,9 +47,9 @@ struct HomeView: View {
                      
                     // Stat Cards
                     HStack(spacing: 12) {
-                        StatCard(title: String(visitedCities.count), subtitle: "Cities")
-                        StatCard(title: String(visitedCountries.count), subtitle: "Countries")
-                        StatCard(title: String(visitedContinents.count), subtitle: "Continents")
+                        StatCard(title: String(viewModel.visitedCities.count), subtitle: "Cities")
+                        StatCard(title: String(viewModel.visitedCountries.count), subtitle: "Countries")
+                        StatCard(title: String(viewModel.visitedContinents.count), subtitle: "Continents")
                     }
                     .padding(.horizontal)
                     .padding(.bottom)
@@ -95,7 +80,7 @@ struct HomeView: View {
 
                     ZStack {
                         if !showSearchScreen {
-                            FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation)
+                            FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel)
                                 .frame(height : 400)
                                 .frame(width: 360)
                                 .cornerRadius(20)
@@ -128,7 +113,7 @@ struct HomeView: View {
                     SearchMainView()
                 }
                 .fullScreenCover(isPresented: $isMapExpanded) {
-                    FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation)
+                    FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel)
                 }
                 .toolbar(.hidden, for: .navigationBar)
             }
@@ -167,7 +152,6 @@ struct HomeView: View {
                 switch newValue {
                 case 0:
                     homeNavigationPath = NavigationPath()
-                    // Also reset any modal states for Home tab
                     showSearchScreen = false
                     isMapExpanded = false
                 case 1:
@@ -181,10 +165,18 @@ struct HomeView: View {
                 }
             }
         }
+        .task {
+            await viewModel.initializeWithCurrentUser()
+        }
+        .overlay {
+            if viewModel.isLoading {
+                ProgressView()
+            }
+        }
     }
 }
 
-#Preview {
-    let preview = PreviewContainer([City.self])
-    return HomeView().modelContainer(preview.container)
-}
+//#Preview {
+//    let preview = PreviewContainer([City.self])
+//    return HomeView().modelContainer(preview.container)
+//}

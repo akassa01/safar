@@ -5,28 +5,55 @@
 //  Created by Arman Kassam on 2025-07-09.
 //
 
-import SwiftData
+// import SwiftData
 import Foundation
 import MapKit
 import SwiftUI
 
-@Model
-class Place {
-    var id: UUID = UUID()
-    var name: String
-    var latitude: Double
-    var longitude: Double
-    var category: PlaceCategory
-    var city: City?
-    var liked: Bool?
+// @Model
+// class Place {
+//     var id: UUID = UUID()
+//     var name: String
+//     var latitude: Double
+//     var longitude: Double
+//     var category: PlaceCategory
+//     var city: City?
+//     var liked: Bool?
 
-    init(name: String, latitude: Double, longitude: Double, category: PlaceCategory, city: City? = nil, liked: Bool? = nil) {
-        self.name = name
-        self.latitude = latitude
-        self.longitude = longitude
-        self.category = category
-        self.city = city
-        self.liked = liked
+//     init(name: String, latitude: Double, longitude: Double, category: PlaceCategory, city: City? = nil, liked: Bool? = nil) {
+//         self.name = name
+//         self.latitude = latitude
+//         self.longitude = longitude
+//         self.category = category
+//         self.city = city
+//         self.liked = liked
+//     }
+    
+//     var coordinate: CLLocationCoordinate2D {
+//         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+//     }
+// }
+
+// Struct version for future Supabase implementation
+struct Place: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let latitude: Double
+    let longitude: Double
+    let category: PlaceCategory
+    let cityId: Int
+    let userId: UUID
+    let liked: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case latitude
+        case longitude
+        case category
+        case cityId = "city_id"
+        case userId = "user_id"
+        case liked
     }
     
     var coordinate: CLLocationCoordinate2D {

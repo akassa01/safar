@@ -19,7 +19,7 @@ struct CityListMember: View {
                 .bold(true)
                 .frame(width: 40, alignment: .leading)
             VStack (alignment: .leading) {
-                Text(city.name)
+                Text(city.displayName)
                     .font(.headline)
                     .lineLimit(1)
                     .truncationMode(.tail)

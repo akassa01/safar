@@ -7,7 +7,6 @@
 
 import SwiftUI
 import MapKit
-import SwiftData
 
 enum mapType: String, CaseIterable {
     case visited = "Visited"
@@ -19,21 +18,19 @@ struct FullScreenMapView: View {
     @State var isFullScreen: Bool
     @State var cameraPosition: MapCameraPosition
     @Binding var mapPresentation: mapType
+    
+    @ObservedObject var viewModel = UserCitiesViewModel()
 
-    @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<City> { $0.isVisited == true }) private var visitedCities: [City]
-    @Query(filter: #Predicate<City> { $0.bucketList == true}) private var bucketListCities: [City]
-    @Query private var allCities: [City]
     @Environment(\.dismiss) var dismiss
     
     private var mapPins: [City] {
         switch mapPresentation {
         case .visited:
-            return visitedCities
+            return viewModel.visitedCities
         case .bucketList:
-            return bucketListCities
+            return viewModel.bucketListCities
         case .all:
-            return allCities
+            return viewModel.allUserCities
         }
     }
 
@@ -41,9 +38,8 @@ struct FullScreenMapView: View {
         ZStack {
             Map(position: $cameraPosition) {
                 ForEach(mapPins) { city in
-                    Marker(city.name, systemImage: city.isVisited ? "suitcase.fill" : "star.fill", coordinate: city.coordinate)
-                        .tint(city.isVisited ? .green : .yellow)
-                    
+                    Marker(city.displayName, systemImage: city.visited ?? false ? "suitcase.fill" : "star.fill", coordinate: CLLocationCoordinate2D(latitude: city.latitude, longitude: city.longitude))
+                        .tint(city.visited ?? false ? .green : .yellow)
                 }
             }
             .mapStyle(.standard)

@@ -5,12 +5,9 @@
 //  Created by Arman Kassam on 2025-07-05.
 //
 import SwiftUI
-import SwiftData
 
 struct YourCitiesView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<City> { $0.isVisited == true }) private var visitedCities: [City]
-    @Query(filter: #Predicate<City> { $0.bucketList == true }) private var bucketListCities: [City]
+    @StateObject private var viewModel = UserCitiesViewModel()
 
     @State private var selectedTab: CityTab = .visited
     @State private var cityToDelete: City?
@@ -52,9 +49,9 @@ struct YourCitiesView: View {
                 List(currentCities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 }).enumerated().map({ $0 }), id: \.element) { i, city in
                     ZStack {
                         CityListMember(index: i, city: city, bucketList: selectedTab.bucketList, locked: currentCities.count < 5)
-                        NavigationLink(destination: CityDetailView(city: city)) {
-                            EmptyView()
-                        }
+                         NavigationLink(destination: CityDetailView(cityId: city.id)) {
+                             EmptyView()
+                         }
                     }
                     .listRowBackground(Color("Background"))
                     .listRowSeparator(.hidden)
@@ -64,14 +61,23 @@ struct YourCitiesView: View {
             }
             .background(Color("Background"))
         }
+        .task {
+            await viewModel.initializeWithCurrentUser()
+        }
+        .overlay {
+            if viewModel.isLoading {
+                ProgressView()
+            }
+        }
     }
+        
 
     private var currentCities: [City] {
         switch selectedTab {
         case .visited:
-            return visitedCities
+            return viewModel.visitedCities
         case .bucketList:
-            return bucketListCities
+            return viewModel.bucketListCities
         }
     }
 }

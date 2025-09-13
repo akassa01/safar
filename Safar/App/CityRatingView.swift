@@ -6,17 +6,13 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct CityRatingView: View {
     @Binding var isPresented: Bool
-    @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<City> { $0.isVisited == true && $0.rating != nil})
-    private var allRatedCities: [City]
     
     let cityName: String
     let country: String
-    let cityID: String
+    let cityID: Int
     let onRatingSelected: (Double) -> Void
     
     @State private var selectedRating: Double? = nil
@@ -32,8 +28,11 @@ struct CityRatingView: View {
     @State private var tempCityRating: Double? = nil
     
     private let minimumCitiesForRating = 5
+    
+    @StateObject private var viewModel = UserCitiesViewModel()
+    
     private var ratedCities: [City] {
-        allRatedCities.filter { $0.uniqueID != cityID }
+        viewModel.visitedCities.filter { $0.id != cityID }
     }
     
     var body: some View {
@@ -63,7 +62,9 @@ struct CityRatingView: View {
                 }
             }
         }
-        .onAppear {
+        .task {
+            // Ensure rated cities are loaded for comparison logic
+            await viewModel.initializeWithCurrentUser()
             print("Entered city rating view")
         }
         .background(Color("Background"))
@@ -148,7 +149,7 @@ struct CityRatingView: View {
                             recordFirstCitiesComparison(newCityWins: false)
                         }) {
                             CityComparisonCard(
-                                name: comparisonCity.name,
+                                name: comparisonCity.displayName,
                                 country: comparisonCity.country,
                                 rating: nil,
                                 isSelected: false
@@ -255,9 +256,9 @@ struct CityRatingView: View {
                             recordComparison(newCityWins: false)
                         }) {
                             CityComparisonCard(
-                                name: comparisonCity.name,
+                                name: comparisonCity.displayName,
                                 country: comparisonCity.country,
-                                rating: comparisonCity.rating,
+                                rating: Double(comparisonCity.rating ?? 0.0),
                                 isSelected: false
                             )
                         }
@@ -289,7 +290,7 @@ struct CityRatingView: View {
         let categoryRange = category.ratingRange
         let relevantCities = ratedCities.filter { city in
             guard let rating = city.rating else { return false }
-            return (rating >= categoryRange.lowerBound && rating <= categoryRange.upperBound) && city.uniqueID != self.cityID
+            return (rating >= categoryRange.lowerBound && rating <= categoryRange.upperBound) && city.id != self.cityID
         }
         
         var citiesToCompare = relevantCities
@@ -337,7 +338,7 @@ struct CityRatingView: View {
         let seedRating = category.baseRating
         let closestCity = ratedCities
             .filter { $0.rating != nil }
-//            .filter { $0.uniqueID != uniqueID }
+            .filter { $0.id != cityID }
             .min(by: { abs(($0.rating ?? 0) - seedRating) < abs(($1.rating ?? 0) - seedRating) })
 
         if let seed = closestCity {
@@ -360,9 +361,9 @@ struct CityRatingView: View {
         }
 
         if newCityWins {
-            ratingBounds.lowerBound = max(ratingBounds.lowerBound, opponentRating)
+            ratingBounds.lowerBound = max(ratingBounds.lowerBound, Double(opponentRating))
         } else {
-            ratingBounds.upperBound = min(ratingBounds.upperBound, opponentRating)
+            ratingBounds.upperBound = min(ratingBounds.upperBound, Double(opponentRating))
         }
 
         comparisonResults.append(.init(comparedCity: opponent, newCityWins: newCityWins))
@@ -479,7 +480,9 @@ struct CityRatingView: View {
                 let newRating = min(10.0, currentRating + adjustment)
                 
                 if let city = allRatings[i].city {
-                    city.rating = newRating
+                    Task {
+                        await viewModel.updateCityRating(cityId: city.id, rating: newRating)
+                    }
                 } else {
                     selectedRating = newRating
                 }
@@ -503,22 +506,19 @@ struct CityRatingView: View {
                 let adjustment = adjustmentFactor * (2.0 - distance) / 2.0
                 
                 if currentRating > newRating {
-                    city.rating = min(10.0, currentRating + adjustment)
+                    Task {
+                        await viewModel.updateCityRating(cityId: city.id, rating: min(10.0, currentRating + adjustment))
+                    }
                 } else {
-                    city.rating = max(0.1, currentRating - adjustment)
+                    Task {
+                        await viewModel.updateCityRating(cityId: city.id, rating: max(0.1, currentRating - adjustment))
+                    }
                 }
-                print("Adjusted rating of \(city.name) from \(currentRating) to \(city.rating ?? 0)")
+                print("Adjusted rating of \(city.displayName) from \(currentRating) to \(city.rating ?? 0)")
             }
         }
         
         ensureBestCityHas10()
-        
-        do {
-            try modelContext.save()
-            print("Adjusted ratings dynamically")
-        } catch {
-            print("Failed to save dynamic rating adjustments: \(error)")
-        }
     }
     
     private func ensureBestCityHas10() {
@@ -539,12 +539,14 @@ struct CityRatingView: View {
             
             for city in ratedCities {
                 if let rating = city.rating {
-                    city.rating = min(10.0, rating * scaleFactor)
+                    Task {
+                        await viewModel.updateCityRating(cityId: city.id, rating: min(10.0, rating * scaleFactor))
+                    }
                 }
             }
             
             if let newRating = selectedRating {
-                selectedRating = min(10.0, newRating * scaleFactor)
+                selectedRating = min(10.0, newRating * Double(scaleFactor))
             }
         }
     }
@@ -575,15 +577,8 @@ struct CityRatingView: View {
         guard let rating = selectedRating else { return }
         applyDynamicRatingAdjustments()
         
-        if let city = findCityByID(cityID) {
-                city.rating = rating
-                do {
-                    try modelContext.save()
-                    print("Successfully saved \(city.name) with rating \(rating)")
-                } catch {
-                    print("Failed to save city rating: \(error)")
-                }
-            }
+        // The rating update is handled by the parent view through the onRatingSelected callback
+        // which uses the UserCitiesViewModel.updateCityRating() function
         
         onRatingSelected(rating)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -591,8 +586,8 @@ struct CityRatingView: View {
         }
     }
     
-    private func findCityByID(_ id: String) -> City? {
-        ratedCities.first(where: { $0.uniqueID == id })
+    private func findCityByID(_ id: Int) -> City? {
+        ratedCities.first(where: { $0.id == id })
     }
 }
 
@@ -618,7 +613,7 @@ extension Array {
     }
 }
 
-#Preview {
-    @Previewable @State var isPresented: Bool = true
-    CityRatingView(isPresented: $isPresented, cityName: "Vancouver", country: "Canada", cityID: "1234", onRatingSelected: {_ in })
-}
+//#Preview {
+//    @Previewable @State var isPresented: Bool = true
+//    CityRatingView(isPresented: $isPresented, cityName: "Vancouver", country: "Canada", cityID: "1234", onRatingSelected: {_ in })
+//}

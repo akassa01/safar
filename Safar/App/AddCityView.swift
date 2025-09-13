@@ -6,15 +6,14 @@
 //
 
 import SwiftUI
-import SwiftData
 import MapKit
 import PhotosUI
 
 
 struct AddCityView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    
+    @StateObject var viewModel = UserCitiesViewModel()
+
     let baseResult: SearchResult
     let isVisited: Bool
     let onSave: (City) -> Void
@@ -78,11 +77,10 @@ struct AddCityView: View {
                 }
             }
             .sheet(isPresented: $showingRating) {
-                let uniqueID = "\(baseResult.title)-\(String(baseResult.longitude ?? 0))-\(String(baseResult.latitude ?? 0))"
                 CityRatingView( isPresented: $showingRating,
                     cityName: baseResult.title,
                     country: baseResult.country,
-                    cityID: uniqueID,
+                    cityID: Int(baseResult.data_id) ?? 0,
                     onRatingSelected: { rating in
                         selectedRating = rating
                         saveCity()
@@ -90,22 +88,25 @@ struct AddCityView: View {
                 )
                 .presentationBackground(Color("Background"))
             }
-            .sheet(item: $activePlaceCategory) { category in
-                PlaceSearchView(
-                    cityCoordinate: CLLocationCoordinate2D(
-                        latitude: baseResult.latitude ?? 0,
-                        longitude: baseResult.longitude ?? 0
-                    ),
-                    category: category,
-                    onPlacesSelected: { places in
-                        addPlaces(places)
-                        activePlaceCategory = nil
-                    }
-                )
-            }
-            .onChange(of: selectedPhotos) { _, newPhotos in
-                loadSelectedPhotos(newPhotos)
-            }
+//            .sheet(item: $activePlaceCategory) { category in
+//                PlaceSearchView(
+//                    cityCoordinate: CLLocationCoordinate2D(
+//                        latitude: baseResult.latitude ?? 0,
+//                        longitude: baseResult.longitude ?? 0
+//                    ),
+//                    category: category,
+//                    onPlacesSelected: { places in
+//                        addPlaces(places)
+//                        activePlaceCategory = nil
+//                    }
+//                )
+//                    }
+        .onChange(of: selectedPhotos) { _, newPhotos in
+            loadSelectedPhotos(newPhotos)
+        }
+        .task {
+            await viewModel.initializeWithCurrentUser()
+        }
         }
     }
     
@@ -141,55 +142,48 @@ struct AddCityView: View {
     }
     
     private func saveCity() {
-        let newCity = City(
-            name: baseResult.title,
-            latitude: baseResult.latitude ?? 0,
-            longitude: baseResult.longitude ?? 0,
-            bucketList: false,
-            isVisited: isVisited,
-            country: baseResult.country,
-            admin: baseResult.admin
-        )
-        
-        // Add rating
-        newCity.rating = selectedRating
-        
-        // Add notes
-        if !notes.isEmpty {
-            newCity.notes = notes
+        Task {
+            // Ensure the user is initialized before attempting to save
+            if viewModel.currentUserId == nil {
+                await viewModel.initializeWithCurrentUser()
+            }
+
+            let cityId = Int(baseResult.data_id) ?? 0
+            
+            if isVisited {
+                await viewModel.markCityAsVisited(cityId: cityId, rating: selectedRating, notes: notes)
+            } else {
+                await viewModel.addCityToBucketList(cityId: cityId)
+            }
+            
+            // Get the updated city data to pass to onSave
+            if let updatedCity = await viewModel.getCityById(cityId: cityId) {
+                await MainActor.run {
+                    onSave(updatedCity)
+                    dismiss()
+                }
+            } else {
+                await MainActor.run {
+                    dismiss()
+                }
+            }
         }
-        
-        // Add photos
-        for image in loadedImages {
-            let photo = Photo(image: image, city: newCity)
-            newCity.photos.append(photo)
-        }
-        
-        // Add places
-        let allPlaces = restaurants + hotels + activities + shops
-        for place in allPlaces {
-            place.city = newCity
-            newCity.places.append(place)
-        }
-        
-        onSave(newCity)
-        dismiss()
     }
 }
 
-
-#Preview {
-    AddCityView(
-        baseResult: SearchResult(
-            title: "Vancouver",
-            subtitle: "British Columbia, Canada",
-            latitude: 49.2827,
-            longitude: -123.1207,
-            population: 10000,
-            country: "Canada",
-            admin: "British Columbia"
-        ),
-        isVisited: true,
-        onSave: { _ in }
-    )
-}
+//
+//#Preview {
+//    AddCityView(
+//        baseResult: SearchResult(
+//            title: "Vancouver",
+//            subtitle: "British Columbia, Canada",
+//            latitude: 49.2827,
+//            longitude: -123.1207,
+//            population: 10000,
+//            country: "Canada",
+//            admin: "British Columbia"
+//        ),
+//        isVisited: true,
+//        onSave: { _ in }
+//    )
+//}

@@ -4,15 +4,17 @@
 //
 //  Created by Arman Kassam on 2025-07-17.
 //
-import SwiftData
+
 import SwiftUI
 
 struct NotesEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
+    @StateObject private var viewModel = UserCitiesViewModel()
     
     let city: City
     @State private var notes: String
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
     init(city: City) {
         self.city = city
@@ -21,35 +23,76 @@ struct NotesEditorView: View {
     
     var body: some View {
         NavigationView {
-            TextEditor(text: $notes)
-                .padding()
-                .navigationTitle("Edit Notes")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Save") {
-                            saveNotes()
-                        }
-                        .fontWeight(.semibold)
+            VStack {
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .padding()
+                }
+                
+                TextEditor(text: $notes)
+                    .padding()
+                    .background(Color(.systemBackground))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+            }
+            .padding()
+            .navigationTitle("Edit Notes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveNotes()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(isLoading)
+                }
+            }
         }
         .background(Color("Background"))
+        .overlay {
+            if isLoading {
+                ProgressView()
+            }
+        }
     }
     
     private func saveNotes() {
-        city.notes = notes.isEmpty ? nil : notes
-        do {
-            try modelContext.save()
-        } catch {
-            print("Error saving notes: \(error)")
+        guard let userId = viewModel.currentUserId else {
+            errorMessage = "User not authenticated"
+            return
         }
-        dismiss()
+        
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                try await DatabaseManager.shared.updateUserCityNotes(
+                    userId: userId,
+                    cityId: city.id,
+                    notes: notes.isEmpty ? "" : notes
+                )
+                
+                await MainActor.run {
+                    isLoading = false
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "Failed to save notes: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 }

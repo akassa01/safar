@@ -18,6 +18,7 @@ struct SearchResult: Identifiable {
     let population: Int
     let country: String
     let admin: String
+    let data_id: String
 }
 enum SearchCategory: String, CaseIterable, Hashable, IconRepresentable {
     case cities = "Cities"
@@ -36,7 +37,6 @@ enum SearchCategory: String, CaseIterable, Hashable, IconRepresentable {
 }
 
 struct SearchMainView: View {
-    @Query var cities: [City]
     @FocusState private var isSearchFieldFocused: Bool
     @State private var searchText: String = ""
     @State private var selectedCategory: SearchCategory = .cities
@@ -45,7 +45,7 @@ struct SearchMainView: View {
     @State private var isLoading = false
     @State private var searchResults = [SearchResult]()
     @State private var debounceTask: DispatchWorkItem?
-
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -101,20 +101,13 @@ struct SearchMainView: View {
                         .padding()
                 } else {
                     List(searchResults.sorted(by: { $0.population > $1.population })) { result in
-                        
-                        let matchingCities = cities.filter {
-                                $0.latitude == result.latitude && $0.longitude == result.longitude
-                            }
-                        
-                        let searchedCity: City = matchingCities.first ?? City(name: result.title, latitude: result.latitude ?? 0, longitude: result.longitude ?? 0, bucketList: false, isVisited: false, country: result.country, admin: result.admin)
-                        
-                        ZStack {
-                            SearchListMember(result: result)
-                                .listRowBackground(Color("Background"))
-                            NavigationLink(destination: CityDetailView(city: searchedCity)) {
-                                EmptyView()
-                            }
-                        }
+                         ZStack {
+                             SearchListMember(result: result)
+                                 .listRowBackground(Color("Background"))
+                             NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
+                                 EmptyView()
+                             }
+                         }
                         .listRowBackground(Color("Background"))
 
                         
@@ -158,24 +151,25 @@ struct SearchMainView: View {
         let currentQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         switch selectedCategory {
         case .cities:
-            DispatchQueue.global(qos: .userInitiated).async {
-                let results = DatabaseManager.shared.searchCities(query: currentQuery)
-                DispatchQueue.main.async {
+            Task {
+                do {
+                    let results = try await DatabaseManager.shared.searchCities(query: currentQuery)
                     self.searchResults = results
                     self.isLoading = false
+                } catch {
+                    self.searchResults = []
                 }
+               
             }
-
+            
         case .countries:
-            DispatchQueue.global(qos: .userInitiated).async {
-                let results = DatabaseManager.shared.searchCountries(query: currentQuery)
-                    .map { SearchResult(title: $0, subtitle: "", latitude: nil, longitude: nil, population: 0, country: "", admin: "") }
-                DispatchQueue.main.async {
+            Task {
+                let results = try await DatabaseManager.shared.searchCountries(query: currentQuery)
+                    .map { SearchResult(title: $0.name, subtitle: "", latitude: nil, longitude: nil, population: Int($0.population), country: "", admin: "", data_id: String($0.id)) }
                     self.searchResults = results
                     self.isLoading = false
-                }
             }
-
+                
         case .places:
             let request = MKLocalSearch.Request()
             request.naturalLanguageQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -186,7 +180,7 @@ struct SearchMainView: View {
                 isLoading = false
                 if let items = response?.mapItems {
                     self.searchResults = items.map {
-                        SearchResult(title: $0.name ?? "Unknown", subtitle: $0.placemark.title ?? "", latitude: nil, longitude: nil, population: 0, country: "", admin: "")
+                        SearchResult(title: $0.name ?? "Unknown", subtitle: $0.placemark.title ?? "", latitude: nil, longitude: nil, population: 0, country: "", admin: "", data_id: "")
                     }
                 }
             }
@@ -210,6 +204,6 @@ extension MKMapItem: @retroactive Identifiable {
 
 
 
-#Preview {
-    SearchMainView()
-}
+//#Preview {
+//    SearchMainView()
+//}
