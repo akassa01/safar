@@ -17,13 +17,13 @@ struct PlaceDisclosureGroup: View {
     
     var body: some View {
         DisclosureGroup("\(title) (\(places.count))") {
-            ForEach(places, id: \.id) { place in
+            ForEach(places, id: \.localKey) { place in
                 PlaceRowInList(
                     place: place,
                     color: color,
                     icon: icon,
                     onRemove: {
-                        places.removeAll { $0.id == place.id }
+                        places.removeAll { $0.localKey == place.localKey }
                     }
                 )
             }

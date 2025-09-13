@@ -19,7 +19,7 @@ struct FullScreenMapView: View {
     @State var cameraPosition: MapCameraPosition
     @Binding var mapPresentation: mapType
     
-    @ObservedObject var viewModel = UserCitiesViewModel()
+    @ObservedObject var viewModel: UserCitiesViewModel
 
     @Environment(\.dismiss) var dismiss
     
@@ -38,8 +38,12 @@ struct FullScreenMapView: View {
         ZStack {
             Map(position: $cameraPosition) {
                 ForEach(mapPins) { city in
-                    Marker(city.displayName, systemImage: city.visited ?? false ? "suitcase.fill" : "star.fill", coordinate: CLLocationCoordinate2D(latitude: city.latitude, longitude: city.longitude))
-                        .tint(city.visited ?? false ? .green : .yellow)
+                    Annotation(city.displayName, coordinate: CLLocationCoordinate2D(latitude: city.latitude, longitude: city.longitude)) {
+                        Circle()
+                            .fill((city.visited ?? false) ? Color.green : Color.yellow)
+                            .frame(width: 12, height: 12)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    }
                 }
             }
             .mapStyle(.standard)

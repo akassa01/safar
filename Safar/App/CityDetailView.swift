@@ -11,6 +11,7 @@ import PhotosUI
 
 struct CityDetailView: View {
     @StateObject private var viewModel = UserCitiesViewModel()
+    @StateObject private var placesViewModel = CityPlacesViewModel()
     @Environment(\.dismiss) private var dismiss
     
     let cityId: Int
@@ -154,16 +155,20 @@ struct CityDetailView: View {
         //         loadSelectedPhotos(newPhotos)
         //     }
         // }
-        // .sheet(item: $activePlaceCategory) { category in
-        //     PlaceSearchView(
-        //         cityCoordinate: city.coordinate,
-        //         category: category,
-        //         onPlacesSelected: { places in
-        //             addPlaces(places)
-        //             activePlaceCategory = nil
-        //         }
-        //     )
-        // }
+        .sheet(item: $activePlaceCategory) { category in
+            if let city = city {
+                PlaceSearchView(
+                    cityCoordinate: CLLocationCoordinate2D(latitude: city.latitude, longitude: city.longitude),
+                    category: category,
+                    onPlacesSelected: { places in
+                        Task {
+                            await placesViewModel.addPlaces(places, to: city.id)
+                            activePlaceCategory = nil
+                        }
+                    }
+                )
+            }
+        }
         .alert("Delete City", isPresented: $showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 deleteCity()
@@ -237,66 +242,67 @@ struct CityDetailView: View {
     
     private var visitedCityContent: some View {
         VStack(spacing: 20) {
-//            mapSection
-//            placesSection
+            mapSection
+            placesSection
             notesSection
-//            photosSection
+            // photosSection (optional)
         }
         .padding()
     }
     
-//    private var mapSection: some View {
-//        VStack(alignment: .leading, spacing: 12) {
-//            SectionHeader(title: "City Map", icon: "map.fill")
-//            
-//            Map(position: $mapCameraPosition, selection: $selectedPlace) {
-//                // Place markers
-//                ForEach(city.places, id: \.id) { place in
-//                    Marker(place.name, coordinate: place.coordinate)
-//                        .tint(place.category.systemColor)
-//                        .tag(place)
-//                }
-//            }
-//            .frame(height: 200)
-//            .cornerRadius(12)
-//            .overlay(
-//                RoundedRectangle(cornerRadius: 12)
-//                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-//            )
-//            
-//            // Map controls
-//            HStack {
-//                Button(action: {
-//                    withAnimation {
-//                        mapCameraPosition = .region(MKCoordinateRegion(
-//                            center: city.coordinate,
-//                            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-//                        ))
-//                    }
-//                }) {
-//                    Label("Reset View", systemImage: "location.circle")
-//                        .font(.caption)
-//                        .padding(.horizontal, 12)
-//                        .padding(.vertical, 6)
-//                        .background(Color.accentColor.opacity(0.1))
-//                        .foregroundColor(.accentColor)
-//                        .cornerRadius(16)
-//                }
-//                
-//                Spacer()
-//                
-//                // MAYBE WE ADD A VIEW ON SELECTED PLACE FOR LIKES BALANCE
-////                if let selectedPlace = selectedPlace {
-////                    Text("Selected: \(selectedPlace.name)")
-////                        .font(.caption)
-////                        .foregroundColor(.secondary)
-////                }
-//            }
-//        }
-//        .padding()
-//        .background(Color("Background"))
-//        .cornerRadius(12)
-//    }
+    private var mapSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "City Map", icon: "map.fill")
+            if let city = city {
+                Map(position: $mapCameraPosition, selection: $selectedPlace) {
+
+                    // Place markers (flattened from categories) as circles
+                    let allPlaces = PlaceCategory.allCases.flatMap { category in
+                        placesViewModel.placesByCategory[category] ?? []
+                    }
+                    ForEach(allPlaces, id: \.localKey) { place in
+                        Annotation(place.name, coordinate: place.coordinate) {
+                            Circle()
+                                .fill(place.category.systemColor)
+                                .frame(width: 10, height: 10)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                        }
+                        .tag(place)
+                    }
+                }
+                .frame(height: 220)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                
+                // Map controls
+                HStack {
+                    Button(action: {
+                        withAnimation {
+                            mapCameraPosition = .region(MKCoordinateRegion(
+                                center: CLLocationCoordinate2D(latitude: city.latitude, longitude: city.longitude),
+                                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                            ))
+                        }
+                    }) {
+                        Label("Reset View", systemImage: "location.circle")
+                            .font(.caption)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.accentColor.opacity(0.1))
+                            .foregroundColor(.accentColor)
+                            .cornerRadius(16)
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .padding()
+        .background(Color("Background"))
+        .cornerRadius(12)
+    }
     
     private var bucketListContent: some View {
         VStack(spacing: 20) {
@@ -411,39 +417,70 @@ struct CityDetailView: View {
 //        .cornerRadius(12)
 //    }
     
-//    private var placesSection: some View {
-//        VStack(alignment: .leading, spacing: 16) {
-//            SectionHeader(title: "Places", icon: "mappin.and.ellipse")
-//            
-//            ForEach(PlaceCategory.allCases, id: \.self) { category in
-//                let categoryPlaces = city.places.filter { $0.category == category }
-//                
-//                PlaceCategorySection(
-//                    category: category,
-//                    places: categoryPlaces,
-//                    onAddPlaces: {
-//                        activePlaceCategory = category
-//                        showingPlaceSearch = true
-//                    },
-//                    onRemovePlace: { place in
-//                        removePlace(place)
-//                    },
-//                    onPlaceSelected: { place in
-//                        selectedPlace = place
-//                        withAnimation {
-//                            mapCameraPosition = .region(MKCoordinateRegion(
-//                                center: place.coordinate,
-//                                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-//                            ))
-//                        }
-//                    }
-//                )
-//            }
-//        }
-//        .padding()
-//        .background(Color("Background"))
-//        .cornerRadius(12)
-//    }
+    private var placesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                SectionHeader(title: "Places", icon: "mappin.and.ellipse")
+                Spacer()
+            }
+            ForEach(PlaceCategory.allCases, id: \.self) { category in
+                let categoryPlaces = placesViewModel.placesByCategory[category] ?? []
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: category.icon)
+                            .foregroundColor(category.systemColor)
+                        Text("\(category.pluralDisplayName) (\(categoryPlaces.count))")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Button {
+                            activePlaceCategory = category
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                    if categoryPlaces.isEmpty {
+                        Text("No \(category.pluralDisplayName.lowercased()) added yet")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 24)
+                    } else {
+                        ForEach(categoryPlaces, id: \.localKey) { place in
+                            HStack {
+                                Text(place.name)
+                                    .font(.subheadline)
+                                Spacer()
+                                HStack(spacing: 8) {
+                                    Button {
+                                        Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
+                                    } label: {
+                                        Image(systemName: place.liked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                            .foregroundColor(place.liked == true ? .green : .gray)
+                                    }
+                                    Button {
+                                        Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
+                                    } label: {
+                                        Image(systemName: place.liked == false ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                                            .foregroundColor(place.liked == false ? .red : .gray)
+                                    }
+                                    Button(role: .destructive) {
+                                        Task { await placesViewModel.deletePlace(placeId: place.id ?? 0, cityId: cityId) }
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color("Background"))
+        .cornerRadius(12)
+    }
     
     private var notesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -490,6 +527,10 @@ struct CityDetailView: View {
         
         await viewModel.initializeWithCurrentUser()
         let loadedCity = await viewModel.getCityById(cityId: cityId)
+        if let userId = viewModel.currentUserId {
+            placesViewModel.setUserId(userId)
+            await placesViewModel.loadPlaces(for: cityId)
+        }
         
         await MainActor.run {
             if let loadedCity = loadedCity {
@@ -616,6 +657,20 @@ struct CityDetailView: View {
     private func deleteCity() {
         Task {
             await viewModel.removeCityFromList(cityId: cityId)
+            // Reload data and adjust ratings for remaining cities if needed
+            await viewModel.loadUserData()
+            let remainingRatedCities = viewModel.visitedCities.filter { ($0.rating ?? 0) > 0 }
+            if let userId = viewModel.currentUserId, !remainingRatedCities.isEmpty {
+                let newRatings = computeAdjustedRatings(remainingCities: remainingRatedCities)
+                for (cityId, newRating) in newRatings {
+                    do {
+                        try await DatabaseManager.shared.updateUserCityRating(userId: userId, cityId: cityId, rating: newRating)
+                    } catch {
+                        print("Failed to update adjusted rating for city id \(cityId): \(error)")
+                    }
+                }
+                await viewModel.loadUserData()
+            }
             await MainActor.run {
                 dismiss()
             }
@@ -637,65 +692,49 @@ struct CityDetailView: View {
     // }
 
     // Main function to adjust ratings after deletion
-    // private func adjustRatingsAfterDeletion(remainingCities: [City]) {
-    //     guard !remainingCities.isEmpty else { return }
-    //     
-    //     print("Adjusting ratings after city deletion...")
-    //     
-    //     // Sort cities by current rating
-    //     let sortedCities = remainingCities.sorted { ($0.rating ?? 0) < ($1.rating ?? 0) }
-    //     
-    //     // Handle special cases for small numbers of cities
-    //     handleSpecialDeletionCases(remainingCities: remainingCities)
-    //     
-    //     // Ensure the highest rated city has 10.0
-    //     ensureHighestRatedCityHas10(cities: sortedCities)
-    // }
+    private func computeAdjustedRatings(remainingCities: [City]) -> [Int: Double] {
+        guard !remainingCities.isEmpty else { return [:] }
+        // Work on rated cities only
+        let rated = remainingCities.compactMap { city -> (Int, Double)? in
+            if let rating = city.rating { return (city.id, rating) }
+            return nil
+        }
+        guard !rated.isEmpty else { return [:] }
+        let count = rated.count
+        var adjusted: [Int: Double] = [:]
+        
+        if count == 1 {
+            adjusted[rated[0].0] = 10.0
+            return adjusted
+        }
+        if count >= 2 && count <= 4 {
+            let sorted = rated.sorted { $0.1 < $1.1 }
+            let spacing = 9.0 / Double(count - 1)
+            for (index, item) in sorted.enumerated() {
+                let newRating = min(10.0, max(1.0, 1.0 + spacing * Double(index)))
+                adjusted[item.0] = newRating
+            }
+            return adjusted
+        }
+        // count >= 5 → scale so max becomes 10
+        if let maxRating = rated.map({ $0.1 }).max(), maxRating > 0, maxRating < 10.0 {
+            let factor = 10.0 / maxRating
+            for (id, rating) in rated {
+                adjusted[id] = min(10.0, rating * factor)
+            }
+        } else {
+            // Already at or above 10; clamp to 10
+            for (id, rating) in rated {
+                adjusted[id] = min(10.0, rating)
+            }
+        }
+        return adjusted
+    }
 
-    // Ensure the highest rated city has 10.0 rating
-    // private func ensureHighestRatedCityHas10(cities: [City]) {
-    //     guard let highestRatedCity = cities.max(by: { ($0.rating ?? 0) < ($1.rating ?? 0) }),
-    //           let highestRating = highestRatedCity.rating else { return }
-    //     
-    //     if highestRating < 10.0 {
-    //         let scaleFactor = 10.0 / highestRating
-    //         
-    //         for city in cities {
-    //             if let rating = city.rating {
-    //                 city.rating = min(10.0, rating * scaleFactor)
-    //             }
-    //         }
-    //         
-    //         print("Scaled all ratings by factor: \(scaleFactor)")
-    //     }
-    // }
+    // Legacy comment retained, logic folded into computeAdjustedRatings
 
 
-    // Additional helper function for handling special cases
-    // private func handleSpecialDeletionCases(remainingCities: [City]) {
-    //     let ratedCities = remainingCities.filter { $0.rating != nil }
-    //     
-    //     // If we're down to fewer than 5 cities, we might want to adjust the rating system
-    //     if ratedCities.count < 5 {
-    //         print("Warning: Only \(ratedCities.count) rated cities remaining")
-    //         
-    //         // If only 1 city remains, ensure it has a 10.0 rating
-    //         if ratedCities.count == 1 {
-    //             ratedCities[0].rating = 10.0
-    //         }
-    //         
-    //         // If 2-4 cities remain, spread them out more evenly
-    //         if ratedCities.count >= 2 && ratedCities.count <= 4 {
-    //             let sortedCities = ratedCities.sorted { ($0.rating ?? 0) < ($1.rating ?? 0) }
-    //             let spacing = 9.0 / Double(sortedCities.count - 1) // From 1.0 to 10.0
-    //             
-    //             for (index, city) in sortedCities.enumerated() {
-    //                 let newRating = 1.0 + (spacing * Double(index))
-    //                 city.rating = min(10.0, max(1.0, newRating))
-    //             }
-    //         }
-    //     }
-    // }
+    // Special cases handled inside computeAdjustedRatings
 }
 
 //#Preview {

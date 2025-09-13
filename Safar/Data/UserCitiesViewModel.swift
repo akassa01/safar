@@ -75,38 +75,25 @@ class UserCitiesViewModel: ObservableObject {
     }
     
     func loadCountries(_ cities: [City]) async {
-        let citiesMap = Set(cities.compactMap { $0.country })
         error = nil
         do {
-              var countries: [String] = []
-              var continents: [String] = []
-              
-              for country in citiesMap {
-                  let result = try await databaseManager.getCountryAndContinent(forCountry: country)
-                  
-                  if let countryName = result.country {
-                      countries.append(countryName)
-                  }
-                  print("Countries visited: \(countries.count)")
-                  
-                  if let continentName = result.continent {
-                      continents.append(continentName)
-                  }
-                  print("Continents visited: \(continents.count)")
+            // Use countryId to avoid name-matching issues; dedupe IDs first
+            let countryIds = Array(Set(cities.map { $0.countryId }))
+            let countriesData = try await databaseManager.getCountriesByIds(countryIds)
 
-              }
-              
-              // Update the published vars on the main actor
-              await MainActor.run {
-                  self.visitedCountries = countries
-                  self.visitedContinents = continents
-              }
-              
-          } catch {
-              await MainActor.run {
-                  self.error = error
-              }
-          }
+            // Deduplicate names and continents
+            let uniqueCountryNames = Array(Set(countriesData.map { $0.name })).sorted()
+            let uniqueContinents = Array(Set(countriesData.map { $0.continent })).sorted()
+
+            await MainActor.run {
+                self.visitedCountries = uniqueCountryNames
+                self.visitedContinents = uniqueContinents
+            }
+        } catch {
+            await MainActor.run {
+                self.error = error
+            }
+        }
     }
     
     func addCityToBucketList(cityId: Int) async {

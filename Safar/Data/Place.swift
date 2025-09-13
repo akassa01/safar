@@ -35,15 +35,15 @@ import SwiftUI
 // }
 
 // Struct version for future Supabase implementation
-struct Place: Codable, Identifiable {
-    let id: Int
-    let name: String
-    let latitude: Double
-    let longitude: Double
-    let category: PlaceCategory
-    let cityId: Int
-    let userId: UUID
-    let liked: Bool?
+struct Place: Codable, Identifiable, Hashable {
+    var id: Int?
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var category: PlaceCategory
+    var cityId: Int?
+    var userId: UUID?
+    var liked: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -58,6 +58,31 @@ struct Place: Codable, Identifiable {
     
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+    
+    // For local de-duplication when id is not yet assigned by DB
+    var localKey: String {
+        "\(name)_\(latitude)_\(longitude)_\(category.rawValue)"
+    }
+    
+    init(
+        id: Int? = nil,
+        name: String,
+        latitude: Double,
+        longitude: Double,
+        category: PlaceCategory,
+        cityId: Int? = nil,
+        userId: UUID? = nil,
+        liked: Bool? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
+        self.category = category
+        self.cityId = cityId
+        self.userId = userId
+        self.liked = liked
     }
 }
 

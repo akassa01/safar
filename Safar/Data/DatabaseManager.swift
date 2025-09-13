@@ -188,6 +188,22 @@ class DatabaseManager {
             throw DatabaseError.networkError("Failed to get country data: \(error.localizedDescription)")
         }
     }
+
+    // Batch fetch countries by IDs to avoid repeated lookups and name-matching pitfalls
+    func getCountriesByIds(_ ids: [Int64]) async throws -> [Country] {
+        guard !ids.isEmpty else { return [] }
+        do {
+            let response: [Country] = try await supabase
+                .from("countries")
+                .select("id, name, country_code, capital, continent, population")
+                .in("id", values: ids.map { Int($0) })
+                .execute()
+                .value
+            return response
+        } catch {
+            throw DatabaseError.networkError("Failed to get countries by ids: \(error.localizedDescription)")
+        }
+    }
     
     // MARK: - Additional helper methods for user-specific data
     
@@ -353,7 +369,7 @@ extension DatabaseManager {
     }
     
     func markCityAsVisited(userId: UUID, cityId: Int, rating: Double? = nil, notes: String? = nil) async throws {
-        // If the user doesn't already have this city, insert it; otherwise update
+        // If the user doesn't already have this city, insert it; otherwise update existing fields
         if try await userHasCity(userId: userId, cityId: cityId) {
             try await updateUserCity(userId: userId, cityId: cityId, visited: true, rating: rating, notes: notes)
         } else {
@@ -488,6 +504,105 @@ extension DatabaseManager {
             return !response.isEmpty
         } catch {
             throw DatabaseError.networkError("Failed to check if user has city: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - Places (user_place) CRUD
+extension DatabaseManager {
+    struct UserPlaceInsert: Codable {
+        let name: String
+        let latitude: Double
+        let longitude: Double
+        let category: String
+        let cityId: Int
+        let userId: String
+        let liked: Bool?
+        
+        enum CodingKeys: String, CodingKey {
+            case name
+            case latitude
+            case longitude
+            case category
+            case cityId = "city_id"
+            case userId = "user_id"
+            case liked
+        }
+    }
+
+    /// Fetch all places created by a user for a given city
+    func getUserPlaces(userId: UUID, cityId: Int) async throws -> [Place] {
+        do {
+            let response: [Place] = try await supabase
+                .from("user_place")
+                .select("id, created_at, name, latitude, longitude, category, city_id, user_id, liked")
+                .eq("user_id", value: userId.uuidString)
+                .eq("city_id", value: cityId)
+                .execute()
+                .value
+            return response
+        } catch {
+            throw DatabaseError.networkError("Failed to get user places: \(error.localizedDescription)")
+        }
+    }
+
+    /// Insert multiple places for a user and city
+    func insertUserPlaces(userId: UUID, cityId: Int, places: [Place]) async throws {
+        guard !places.isEmpty else { return }
+        let payload: [UserPlaceInsert] = places.map { place in
+            UserPlaceInsert(
+                name: place.name,
+                latitude: place.latitude,
+                longitude: place.longitude,
+                category: place.category.rawValue,
+                cityId: cityId,
+                userId: userId.uuidString,
+                liked: place.liked
+            )
+        }
+        do {
+            try await supabase
+                .from("user_place")
+                .insert(payload)
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to insert user places: \(error.localizedDescription)")
+        }
+    }
+
+    /// Update liked status for a place
+    func updateUserPlaceLiked(placeId: Int, liked: Bool?) async throws {
+        do {
+            if let liked = liked {
+                try await supabase
+                    .from("user_place")
+                    .update(["liked": liked])
+                    .eq("id", value: placeId)
+                    .execute()
+            } else {
+                // Encode JSON null by using an Optional value inside a dictionary
+                let payload: [String: Bool?] = ["liked": nil]
+                try await supabase
+                    .from("user_place")
+                    .update(payload)
+                    .eq("id", value: placeId)
+                    .execute()
+            }
+        } catch {
+            throw DatabaseError.networkError("Failed to update place like: \(error.localizedDescription)")
+        }
+    }
+
+    /// Delete a place by id (only the user's own place should be removed in UI)
+    func deleteUserPlace(placeId: Int) async throws {
+        do {
+            try await supabase
+                .from("user_place")
+                .delete()
+                .eq("id", value: placeId)
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to delete place: \(error.localizedDescription)")
         }
     }
 }

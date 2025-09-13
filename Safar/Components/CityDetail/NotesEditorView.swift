@@ -59,6 +59,9 @@ struct NotesEditorView: View {
             }
         }
         .background(Color("Background"))
+        .task {
+            await viewModel.initializeWithCurrentUser()
+        }
         .overlay {
             if isLoading {
                 ProgressView()

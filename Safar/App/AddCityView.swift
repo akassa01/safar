@@ -88,19 +88,19 @@ struct AddCityView: View {
                 )
                 .presentationBackground(Color("Background"))
             }
-//            .sheet(item: $activePlaceCategory) { category in
-//                PlaceSearchView(
-//                    cityCoordinate: CLLocationCoordinate2D(
-//                        latitude: baseResult.latitude ?? 0,
-//                        longitude: baseResult.longitude ?? 0
-//                    ),
-//                    category: category,
-//                    onPlacesSelected: { places in
-//                        addPlaces(places)
-//                        activePlaceCategory = nil
-//                    }
-//                )
-//                    }
+            .sheet(item: $activePlaceCategory) { category in
+                PlaceSearchView(
+                    cityCoordinate: CLLocationCoordinate2D(
+                        latitude: baseResult.latitude ?? 0,
+                        longitude: baseResult.longitude ?? 0
+                    ),
+                    category: category,
+                    onPlacesSelected: { places in
+                        addPlaces(places)
+                        activePlaceCategory = nil
+                    }
+                )
+            }
         .onChange(of: selectedPhotos) { _, newPhotos in
             loadSelectedPhotos(newPhotos)
         }
@@ -154,6 +154,15 @@ struct AddCityView: View {
                 await viewModel.markCityAsVisited(cityId: cityId, rating: selectedRating, notes: notes)
             } else {
                 await viewModel.addCityToBucketList(cityId: cityId)
+            }
+            // After saving the city, insert any selected places for this city
+            let allPlaces = restaurants + hotels + activities + shops
+            if !allPlaces.isEmpty, let userId = viewModel.currentUserId {
+                do {
+                    try await DatabaseManager.shared.insertUserPlaces(userId: userId, cityId: cityId, places: allPlaces)
+                } catch {
+                    print("Failed to insert places: \(error)")
+                }
             }
             
             // Get the updated city data to pass to onSave
