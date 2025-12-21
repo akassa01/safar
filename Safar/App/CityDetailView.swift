@@ -114,7 +114,7 @@ struct CityDetailView: View {
                         data_id: String(city.id)
                     ),
                     isVisited: true,
-                    onSave: { city in
+                    onSave: { savedCity in
                         Task {
                             await loadCityData()
                         }

@@ -149,9 +149,12 @@ struct AddCityView: View {
             }
 
             let cityId = Int(baseResult.data_id) ?? 0
-            
+
+            print("🔵 AddCityView.saveCity() - cityId: \(cityId), isVisited: \(isVisited), rating: \(selectedRating ?? -1), notes: '\(notes)'")
+
             if isVisited {
                 await viewModel.markCityAsVisited(cityId: cityId, rating: selectedRating, notes: notes)
+                print("🔵 After markCityAsVisited call")
             } else {
                 await viewModel.addCityToBucketList(cityId: cityId)
             }
@@ -165,8 +168,11 @@ struct AddCityView: View {
                 }
             }
             
+            // Reload user data to get the updated city with rating
+            await viewModel.loadUserData()
+
             // Get the updated city data to pass to onSave
-            if let updatedCity = await viewModel.getCityById(cityId: cityId) {
+            if let updatedCity = viewModel.allUserCities.first(where: { $0.id == cityId }) {
                 await MainActor.run {
                     onSave(updatedCity)
                     dismiss()

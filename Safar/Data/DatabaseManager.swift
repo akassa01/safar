@@ -313,8 +313,12 @@ class DatabaseManager {
     }
     
     func updateUserCity(userId: UUID, cityId: Int, visited: Bool? = nil, rating: Double? = nil, notes: String? = nil) async throws {
+        print("🟡 updateUserCity - cityId: \(cityId), visited: \(visited?.description ?? "nil"), rating: \(rating ?? -1), notes: '\(notes ?? "nil")'")
+
         do {
+            // Update each field separately to ensure they're saved correctly
             if let visited = visited {
+                print("🟡 Updating visited to \(visited)")
                 try await supabase
                     .from("user_city")
                     .update(["visited": visited])
@@ -323,6 +327,7 @@ class DatabaseManager {
                     .execute()
             }
             if let rating = rating {
+                print("🟡 Updating rating to \(rating)")
                 try await supabase
                     .from("user_city")
                     .update(["rating": rating])
@@ -331,6 +336,7 @@ class DatabaseManager {
                     .execute()
             }
             if let notes = notes {
+                print("🟡 Updating notes to '\(notes)'")
                 try await supabase
                     .from("user_city")
                     .update(["notes": notes])
@@ -338,7 +344,9 @@ class DatabaseManager {
                     .eq("city_id", value: cityId)
                     .execute()
             }
+            print("🟡 updateUserCity completed successfully")
         } catch {
+            print("🔴 updateUserCity error: \(error)")
             throw DatabaseError.networkError("Failed to update user city: \(error.localizedDescription)")
         }
     }
@@ -370,10 +378,17 @@ extension DatabaseManager {
     
     func markCityAsVisited(userId: UUID, cityId: Int, rating: Double? = nil, notes: String? = nil) async throws {
         // If the user doesn't already have this city, insert it; otherwise update existing fields
-        if try await userHasCity(userId: userId, cityId: cityId) {
+        let hasCity = try await userHasCity(userId: userId, cityId: cityId)
+        print("🟢 markCityAsVisited - cityId: \(cityId), hasCity: \(hasCity), rating: \(rating ?? -1), notes: '\(notes ?? "")'")
+
+        if hasCity {
+            print("🟢 Calling updateUserCity")
             try await updateUserCity(userId: userId, cityId: cityId, visited: true, rating: rating, notes: notes)
+            print("🟢 updateUserCity completed")
         } else {
+            print("🟢 Calling addUserCity")
             try await addUserCity(userId: userId, cityId: cityId, visited: true, rating: rating, notes: notes ?? "")
+            print("🟢 addUserCity completed")
         }
     }
     

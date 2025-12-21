@@ -78,7 +78,7 @@ struct SearchListMember: View {
                 isVisited: true,
                 onSave: { city in
                     Task {
-                        await viewModel.markCityAsVisited(cityId: city.id, rating: city.rating)
+                        await viewModel.loadUserData()
                     }
                     print("Successfully saved city: \(city.id)")
                 }
