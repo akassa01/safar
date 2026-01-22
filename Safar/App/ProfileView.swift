@@ -8,14 +8,22 @@ struct ProfileView: View {
     @State var fullName = ""
     @State var bio = ""
     @State var joinDate = Date()
-    
+
     @State var isLoading = false
     @State var isEditing = false
     @State var showingSignOutAlert = false
-    
+
     @State var imageSelection: PhotosPickerItem?
     @State var avatarImage: AvatarImage?
-    
+
+    // Username change states
+    @State private var originalUsername = ""
+    @State private var showingUsernameChangeConfirmation = false
+    @State private var cooldownStatus: CooldownStatusResponse?
+    @State private var profileError: String?
+    @State private var showingErrorAlert = false
+    @StateObject private var usernameValidator = UsernameValidator()
+
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -80,13 +88,50 @@ struct ProfileView: View {
                             }
                             
                             if isEditing {
-                                TextField("Username", text: $username)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                                    .textContentType(.username)
-                                    .textInputAutocapitalization(.never)
+                                VStack(spacing: 4) {
+                                    HStack(spacing: 8) {
+                                        TextField("Username", text: $username)
+                                            .font(.subheadline)
+                                            .multilineTextAlignment(.center)
+                                            .textContentType(.username)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                            .padding(8)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(usernameValidator.isValid == false ? Color.red : Color.clear, lineWidth: 1.5)
+                                            )
+                                            .onChange(of: username) { _, newValue in
+                                                usernameValidator.checkAvailability(newValue, currentUsername: originalUsername)
+                                            }
+
+                                        // Availability indicator
+                                        if usernameValidator.isChecking {
+                                            ProgressView()
+                                                .scaleEffect(0.7)
+                                        } else if let isValid = usernameValidator.isValid {
+                                            Image(systemName: isValid ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                                .foregroundColor(isValid ? .accentColor : .red)
+                                        }
+                                    }
+
+                                    // Validation message
+                                    if let message = usernameValidator.validationMessage {
+                                        Text(message)
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+
+                                    // Cooldown warning
+                                    if let cooldown = cooldownStatus, !cooldown.canChange {
+                                        Text("You can change your username in \(cooldown.daysRemaining ?? 0) days")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                                .frame(maxWidth: 220)
                             } else {
                                 Text("@\(username.isEmpty ? "username" : username)")
                                     .font(.subheadline)
@@ -154,6 +199,8 @@ struct ProfileView: View {
                             .disabled(isLoading)
                             
                             Button(action: {
+                                // Reset to original values
+                                username = originalUsername
                                 isEditing = false
                             }) {
                                 Text("Cancel")
@@ -243,9 +290,33 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
+            .alert("Change Username?", isPresented: $showingUsernameChangeConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Change") {
+                    Task {
+                        await updateUsername()
+                    }
+                }
+            } message: {
+                Text("You can only change your username once every 30 days. Are you sure you want to change it to @\(username)?")
+            }
+            .alert("Error", isPresented: $showingErrorAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(profileError ?? "An unknown error occurred")
+            }
             .onChange(of: imageSelection) { _, newValue in
                 guard let newValue else { return }
                 loadTransferable(from: newValue)
+            }
+            .onChange(of: isEditing) { _, newValue in
+                if newValue {
+                    Task {
+                        await loadCooldownStatus()
+                    }
+                } else {
+                    usernameValidator.reset()
+                }
             }
         }
         .task {
@@ -267,6 +338,7 @@ struct ProfileView: View {
                 .value
             
             username = profile.username ?? ""
+            originalUsername = profile.username ?? ""
             fullName = profile.fullName ?? ""
             // Add bio field to your Profile model if not already present
             // bio = profile.bio ?? ""
@@ -281,6 +353,34 @@ struct ProfileView: View {
     }
     
     func updateProfileButtonTapped() {
+        let usernameChanged = username != originalUsername
+
+        // If username changed, check cooldown and show confirmation
+        if usernameChanged {
+            // Check if on cooldown
+            if let cooldown = cooldownStatus, !cooldown.canChange {
+                profileError = "You can change your username in \(cooldown.daysRemaining ?? 0) days"
+                showingErrorAlert = true
+                return
+            }
+
+            // Check validation
+            if usernameValidator.isValid == false {
+                profileError = usernameValidator.validationMessage ?? "Invalid username"
+                showingErrorAlert = true
+                return
+            }
+
+            // Show confirmation dialog
+            showingUsernameChangeConfirmation = true
+            return
+        }
+
+        // No username change, just save other profile fields
+        saveProfileWithoutUsername()
+    }
+
+    private func saveProfileWithoutUsername() {
         Task {
             isLoading = true
             defer {
@@ -289,24 +389,53 @@ struct ProfileView: View {
             }
             do {
                 let imageURL = try await uploadImage()
-                
+
                 let currentUser = try await supabase.auth.session.user
-                
+
+                // Update profile without username (use original)
                 let updatedProfile = Profile(
-                    username: username,
+                    username: originalUsername,
                     fullName: fullName,
                     avatarURL: imageURL
-                    // bio: bio // Add if you extend your Profile model
                 )
-                
+
                 try await supabase
                     .from("profiles")
                     .update(updatedProfile)
                     .eq("id", value: currentUser.id)
                     .execute()
             } catch {
-                debugPrint(error)
+                profileError = error.localizedDescription
+                showingErrorAlert = true
             }
+        }
+    }
+
+    private func updateUsername() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response = try await usernameValidator.updateUsername(username)
+            if response.success {
+                originalUsername = username
+                // Now save the rest of the profile
+                saveProfileWithoutUsername()
+            }
+        } catch let error as UsernameError {
+            profileError = error.localizedDescription
+            showingErrorAlert = true
+        } catch {
+            profileError = "Failed to update username. Please try again."
+            showingErrorAlert = true
+        }
+    }
+
+    private func loadCooldownStatus() async {
+        do {
+            cooldownStatus = try await usernameValidator.getCooldownStatus()
+        } catch {
+            // Silently fail - will be caught on save attempt
         }
     }
     
