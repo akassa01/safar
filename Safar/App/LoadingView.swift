@@ -8,28 +8,29 @@
 import SwiftUI
 
 struct LoadingView: View {
+    @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var isLoading = true
-    @State private var showConnectionError = false
     @State private var isAuthenticated = false
+    @State private var showOfflineView = false
     @State private var loadingComplete = false
-    
+
     var body: some View {
         ZStack {
             Color("Background")
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 Spacer()
-                
+
                 // App Logo (matching launch screen)
                 Image("safar_logo")
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: 280)
                     .padding(.horizontal, 24)
-                
+
                 Spacer()
-                
+
                 // Loading indicator
                 if isLoading {
                     VStack(spacing: 16) {
@@ -44,17 +45,14 @@ struct LoadingView: View {
         .task {
             await checkAuthenticationAndLoad()
         }
-        .alert("Connection Error", isPresented: $showConnectionError) {
-            Button("Retry") {
+        .fullScreenCover(isPresented: $showOfflineView) {
+            OfflineView {
+                showOfflineView = false
+                isLoading = true
                 Task {
                     await checkAuthenticationAndLoad()
                 }
             }
-            Button("Continue Offline") {
-                loadingComplete = true
-            }
-        } message: {
-            Text("Unable to connect to the server. Please check your internet connection and try again.")
         }
         .fullScreenCover(isPresented: $loadingComplete) {
             if isAuthenticated {
@@ -64,15 +62,34 @@ struct LoadingView: View {
             }
         }
     }
-    
+
     private func checkAuthenticationAndLoad() async {
-        // Show loading for a minimum time to allow Supabase to respond
         let minimumLoadingTime: TimeInterval = 2.0
         let startTime = Date()
-        
+
+        // First, check for a cached session (works offline - stored in Keychain)
+        let hasExistingSession = supabase.auth.currentSession != nil
+
+        // Check network connectivity
+        if !networkMonitor.isConnected {
+            await MainActor.run {
+                isLoading = false
+                if hasExistingSession {
+                    // User is logged in but offline - show offline screen
+                    isAuthenticated = true
+                    showOfflineView = true
+                } else {
+                    // User is not logged in and offline - they need network to sign in
+                    // Show offline screen (they can't do anything without network anyway)
+                    showOfflineView = true
+                }
+            }
+            return
+        }
+
+        // We have network - proceed with normal auth flow
         do {
-            // Check if we have a current session
-            if let session = supabase.auth.currentSession {
+            if hasExistingSession {
                 isAuthenticated = true
             } else {
                 // Listen for auth state changes
@@ -83,22 +100,24 @@ struct LoadingView: View {
                     }
                 }
             }
-            
+
             // Ensure minimum loading time
             let elapsedTime = Date().timeIntervalSince(startTime)
             if elapsedTime < minimumLoadingTime {
                 try await Task.sleep(nanoseconds: UInt64((minimumLoadingTime - elapsedTime) * 1_000_000_000))
             }
-            
+
             await MainActor.run {
                 isLoading = false
                 loadingComplete = true
             }
-            
+
         } catch {
+            // Network error during auth check - treat as offline
             await MainActor.run {
                 isLoading = false
-                showConnectionError = true
+                isAuthenticated = hasExistingSession
+                showOfflineView = true
             }
         }
     }
