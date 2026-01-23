@@ -17,4 +17,18 @@ struct Profile: Codable {
     }
   }
 
+struct ProfileSearchResult: Codable, Identifiable {
+    let id: String
+    let username: String?
+    let fullName: String?
+    let avatarURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case username
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+    }
+}
+
 

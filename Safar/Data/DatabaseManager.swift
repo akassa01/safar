@@ -621,3 +621,25 @@ extension DatabaseManager {
         }
     }
 }
+
+// MARK: - People Search
+extension DatabaseManager {
+    /// Search profiles by username or full name
+    func searchPeople(query: String) async throws -> [ProfileSearchResult] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        do {
+            let response: [ProfileSearchResult] = try await supabase
+                .from("profiles")
+                .select("id, username, full_name, avatar_url")
+                .or("username.ilike.%\(trimmed)%,full_name.ilike.%\(trimmed)%")
+                .limit(50)
+                .execute()
+                .value
+            return response
+        } catch {
+            throw DatabaseError.networkError("Failed to search people: \(error.localizedDescription)")
+        }
+    }
+}

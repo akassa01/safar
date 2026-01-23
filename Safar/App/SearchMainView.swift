@@ -44,6 +44,7 @@ struct SearchMainView: View {
 
     @State private var isLoading = false
     @State private var searchResults = [SearchResult]()
+    @State private var peopleResults = [ProfileSearchResult]()
     @State private var debounceTask: DispatchWorkItem?
     
     var body: some View {
@@ -95,6 +96,19 @@ struct SearchMainView: View {
                 if isLoading {
                     ProgressView()
                         .padding()
+                } else if selectedCategory == .people {
+                    if peopleResults.isEmpty && !searchText.isEmpty {
+                        Text("No results found")
+                            .foregroundColor(.secondary)
+                            .padding()
+                    } else {
+                        List(peopleResults) { person in
+                            PersonSearchRow(person: person)
+                                .listRowBackground(Color("Background"))
+                        }
+                        .listStyle(.plain)
+                        .background(Color("Background"))
+                    }
                 } else if searchResults.isEmpty && !searchText.isEmpty {
                     Text("No results found")
                         .foregroundColor(.secondary)
@@ -110,7 +124,7 @@ struct SearchMainView: View {
                          }
                         .listRowBackground(Color("Background"))
 
-                        
+
                     }
                     .listStyle(.plain)
                     .background(Color("Background"))
@@ -126,14 +140,18 @@ struct SearchMainView: View {
             }
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: selectedCategory) {
+                performSearch()
+            }
         }
     }
 
     private func performSearch() {
         debounceTask?.cancel()
-        
+
         guard !searchText.isEmpty else {
             searchResults = []
+            peopleResults = []
             return
         }
 
@@ -186,8 +204,15 @@ struct SearchMainView: View {
             }
 
         case .people:
-            searchResults = []
-            isLoading = false
+            Task {
+                do {
+                    let results = try await DatabaseManager.shared.searchPeople(query: currentQuery)
+                    self.peopleResults = results
+                } catch {
+                    self.peopleResults = []
+                }
+                self.isLoading = false
+            }
         }
     }
 }
@@ -204,6 +229,65 @@ extension MKMapItem: @retroactive Identifiable {
 
 
 
+struct PersonSearchRow: View {
+    let person: ProfileSearchResult
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: avatarURL) { phase in
+                switch phase {
+                case .empty:
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.gray)
+                        )
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                case .failure:
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.gray)
+                        )
+                @unknown default:
+                    Circle()
+                        .fill(Color(.systemGray5))
+                }
+            }
+            .frame(width: 44, height: 44)
+
+            VStack(alignment: .leading, spacing: 2) {
+                if let fullName = person.fullName, !fullName.isEmpty {
+                    Text(fullName)
+                        .font(.body)
+                        .fontWeight(.medium)
+                }
+                if let username = person.username, !username.isEmpty {
+                    Text("@\(username)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .background(Color("Background"))
+    }
+
+    private var avatarURL: URL? {
+        guard let path = person.avatarURL, !path.isEmpty else { return nil }
+        return supabaseBaseURL.appendingPathComponent("storage/v1/object/public/avatars/\(path)")
+    }
+}
+
 //#Preview {
 //    SearchMainView()
 //}
+
