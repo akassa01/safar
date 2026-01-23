@@ -8,9 +8,6 @@
 import SwiftUI
 
 struct TopBar: View {
-    
-    @State private var showPopover = false
-    
     var body: some View {
         NavigationStack {
             HStack {
@@ -24,35 +21,10 @@ struct TopBar: View {
                 Spacer()
                
                 HStack(spacing: 20) {
-                    
-                    Button(action: {
-                        showPopover = true
-                    }, label: {
-                        Image(systemName: "bell")
-                            .foregroundColor(Color.accentColor)
-                    })
-                    .popover(isPresented: $showPopover, arrowEdge: .top) {
-                        
-                        NotificationsView()
-                            .presentationCompactAdaptation(.popover)
-                            
-                    }
-                    .presentationBackground(Color("Background"))
-                   
-                    
                     NavigationLink(destination: {
                         ProfileView()
                     }, label: {
                         Image(systemName: "person.crop.circle")
-                            .foregroundColor(Color.accentColor)
-                    })
-                   
-                    
-                    
-                    NavigationLink(destination: {
-                        SettingsView()
-                    }, label: {
-                        Image(systemName: "gearshape")
                             .foregroundColor(Color.accentColor)
                     })
                 }

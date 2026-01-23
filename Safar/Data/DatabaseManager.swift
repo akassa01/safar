@@ -112,21 +112,24 @@ class DatabaseManager {
     }
     
     func searchCities(query: String) async throws -> [SearchResult] {
+        // Use fuzzy search for better matching
+        return try await searchCitiesFuzzy(query: query, similarityThreshold: 0.3)
+    }
+
+    func searchCitiesByDisplayName(query: String) async throws -> [SearchResult] {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw DatabaseError.invalidData
         }
-        
-        let normalizedQuery = normalizeForSearch(query)
-        
+
         do {
             let response: [City] = try await supabase
                 .from("cities")
                 .select("id, display_name, plain_name, admin, country, country_id, population, latitude, longitude, created_at")
-                .ilike("plain_name", pattern: "%\(normalizedQuery)%")
+                .ilike("display_name", pattern: "%\(query)%")
                 .limit(50)
                 .execute()
                 .value
-            
+
             return response.map { city in
                 let subtitle = [city.admin, city.country].filter { !$0.isEmpty }.joined(separator: ", ")
                 return SearchResult(
@@ -144,7 +147,66 @@ class DatabaseManager {
             throw DatabaseError.networkError("Failed to search cities: \(error.localizedDescription)")
         }
     }
-    
+
+    func searchCitiesFuzzy(query: String, similarityThreshold: Double = 0.3) async throws -> [SearchResult] {
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw DatabaseError.invalidData
+        }
+
+        struct FuzzyResult: Codable {
+            let id: Int
+            let displayName: String
+            let plainName: String
+            let admin: String
+            let country: String
+            let countryId: Int
+            let population: Int
+            let latitude: Double
+            let longitude: Double
+            let similarityScore: Double
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case displayName = "display_name"
+                case plainName = "plain_name"
+                case admin
+                case country
+                case countryId = "country_id"
+                case population
+                case latitude
+                case longitude
+                case similarityScore = "similarity_score"
+            }
+        }
+
+        do {
+            let response: [FuzzyResult] = try await supabase
+                .rpc("search_cities_fuzzy", params: [
+                    "search_query": query,
+                    "similarity_threshold": similarityThreshold,
+                    "result_limit": 50
+                ])
+                .execute()
+                .value
+
+            return response.map { city in
+                let subtitle = [city.admin, city.country].filter { !$0.isEmpty }.joined(separator: ", ")
+                return SearchResult(
+                    title: city.displayName,
+                    subtitle: subtitle,
+                    latitude: city.latitude,
+                    longitude: city.longitude,
+                    population: city.population,
+                    country: city.country,
+                    admin: city.admin,
+                    data_id: String(city.id)
+                )
+            }
+        } catch {
+            throw DatabaseError.networkError("Failed to fuzzy search cities: \(error.localizedDescription)")
+        }
+    }
+
     func searchCountries(query: String) async throws -> [Country] {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw DatabaseError.invalidData

@@ -8,8 +8,188 @@
 import SwiftUI
 
 struct ExploreView: View {
+    @EnvironmentObject var userCitiesViewModel: UserCitiesViewModel
+    @StateObject private var recommendationsViewModel = RecommendationsViewModel()
+
+    private var visitedCount: Int {
+        userCitiesViewModel.visitedCities.count
+    }
+
+    private var isUnlocked: Bool {
+        visitedCount >= recommendationsViewModel.minimumCitiesRequired
+    }
+
     var body: some View {
-        Text("There's so much more to explore!")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                HStack {
+                    Text("Explore")
+                        .font(.largeTitle)
+                        .bold()
+                    Spacer()
+                }
+                .padding(.horizontal)
+
+                recommendationsSection
+            }
+            .padding(.vertical)
+        }
+        .background(Color("Background"))
+        .onAppear {
+            loadRecommendations()
+        }
+    }
+
+    @ViewBuilder
+    private var recommendationsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Recommended for You")
+                        .font(.title2)
+                        .bold()
+                    Text("Powered by Apple Intelligence")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if isUnlocked && !recommendationsViewModel.isLoading {
+                    Button(action: {
+                        Task {
+                            await recommendationsViewModel.reload(
+                                visitedCities: userCitiesViewModel.visitedCities
+                            )
+                        }
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundColor(.accentColor)
+                    }
+                }
+            }
+            .padding(.horizontal)
+
+            if !isUnlocked {
+                lockedStateView
+            } else if recommendationsViewModel.isLoading {
+                loadingView
+            } else if let error = recommendationsViewModel.error {
+                errorView(error: error)
+            } else if recommendationsViewModel.recommendations.isEmpty {
+                emptyView
+            } else {
+                RecommendationGrid(
+                    recommendations: recommendationsViewModel.recommendations
+                )
+            }
+        }
+    }
+
+    private var lockedStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "lock.circle")
+                .font(.system(size: 44))
+                .foregroundColor(.accentColor.opacity(0.6))
+
+            VStack(spacing: 8) {
+                Text("Unlock Recommendations")
+                    .font(.headline)
+
+                Text("Visit and rate at least 10 cities to get personalized AI recommendations.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(spacing: 4) {
+                Text("\(visitedCount)")
+                    .font(.title2)
+                    .bold()
+                    .foregroundColor(.accentColor)
+                Text("/ \(recommendationsViewModel.minimumCitiesRequired) cities")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            ProgressView(value: Double(visitedCount), total: Double(recommendationsViewModel.minimumCitiesRequired))
+                .tint(.accentColor)
+                .padding(.horizontal, 40)
+        }
+        .frame(height: 220)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal)
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("Generating recommendations...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func errorView(error: RecommendationError) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 40))
+                .foregroundColor(.orange.opacity(0.7))
+
+            Text(error.localizedDescription)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button(action: {
+                Task {
+                    await recommendationsViewModel.generateRecommendations(
+                        visitedCities: userCitiesViewModel.visitedCities
+                    )
+                }
+            }) {
+                Text("Try Again")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.accentColor)
+                    .foregroundColor(Color("Background"))
+                    .cornerRadius(20)
+            }
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal)
+    }
+
+    private var emptyView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 40))
+                .foregroundColor(.accentColor.opacity(0.5))
+            Text("No recommendations available yet.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal)
+    }
+
+    private func loadRecommendations() {
+        recommendationsViewModel.loadCachedRecommendations()
+
+        if !recommendationsViewModel.hasLoadedFromCache && isUnlocked {
+            Task {
+                await recommendationsViewModel.generateRecommendations(
+                    visitedCities: userCitiesViewModel.visitedCities
+                )
+            }
+        }
     }
 }
 
