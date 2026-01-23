@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct YourCitiesView: View {
-    @StateObject private var viewModel = UserCitiesViewModel()
+    @EnvironmentObject var viewModel: UserCitiesViewModel
 
     @State private var selectedTab: CityTab = .visited
     @State private var cityToDelete: City?
@@ -61,14 +61,6 @@ struct YourCitiesView: View {
                 .background(Color("Background"))
             }
             .background(Color("Background"))
-        }
-        .task {
-            await viewModel.initializeWithCurrentUser()
-        }
-        .overlay {
-            if viewModel.isLoading {
-                ProgressView()
-            }
         }
     }
         

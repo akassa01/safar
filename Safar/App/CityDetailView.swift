@@ -10,7 +10,7 @@ import MapKit
 import PhotosUI
 
 struct CityDetailView: View {
-    @StateObject private var viewModel = UserCitiesViewModel()
+    @EnvironmentObject var viewModel: UserCitiesViewModel
     @StateObject private var placesViewModel = CityPlacesViewModel()
     @Environment(\.dismiss) private var dismiss
     
@@ -121,11 +121,13 @@ struct CityDetailView: View {
                         }
                     }
                 )
+                .environmentObject(viewModel)
             }
         }
         .sheet(isPresented: $showingNotesEditor) {
             if let city = city {
                 NotesEditorView(city: city)
+                    .environmentObject(viewModel)
             }
         }
         .sheet(isPresented: $showingRatingView) {
@@ -531,12 +533,14 @@ struct CityDetailView: View {
 
     private func openInAppleMaps(place: Place) {
         let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: place.coordinate))
-        mapItem.name = place.name
+//        mapItem.name = place.name
         mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault])
     }
 
-    private func loadCityData() async {
-        isLoading = true
+    private func loadCityData(showLoading: Bool = true) async {
+        if showLoading {
+            isLoading = true
+        }
         errorMessage = nil
         
         await viewModel.initializeWithCurrentUser()
@@ -564,12 +568,14 @@ struct CityDetailView: View {
     private func addToBucketList() {
         Task {
             await viewModel.addCityToBucketList(cityId: cityId)
+            await loadCityData(showLoading: false)
         }
     }
-    
+
     private func removeFromBucketList() {
         Task {
             await viewModel.removeCityFromList(cityId: cityId)
+            await loadCityData(showLoading: false)
         }
     }
     

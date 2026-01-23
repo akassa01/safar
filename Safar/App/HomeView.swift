@@ -18,7 +18,7 @@ struct HomeView: View {
     @State private var exploreNavigationPath = NavigationPath()
     @State private var feedNavigationPath = NavigationPath()
     
-    @StateObject var viewModel = UserCitiesViewModel()
+    @EnvironmentObject var viewModel: UserCitiesViewModel
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -111,6 +111,7 @@ struct HomeView: View {
                 .background(Color("Background"))
                 .fullScreenCover(isPresented: $showSearchScreen) {
                     SearchMainView()
+                        .environmentObject(viewModel)
                 }
                 .fullScreenCover(isPresented: $isMapExpanded) {
                     FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel)

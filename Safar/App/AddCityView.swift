@@ -12,7 +12,7 @@ import PhotosUI
 
 struct AddCityView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject var viewModel = UserCitiesViewModel()
+    @EnvironmentObject var viewModel: UserCitiesViewModel
 
     let baseResult: SearchResult
     let isVisited: Bool
@@ -103,9 +103,6 @@ struct AddCityView: View {
             }
         .onChange(of: selectedPhotos) { _, newPhotos in
             loadSelectedPhotos(newPhotos)
-        }
-        .task {
-            await viewModel.initializeWithCurrentUser()
         }
         }
     }

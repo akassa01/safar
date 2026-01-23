@@ -9,7 +9,7 @@ import SwiftUI
 
 struct NotesEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel = UserCitiesViewModel()
+    @EnvironmentObject var viewModel: UserCitiesViewModel
     
     let city: City
     @State private var notes: String
@@ -59,9 +59,6 @@ struct NotesEditorView: View {
             }
         }
         .background(Color("Background"))
-        .task {
-            await viewModel.initializeWithCurrentUser()
-        }
         .overlay {
             if isLoading {
                 ProgressView()

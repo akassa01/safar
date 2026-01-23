@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LoadingView: View {
     @StateObject private var networkMonitor = NetworkMonitor.shared
+    @StateObject private var userCitiesViewModel = UserCitiesViewModel()
     @State private var isLoading = true
     @State private var isAuthenticated = false
     @State private var showOfflineView = false
@@ -57,6 +58,7 @@ struct LoadingView: View {
         .fullScreenCover(isPresented: $loadingComplete) {
             if isAuthenticated {
                 HomeView()
+                    .environmentObject(userCitiesViewModel)
             } else {
                 AuthView()
             }

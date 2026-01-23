@@ -17,8 +17,8 @@ struct SearchListMember: View {
     @State private var tempCityResult: SearchResult? = nil
     
     var result: SearchResult
-    
-    @StateObject private var viewModel = UserCitiesViewModel()
+
+    @EnvironmentObject var viewModel: UserCitiesViewModel
     
     var body: some View {
         HStack {
@@ -83,11 +83,9 @@ struct SearchListMember: View {
                     print("Successfully saved city: \(city.id)")
                 }
             )
+            .environmentObject(viewModel)
         }
         .padding(.vertical, 8)
         .background(Color("Background"))
-        .task {
-            await viewModel.initializeWithCurrentUser()
-        }
     }
 }
