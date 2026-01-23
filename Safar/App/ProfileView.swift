@@ -10,7 +10,6 @@ struct ProfileView: View {
     @State var joinDate = Date()
 
     @State var isLoading = false
-    @State var isEditing = false
     @State var showingSignOutAlert = false
 
     @State var imageSelection: PhotosPickerItem?
@@ -18,14 +17,16 @@ struct ProfileView: View {
 
     // Username change states
     @State private var originalUsername = ""
+    @State private var originalBio = ""
+    @State private var isEditingUsername = false
     @State private var showingUsernameChangeConfirmation = false
     @State private var cooldownStatus: CooldownStatusResponse?
     @State private var profileError: String?
     @State private var showingErrorAlert = false
     @StateObject private var usernameValidator = UsernameValidator()
 
-    @Environment(\.dismiss) private var dismiss
-    
+    @FocusState private var isBioFocused: Bool
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -55,7 +56,7 @@ struct ProfileView: View {
                                 Circle()
                                     .stroke(Color(.systemBackground), lineWidth: 4)
                             )
-                            
+
                             // Edit Button Overlay
                             PhotosPicker(selection: $imageSelection, matching: .images) {
                                 Image(systemName: "camera.fill")
@@ -71,36 +72,29 @@ struct ProfileView: View {
                             }
                             .offset(x: 40, y: 40)
                         }
-                        
+
                         // User Info
                         VStack(spacing: 4) {
-                            if isEditing {
-                                TextField("Full Name", text: $fullName)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .multilineTextAlignment(.center)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                            } else {
-                                Text(fullName.isEmpty ? "Add your name" : fullName)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(fullName.isEmpty ? .gray : .primary)
-                            }
-                            
-                            if isEditing {
-                                VStack(spacing: 4) {
+                            // Name (display only)
+                            Text(fullName.isEmpty ? "Add your name" : fullName)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(fullName.isEmpty ? .gray : .primary)
+
+                            // Username with edit button
+                            if isEditingUsername {
+                                VStack(spacing: 8) {
                                     HStack(spacing: 8) {
                                         TextField("Username", text: $username)
                                             .font(.subheadline)
-                                            .multilineTextAlignment(.center)
                                             .textContentType(.username)
                                             .textInputAutocapitalization(.never)
                                             .autocorrectionDisabled()
-                                            .padding(8)
+                                            .padding(10)
                                             .background(Color(.systemGray6))
-                                            .cornerRadius(8)
+                                            .cornerRadius(10)
                                             .overlay(
-                                                RoundedRectangle(cornerRadius: 8)
+                                                RoundedRectangle(cornerRadius: 10)
                                                     .stroke(usernameValidator.isValid == false ? Color.red : Color.clear, lineWidth: 1.5)
                                             )
                                             .onChange(of: username) { _, newValue in
@@ -130,12 +124,67 @@ struct ProfileView: View {
                                             .font(.caption)
                                             .foregroundColor(.orange)
                                     }
+
+                                    // Save/Cancel buttons for username
+                                    HStack(spacing: 12) {
+                                        Button {
+                                            username = originalUsername
+                                            isEditingUsername = false
+                                            usernameValidator.reset()
+                                        } label: {
+                                            Text("Cancel")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.primary)
+                                                .padding(.horizontal, 20)
+                                                .padding(.vertical, 8)
+                                                .background(Color(.systemGray5))
+                                                .cornerRadius(8)
+                                        }
+
+                                        Button {
+                                            saveUsernameChange()
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                if isLoading {
+                                                    ProgressView()
+                                                        .scaleEffect(0.7)
+                                                        .tint(.white)
+                                                } else {
+                                                    Text("Save")
+                                                }
+                                            }
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 20)
+                                            .padding(.vertical, 8)
+                                            .background(Color.accentColor)
+                                            .cornerRadius(8)
+                                        }
+                                        .disabled(isLoading || usernameValidator.isValid == false || username == originalUsername)
+                                    }
+                                    .padding(.top, 4)
                                 }
-                                .frame(maxWidth: 220)
+                                .frame(maxWidth: 280)
+                                .padding(.top, 8)
                             } else {
-                                Text("@\(username.isEmpty ? "username" : username)")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                HStack(spacing: 6) {
+                                    Text("@\(username.isEmpty ? "username" : username)")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+
+                                    Button {
+                                        Task {
+                                            await loadCooldownStatus()
+                                        }
+                                        isEditingUsername = true
+                                    } label: {
+                                        Image(systemName: "pencil")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal)
@@ -143,143 +192,67 @@ struct ProfileView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 30)
                     .background(Color("Background"))
-                    
+
                     // Bio Section
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         HStack {
-                            Text("About")
+                            Text("Bio")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             Spacer()
                         }
-                        
-                        if isEditing {
-                            TextField("Tell others about your travel experiences...", text: $bio, axis: .vertical)
-                                .lineLimit(3...6)
-                                .padding()
-                                .background(Color(.systemGray6))
-                                .cornerRadius(12)
-                        } else {
-                            Text(bio.isEmpty ? "Tell others about your travel experiences..." : bio)
-                                .font(.body)
-                                .foregroundColor(bio.isEmpty ? .gray : .primary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-                                .background(Color(.systemGray6))
-                                .cornerRadius(12)
-                        }
+
+                        TextField("Tell others about your travel experiences...", text: $bio, axis: .vertical)
+                            .lineLimit(3...6)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            .focused($isBioFocused)
+                            .onChange(of: isBioFocused) { _, focused in
+                                if !focused && bio != originalBio {
+                                    saveBio()
+                                }
+                            }
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 24)
-                    
-                    // Action Buttons
+
+                    // Sign Out Button
                     VStack(spacing: 12) {
-                        if isEditing {
-                            Button(action: {
-                                updateProfileButtonTapped()
-                            }) {
-                                HStack {
-                                    if isLoading {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "checkmark")
-                                        Text("Save Changes")
-                                    }
-                                }
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(Color.accentColor)
-                                .cornerRadius(20)
-                            }
-                            .disabled(isLoading)
-                            
-                            Button(action: {
-                                // Reset to original values
-                                username = originalUsername
-                                isEditing = false
-                            }) {
-                                Text("Cancel")
+                        Divider()
+                            .padding(.vertical, 8)
+
+                        Button(action: {
+                            showingSignOutAlert = true
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.right.square")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.red)
+                                Text("Sign Out")
                                     .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 50)
-                                    .background(Color(.systemGray5))
-                                    .cornerRadius(20)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.red)
+                                Spacer()
                             }
-                        } else {
-                            Button(action: {
-                                isEditing = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "pencil")
-                                    Text("Edit Profile")
-                                }
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(Color.accentColor)
-                                .cornerRadius(20)
-                            }
-                        }
-                        
-                        // Settings and other actions
-                        if !isEditing {
-                            VStack(spacing: 8) {
-                                ProfileActionRow(icon: "questionmark.circle", title: "Help & Support", action: {
-                                    // Navigate to help
-                                })
-                                
-                                ProfileActionRow(icon: "info.circle", title: "About Safar", action: {
-                                    // Navigate to about
-                                })
-                                
-                                Divider()
-                                    .padding(.vertical, 8)
-                                
-                                Button(action: {
-                                    showingSignOutAlert = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "arrow.right.square")
-                                            .font(.system(size: 18))
-                                            .foregroundColor(.red)
-                                        Text("Sign Out")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.red)
-                                        Spacer()
-                                    }
-                                    .padding()
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(12)
-                                }
-                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
                         }
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 24)
-                    
+
                     Spacer(minLength: 100)
                 }
             }
             .background(Color("Background"))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isBioFocused = false
+            }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
             .alert("Sign Out", isPresented: $showingSignOutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {
@@ -309,25 +282,16 @@ struct ProfileView: View {
                 guard let newValue else { return }
                 loadTransferable(from: newValue)
             }
-            .onChange(of: isEditing) { _, newValue in
-                if newValue {
-                    Task {
-                        await loadCooldownStatus()
-                    }
-                } else {
-                    usernameValidator.reset()
-                }
-            }
         }
         .task {
             await getInitialProfile()
         }
     }
-    
+
     func getInitialProfile() async {
         do {
             let currentUser = try await supabase.auth.session.user
-            
+
             let profile: Profile =
             try await supabase
                 .from("profiles")
@@ -336,79 +300,39 @@ struct ProfileView: View {
                 .single()
                 .execute()
                 .value
-            
+
             username = profile.username ?? ""
             originalUsername = profile.username ?? ""
             fullName = profile.fullName ?? ""
-            // Add bio field to your Profile model if not already present
-            // bio = profile.bio ?? ""
-            
+            bio = profile.bio ?? ""
+            originalBio = profile.bio ?? ""
+
             if let avatarURL = profile.avatarURL, !avatarURL.isEmpty {
                 try await downloadImage(path: avatarURL)
             }
-            
+
         } catch {
             debugPrint(error)
         }
     }
-    
-    func updateProfileButtonTapped() {
-        let usernameChanged = username != originalUsername
 
-        // If username changed, check cooldown and show confirmation
-        if usernameChanged {
-            // Check if on cooldown
-            if let cooldown = cooldownStatus, !cooldown.canChange {
-                profileError = "You can change your username in \(cooldown.daysRemaining ?? 0) days"
-                showingErrorAlert = true
-                return
-            }
-
-            // Check validation
-            if usernameValidator.isValid == false {
-                profileError = usernameValidator.validationMessage ?? "Invalid username"
-                showingErrorAlert = true
-                return
-            }
-
-            // Show confirmation dialog
-            showingUsernameChangeConfirmation = true
+    private func saveUsernameChange() {
+        // Check if on cooldown
+        if let cooldown = cooldownStatus, !cooldown.canChange {
+            profileError = "You can change your username in \(cooldown.daysRemaining ?? 0) days"
+            showingErrorAlert = true
             return
         }
 
-        // No username change, just save other profile fields
-        saveProfileWithoutUsername()
-    }
-
-    private func saveProfileWithoutUsername() {
-        Task {
-            isLoading = true
-            defer {
-                isLoading = false
-                isEditing = false
-            }
-            do {
-                let imageURL = try await uploadImage()
-
-                let currentUser = try await supabase.auth.session.user
-
-                // Update profile without username (use original)
-                let updatedProfile = Profile(
-                    username: originalUsername,
-                    fullName: fullName,
-                    avatarURL: imageURL
-                )
-
-                try await supabase
-                    .from("profiles")
-                    .update(updatedProfile)
-                    .eq("id", value: currentUser.id)
-                    .execute()
-            } catch {
-                profileError = error.localizedDescription
-                showingErrorAlert = true
-            }
+        // Check validation
+        if usernameValidator.isValid == false {
+            profileError = usernameValidator.validationMessage ?? "Invalid username"
+            showingErrorAlert = true
+            return
         }
+
+        // Show confirmation dialog
+        showingUsernameChangeConfirmation = true
     }
 
     private func updateUsername() async {
@@ -419,8 +343,8 @@ struct ProfileView: View {
             let response = try await usernameValidator.updateUsername(username)
             if response.success {
                 originalUsername = username
-                // Now save the rest of the profile
-                saveProfileWithoutUsername()
+                isEditingUsername = false
+                usernameValidator.reset()
             }
         } catch let error as UsernameError {
             profileError = error.localizedDescription
@@ -431,6 +355,24 @@ struct ProfileView: View {
         }
     }
 
+    private func saveBio() {
+        Task {
+            do {
+                let currentUser = try await supabase.auth.session.user
+
+                try await supabase
+                    .from("profiles")
+                    .update(["bio": bio])
+                    .eq("id", value: currentUser.id)
+                    .execute()
+
+                originalBio = bio
+            } catch {
+                debugPrint(error)
+            }
+        }
+    }
+
     private func loadCooldownStatus() async {
         do {
             cooldownStatus = try await usernameValidator.getCooldownStatus()
@@ -438,68 +380,47 @@ struct ProfileView: View {
             // Silently fail - will be caught on save attempt
         }
     }
-    
+
     private func loadTransferable(from imageSelection: PhotosPickerItem) {
         Task {
             do {
-                avatarImage = try await imageSelection.loadTransferable(type: AvatarImage.self)
+                guard let loadedImage = try await imageSelection.loadTransferable(type: AvatarImage.self) else { return }
+                avatarImage = loadedImage
+                // Save avatar immediately after selection
+                await saveAvatar(imageData: loadedImage.data)
             } catch {
                 debugPrint(error)
             }
         }
     }
-    
+
+    private func saveAvatar(imageData: Data) async {
+        do {
+            let filePath = "\(UUID().uuidString).jpeg"
+
+            try await supabase.storage
+                .from("avatars")
+                .upload(
+                    filePath,
+                    data: imageData,
+                    options: FileOptions(contentType: "image/jpeg")
+                )
+
+            let currentUser = try await supabase.auth.session.user
+
+            try await supabase
+                .from("profiles")
+                .update(["avatar_url": filePath])
+                .eq("id", value: currentUser.id)
+                .execute()
+        } catch {
+            debugPrint(error)
+        }
+    }
+
     private func downloadImage(path: String) async throws {
         let data = try await supabase.storage.from("avatars").download(path: path)
         avatarImage = AvatarImage(data: data)
-    }
-    
-    private func uploadImage() async throws -> String? {
-        guard let data = avatarImage?.data else { return nil }
-        
-        let filePath = "\(UUID().uuidString).jpeg"
-        
-        try await supabase.storage
-            .from("avatars")
-            .upload(
-                filePath,
-                data: data,
-                options: FileOptions(contentType: "image/jpeg")
-            )
-        
-        return filePath
-    }
-}
-
-// Helper view for action rows
-struct ProfileActionRow: View {
-    let icon: String
-    let title: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(.accentColor)
-                    .frame(width: 24)
-                
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.gray)
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-        }
     }
 }
 
