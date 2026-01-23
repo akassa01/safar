@@ -50,7 +50,7 @@ struct CityDetailView: View {
                 ScrollView {
                     VStack {
                         headerSection
-                        
+
                         if city.visited == true {
                             visitedCityContent
                         } else if city.visited == false {
@@ -59,8 +59,9 @@ struct CityDetailView: View {
                             unaddedCityContent
                         }
                     }
-                    .background(Color("Background"))
                 }
+                .scrollContentBackground(.hidden)
+                .background(Color("Background"))
             } else {
                 VStack {
                     Text("City not found")
@@ -177,6 +178,7 @@ struct CityDetailView: View {
         } message: {
             Text("Are you sure you want to delete \(city?.displayName ?? "this city")? This action cannot be undone.")
         }
+        .background(Color("Background"))
         .task {
             await loadCityData()
         }
@@ -276,6 +278,12 @@ struct CityDetailView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                 )
+                .onChange(of: selectedPlace) { oldValue, newValue in
+                    if let place = newValue {
+                        openInAppleMaps(place: place)
+                        selectedPlace = nil
+                    }
+                }
                 
                 // Map controls
                 HStack {
@@ -356,7 +364,7 @@ struct CityDetailView: View {
                 Button(action: {
                     addToBucketList()
                 }) {
-                    Label("Add to Bucket List", systemImage: "star.fill")
+                    Label("Add to Bucket List", systemImage: "bookmark.fill")
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(.accent))
@@ -520,7 +528,13 @@ struct CityDetailView: View {
     }
     
     // MARK: - Helper Functions
-    
+
+    private func openInAppleMaps(place: Place) {
+        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: place.coordinate))
+        mapItem.name = place.name
+        mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault])
+    }
+
     private func loadCityData() async {
         isLoading = true
         errorMessage = nil

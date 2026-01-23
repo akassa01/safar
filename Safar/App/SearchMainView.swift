@@ -121,6 +121,7 @@ struct SearchMainView: View {
                              NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
                                  EmptyView()
                              }
+                            .opacity(0)
                          }
                         .listRowBackground(Color("Background"))
 

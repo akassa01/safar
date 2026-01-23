@@ -39,7 +39,7 @@ struct SearchListMember: View {
                         await viewModel.removeCityFromList(cityId: Int(result.data_id)!)
                     }
                 }) {
-                    Image(systemName: "list.clipboard.fill")
+                    Image(systemName: "bookmark.fill")
                         .foregroundColor(.accent)
                 }
                 .buttonStyle(BorderlessButtonStyle())
@@ -50,7 +50,7 @@ struct SearchListMember: View {
                         await viewModel.addCityToBucketList(cityId: Int(result.data_id)!)
                     }
                 }) {
-                    Image(systemName: "list.clipboard")
+                    Image(systemName: "bookmark")
                         .foregroundColor(.accent)
                         .imageScale(.large)
                 }

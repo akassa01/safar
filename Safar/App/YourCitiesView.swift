@@ -21,7 +21,7 @@ struct YourCitiesView: View {
         var icon: String {
             switch self {
             case .visited: return "suitcase.fill"
-            case .bucketList: return "star.fill"
+            case .bucketList: return "bookmark.fill"
             }
         }
         var bucketList: Bool {
@@ -49,9 +49,10 @@ struct YourCitiesView: View {
                 List(currentCities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 }).enumerated().map({ $0 }), id: \.element) { i, city in
                     ZStack {
                         CityListMember(index: i, city: city, bucketList: selectedTab.bucketList, locked: currentCities.count < 5)
-                         NavigationLink(destination: CityDetailView(cityId: city.id)) {
-                             EmptyView()
-                         }
+                        NavigationLink(destination: CityDetailView(cityId: city.id)) {
+                            EmptyView()
+                        }
+                        .opacity(0)
                     }
                     .listRowBackground(Color("Background"))
                     .listRowSeparator(.hidden)
