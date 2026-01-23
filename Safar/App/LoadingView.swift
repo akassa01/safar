@@ -103,6 +103,11 @@ struct LoadingView: View {
                 }
             }
 
+            // Preload user data while on loading screen
+            if isAuthenticated {
+                await userCitiesViewModel.initializeWithCurrentUser()
+            }
+
             // Ensure minimum loading time
             let elapsedTime = Date().timeIntervalSince(startTime)
             if elapsedTime < minimumLoadingTime {

@@ -124,7 +124,11 @@ struct CityDetailView: View {
                 .environmentObject(viewModel)
             }
         }
-        .sheet(isPresented: $showingNotesEditor) {
+        .sheet(isPresented: $showingNotesEditor, onDismiss: {
+            Task {
+                await loadCityData(showLoading: false)
+            }
+        }) {
             if let city = city {
                 NotesEditorView(city: city)
                     .environmentObject(viewModel)
@@ -270,6 +274,27 @@ struct CityDetailView: View {
                                 .fill(place.category.systemColor)
                                 .frame(width: 10, height: 10)
                                 .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                .popover(
+                                    isPresented: Binding(
+                                        get: { selectedPlace == place },
+                                        set: { if !$0 { selectedPlace = nil } }
+                                    ),
+                                    arrowEdge: .bottom
+                                ) {
+                                    VStack(spacing: 12) {
+                                        Text(place.name)
+                                            .font(.headline)
+                                        Button {
+                                            openInAppleMaps(place: place)
+                                            selectedPlace = nil
+                                        } label: {
+                                            Label("Open in Apple Maps", systemImage: "map")
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                    }
+                                    .padding()
+                                    .presentationCompactAdaptation(.popover)
+                                }
                         }
                         .tag(place)
                     }
@@ -280,12 +305,6 @@ struct CityDetailView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                 )
-                .onChange(of: selectedPlace) { oldValue, newValue in
-                    if let place = newValue {
-                        openInAppleMaps(place: place)
-                        selectedPlace = nil
-                    }
-                }
                 
                 // Map controls
                 HStack {
@@ -532,9 +551,10 @@ struct CityDetailView: View {
     // MARK: - Helper Functions
 
     private func openInAppleMaps(place: Place) {
-        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: place.coordinate))
-//        mapItem.name = place.name
-        mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault])
+        let encodedName = place.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "maps://?q=\(encodedName)&ll=\(place.latitude),\(place.longitude)") {
+            UIApplication.shared.open(url)
+        }
     }
 
     private func loadCityData(showLoading: Bool = true) async {
@@ -542,8 +562,10 @@ struct CityDetailView: View {
             isLoading = true
         }
         errorMessage = nil
-        
-        await viewModel.initializeWithCurrentUser()
+
+        if viewModel.currentUserId == nil {
+            await viewModel.initializeWithCurrentUser()
+        }
         let loadedCity = await viewModel.getCityById(cityId: cityId)
         if let userId = viewModel.currentUserId {
             placesViewModel.setUserId(userId)

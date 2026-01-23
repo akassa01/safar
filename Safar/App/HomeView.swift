@@ -166,9 +166,6 @@ struct HomeView: View {
                 }
             }
         }
-        .task {
-            await viewModel.initializeWithCurrentUser()
-        }
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
