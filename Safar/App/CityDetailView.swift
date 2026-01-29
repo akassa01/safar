@@ -226,7 +226,7 @@ struct CityDetailView: View {
                             text: "Visited",
                             color: .accent
                         )
-                        
+
                         if let rating = city.rating {
                             if viewModel.visitedCities.count >= 5 {
                                 EnhancedRatingDisplay(rating: rating)
@@ -241,6 +241,16 @@ struct CityDetailView: View {
                             color: .accent
                         )
                     }
+                }
+
+                // Community rating (shown for cities with 5+ ratings)
+                if let avgRating = city.averageRating,
+                   let ratingCount = city.ratingCount,
+                   ratingCount >= 5 {
+                    CommunityRatingBadge(
+                        averageRating: avgRating,
+                        ratingCount: ratingCount
+                    )
                 }
             }
         } else {

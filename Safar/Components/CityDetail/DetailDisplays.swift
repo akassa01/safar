@@ -101,7 +101,7 @@ struct StatusBadge: View {
 
 struct RatingDisplay: View {
     let rating: Double
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "star.fill")
@@ -113,5 +113,31 @@ struct RatingDisplay: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
+    }
+}
+
+struct CommunityRatingBadge: View {
+    let averageRating: Double
+    let ratingCount: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "person.3.fill")
+                .foregroundColor(.white.opacity(0.9))
+                .font(.system(size: 12))
+            Text(String(format: "%.1f", averageRating))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+            Text("(\(ratingCount))")
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.7))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.blue.opacity(0.7))
+                .shadow(color: .blue.opacity(0.3), radius: 3, x: 0, y: 2)
+        )
     }
 }

@@ -10,6 +10,7 @@ import SwiftUI
 struct ExploreView: View {
     @EnvironmentObject var userCitiesViewModel: UserCitiesViewModel
     @StateObject private var recommendationsViewModel = RecommendationsViewModel()
+    @StateObject private var leaderboardViewModel = LeaderboardViewModel()
 
     private var visitedCount: Int {
         userCitiesViewModel.visitedCities.count
@@ -31,12 +32,18 @@ struct ExploreView: View {
                 .padding(.horizontal)
 
                 recommendationsSection
+
+                leaderboardPreviewSection
             }
             .padding(.vertical)
         }
         .background(Color("Background"))
         .onAppear {
             loadRecommendations()
+        }
+        .task {
+            await leaderboardViewModel.loadTopCities(limit: 5)
+            await leaderboardViewModel.loadTopCountries(limit: 5)
         }
     }
 
@@ -189,6 +196,105 @@ struct ExploreView: View {
                     visitedCities: userCitiesViewModel.visitedCities
                 )
             }
+        }
+    }
+
+    // MARK: - Leaderboard Preview Section
+    @ViewBuilder
+    private var leaderboardPreviewSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Top Rated Cities
+            if !leaderboardViewModel.topCities.isEmpty {
+                topRatedCitiesSection
+            }
+
+            // Top Rated Countries
+            if !leaderboardViewModel.topCountries.isEmpty {
+                topRatedCountriesSection
+            }
+        }
+    }
+
+    private var topRatedCitiesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Top Rated Cities")
+                        .font(.title2)
+                        .bold()
+                    Text("Based on community ratings")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                NavigationLink(destination: LeaderboardView()) {
+                    Text("See All")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal)
+
+            VStack(spacing: 0) {
+                ForEach(leaderboardViewModel.topCities.prefix(5)) { city in
+                    NavigationLink(destination: CityDetailView(cityId: city.id)) {
+                        LeaderboardCityRow(entry: city)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    if city.id != leaderboardViewModel.topCities.prefix(5).last?.id {
+                        Divider()
+                            .padding(.horizontal)
+                    }
+                }
+            }
+            .background(Color(.systemGray6).opacity(0.5))
+            .cornerRadius(12)
+            .padding(.horizontal)
+        }
+    }
+
+    private var topRatedCountriesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Top Rated Countries")
+                        .font(.title2)
+                        .bold()
+                    Text("Based on city averages")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                NavigationLink(destination: LeaderboardView()) {
+                    Text("See All")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal)
+
+            VStack(spacing: 0) {
+                ForEach(leaderboardViewModel.topCountries.prefix(5)) { country in
+                    LeaderboardCountryRow(entry: country)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+
+                    if country.id != leaderboardViewModel.topCountries.prefix(5).last?.id {
+                        Divider()
+                            .padding(.horizontal)
+                    }
+                }
+            }
+            .background(Color(.systemGray6).opacity(0.5))
+            .cornerRadius(12)
+            .padding(.horizontal)
         }
     }
 }
