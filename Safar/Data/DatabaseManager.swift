@@ -153,6 +153,12 @@ class DatabaseManager {
             throw DatabaseError.invalidData
         }
 
+        struct FuzzyParams: Encodable {
+            let search_query: String
+            let similarity_threshold: Double
+            let result_limit: Int
+        }
+
         struct FuzzyResult: Codable {
             let id: Int
             let displayName: String
@@ -179,31 +185,29 @@ class DatabaseManager {
             }
         }
 
-        do {
-            let response: [FuzzyResult] = try await supabase
-                .rpc("search_cities_fuzzy", params: [
-                    "search_query": query,
-                    "similarity_threshold": similarityThreshold,
-                    "result_limit": 50
-                ])
-                .execute()
-                .value
+        let params = FuzzyParams(
+            search_query: query,
+            similarity_threshold: similarityThreshold,
+            result_limit: 50
+        )
 
-            return response.map { city in
-                let subtitle = [city.admin, city.country].filter { !$0.isEmpty }.joined(separator: ", ")
-                return SearchResult(
-                    title: city.displayName,
-                    subtitle: subtitle,
-                    latitude: city.latitude,
-                    longitude: city.longitude,
-                    population: city.population,
-                    country: city.country,
-                    admin: city.admin,
-                    data_id: String(city.id)
-                )
-            }
-        } catch {
-            throw DatabaseError.networkError("Failed to fuzzy search cities: \(error.localizedDescription)")
+        let response: [FuzzyResult] = try await supabase
+            .rpc("search_cities_fuzzy", params: params)
+            .execute()
+            .value
+
+        return response.map { city in
+            let subtitle = [city.admin, city.country].filter { !$0.isEmpty }.joined(separator: ", ")
+            return SearchResult(
+                title: city.displayName,
+                subtitle: subtitle,
+                latitude: city.latitude,
+                longitude: city.longitude,
+                population: city.population,
+                country: city.country,
+                admin: city.admin,
+                data_id: String(city.id)
+            )
         }
     }
 

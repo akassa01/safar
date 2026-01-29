@@ -18,10 +18,10 @@ struct AIRecommendationResponse {
 
 @Generable
 struct RecommendedCity {
-    @Guide(description: "The city name only, e.g. 'Tokyo' or 'New York City'")
+    @Guide(description: "ONLY the city name without country. Examples: 'Tokyo', 'New York City', 'Zurich', 'Prague'. NEVER include commas or country names here.")
     let cityName: String
 
-    @Guide(description: "The country name, e.g. 'Japan' or 'United States'")
+    @Guide(description: "The country name as a separate field, e.g. 'Japan', 'United States', 'Switzerland'")
     let country: String
 
     @Guide(description: "A brief 1-sentence reason why this city matches the user's travel preferences")

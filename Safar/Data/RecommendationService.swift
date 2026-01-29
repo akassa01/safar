@@ -80,7 +80,10 @@ class RecommendationService {
         - Geographic diversity across different continents
         - Do NOT recommend any cities from my visited list above\(exclusionNote)
 
-        IMPORTANT: Use full official city names only. Do NOT use abbreviations or acronyms (e.g., use "New York City" not "NYC", use "Los Angeles" not "LA").
+        IMPORTANT FORMAT RULES:
+        - For cityName: Use ONLY the city name (e.g., "Zurich", "Prague", "Tokyo"). NEVER include the country in cityName.
+        - For country: Put the country name separately in the country field.
+        - Use full official city names, no abbreviations (e.g., "New York City" not "NYC").
 
         For each recommendation, provide a brief reason why it matches my travel preferences.
         """

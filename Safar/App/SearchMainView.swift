@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import MapKit
 import SwiftData
 
 struct SearchResult: Identifiable {
@@ -20,17 +19,27 @@ struct SearchResult: Identifiable {
     let admin: String
     let data_id: String
 }
+
+enum SearchResultItem: Identifiable {
+    case city(SearchResult)
+    case person(ProfileSearchResult)
+
+    var id: String {
+        switch self {
+        case .city(let result): return result.id.uuidString
+        case .person(let result): return result.id
+        }
+    }
+}
 enum SearchCategory: String, CaseIterable, Hashable, IconRepresentable {
     case cities = "Cities"
     case countries = "Countries"
-    case places = "Places"
     case people = "People"
 
     var icon: String {
         switch self {
         case .cities: return "building.2"
         case .countries: return "globe"
-        case .places: return "mappin"
         case .people: return "person.2"
         }
     }
@@ -43,8 +52,7 @@ struct SearchMainView: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var isLoading = false
-    @State private var searchResults = [SearchResult]()
-    @State private var peopleResults = [ProfileSearchResult]()
+    @State private var searchResults = [SearchResultItem]()
     @State private var debounceTask: DispatchWorkItem?
     
     var body: some View {
@@ -96,36 +104,26 @@ struct SearchMainView: View {
                 if isLoading {
                     ProgressView()
                         .padding()
-                } else if selectedCategory == .people {
-                    if peopleResults.isEmpty && !searchText.isEmpty {
-                        Text("No results found")
-                            .foregroundColor(.secondary)
-                            .padding()
-                    } else {
-                        List(peopleResults) { person in
-                            PersonSearchRow(person: person)
-                                .listRowBackground(Color("Background"))
-                        }
-                        .listStyle(.plain)
-                        .background(Color("Background"))
-                    }
                 } else if searchResults.isEmpty && !searchText.isEmpty {
                     Text("No results found")
                         .foregroundColor(.secondary)
                         .padding()
                 } else {
-                    List(searchResults.sorted(by: { $0.population > $1.population })) { result in
-                         ZStack {
-                             SearchListMember(result: result)
-                                 .listRowBackground(Color("Background"))
-                             NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
-                                 EmptyView()
-                             }
-                            .opacity(0)
-                         }
-                        .listRowBackground(Color("Background"))
-
-
+                    List(sortedResults) { item in
+                        switch item {
+                        case .city(let result):
+                            ZStack {
+                                SearchListMember(result: result)
+                                NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
+                                    EmptyView()
+                                }
+                                .opacity(0)
+                            }
+                            .listRowBackground(Color("Background"))
+                        case .person(let person):
+                            PersonSearchRow(person: person)
+                                .listRowBackground(Color("Background"))
+                        }
                     }
                     .listStyle(.plain)
                     .background(Color("Background"))
@@ -142,7 +140,19 @@ struct SearchMainView: View {
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: selectedCategory) {
+                searchResults = []
                 performSearch()
+            }
+        }
+    }
+
+    private var sortedResults: [SearchResultItem] {
+        searchResults.sorted { a, b in
+            switch (a, b) {
+            case (.city(let cityA), .city(let cityB)):
+                return cityA.population > cityB.population
+            default:
+                return false
             }
         }
     }
@@ -152,20 +162,20 @@ struct SearchMainView: View {
 
         guard !searchText.isEmpty else {
             searchResults = []
-            peopleResults = []
             return
         }
 
         let task = DispatchWorkItem {
             isLoading = true
             DispatchQueue.main.async {
-                    self.executeSearch()
+                self.executeSearch()
             }
         }
 
         debounceTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: task)
     }
+
     private func executeSearch() {
         let currentQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         switch selectedCategory {
@@ -173,62 +183,38 @@ struct SearchMainView: View {
             Task {
                 do {
                     let results = try await DatabaseManager.shared.searchCities(query: currentQuery)
-                    self.searchResults = results
-                    self.isLoading = false
+                    self.searchResults = results.map { .city($0) }
                 } catch {
                     self.searchResults = []
                 }
-               
+                self.isLoading = false
             }
-            
+
         case .countries:
             Task {
-                let results = try await DatabaseManager.shared.searchCountries(query: currentQuery)
-                    .map { SearchResult(title: $0.name, subtitle: "", latitude: nil, longitude: nil, population: Int($0.population), country: "", admin: "", data_id: String($0.id)) }
-                    self.searchResults = results
-                    self.isLoading = false
-            }
-                
-        case .places:
-            let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            request.resultTypes = .pointOfInterest
-
-            let search = MKLocalSearch(request: request)
-            search.start { response, error in
-                isLoading = false
-                if let items = response?.mapItems {
-                    self.searchResults = items.map {
-                        SearchResult(title: $0.name ?? "Unknown", subtitle: $0.placemark.title ?? "", latitude: nil, longitude: nil, population: 0, country: "", admin: "", data_id: "")
-                    }
+                do {
+                    let results = try await DatabaseManager.shared.searchCountries(query: currentQuery)
+                        .map { SearchResult(title: $0.name, subtitle: "", latitude: nil, longitude: nil, population: Int($0.population), country: "", admin: "", data_id: String($0.id)) }
+                    self.searchResults = results.map { .city($0) }
+                } catch {
+                    self.searchResults = []
                 }
+                self.isLoading = false
             }
 
         case .people:
             Task {
                 do {
                     let results = try await DatabaseManager.shared.searchPeople(query: currentQuery)
-                    self.peopleResults = results
+                    self.searchResults = results.map { .person($0) }
                 } catch {
-                    self.peopleResults = []
+                    self.searchResults = []
                 }
                 self.isLoading = false
             }
         }
     }
 }
-
-extension MKMapItem: @retroactive Identifiable {
-    public var id: String {
-        return self.placemark.description
-    }
-
-    var name: String? {
-        return self.placemark.name ?? self.placemark.locality ?? self.placemark.country
-    }
-}
-
-
 
 struct PersonSearchRow: View {
     let person: ProfileSearchResult
