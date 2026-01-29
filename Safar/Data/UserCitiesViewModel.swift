@@ -39,6 +39,16 @@ class UserCitiesViewModel: ObservableObject {
         }
     }
 
+    func clearUserData() {
+        _currentUserId = nil
+        visitedCities = []
+        bucketListCities = []
+        allUserCities = []
+        visitedCountries = []
+        visitedContinents = []
+        error = nil
+    }
+
     func loadUserData() async {
         print("Checking user id")
         guard let userId = _currentUserId else { return }

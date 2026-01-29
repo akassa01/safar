@@ -219,8 +219,7 @@ struct AuthView: View {
             .padding(.horizontal, 30)
             .padding(.bottom, 50)
         }
-        .background(Color("Background"))
-        .ignoresSafeArea()
+        .background(Color("Background").ignoresSafeArea())
         .onOpenURL(perform: { url in
             Task {
                 do {

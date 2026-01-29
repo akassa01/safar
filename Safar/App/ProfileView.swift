@@ -4,6 +4,8 @@ import Supabase
 import SwiftUI
 
 struct ProfileView: View {
+    @EnvironmentObject var authManager: AuthManager
+
     @State var username = ""
     @State var fullName = ""
     @State var bio = ""
@@ -11,6 +13,8 @@ struct ProfileView: View {
 
     @State var isLoading = false
     @State var showingSignOutAlert = false
+    @State var signOutError: String?
+    @State var showingSignOutError = false
 
     @State var imageSelection: PhotosPickerItem?
     @State var avatarImage: AvatarImage?
@@ -257,11 +261,21 @@ struct ProfileView: View {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {
                     Task {
-                        try? await supabase.auth.signOut()
+                        do {
+                            try await authManager.signOut()
+                        } catch {
+                            signOutError = error.localizedDescription
+                            showingSignOutError = true
+                        }
                     }
                 }
             } message: {
                 Text("Are you sure you want to sign out?")
+            }
+            .alert("Sign Out Failed", isPresented: $showingSignOutError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(signOutError ?? "An unknown error occurred")
             }
             .alert("Change Username?", isPresented: $showingUsernameChangeConfirmation) {
                 Button("Cancel", role: .cancel) { }
