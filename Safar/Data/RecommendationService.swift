@@ -99,12 +99,11 @@ class RecommendationService {
         print("[Recommendations] Attempting to match \(aiCities.count) AI recommendations")
 
         for aiCity in aiCities {
-            // Use fuzzy search for better matching
-            guard let searchResults = try? await databaseManager.searchCitiesFuzzy(
-                query: aiCity.cityName,
-                similarityThreshold: 0.25
+            // Use prefix search on plain_name (same as normal city search)
+            guard let searchResults = try? await databaseManager.searchCities(
+                query: aiCity.cityName
             ), !searchResults.isEmpty else {
-                print("[Recommendations] REJECTED: '\(aiCity.cityName), \(aiCity.country)' - no fuzzy results found")
+                print("[Recommendations] REJECTED: '\(aiCity.cityName), \(aiCity.country)' - no prefix search results found")
                 continue
             }
 
