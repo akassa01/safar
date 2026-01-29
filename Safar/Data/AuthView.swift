@@ -184,17 +184,17 @@ struct AuthView: View {
                 .padding(.vertical, 10)
                 
                 // Sign in with Apple Button
-//                SignInWithAppleButton(
-//                    onRequest: { request in
-//                        request.requestedScopes = [.fullName, .email]
-//                    },
-//                    onCompletion: { result in
-//                        handleSignInWithApple(result: result)
-//                    }
-//                )
-//                .signInWithAppleButtonStyle(.black)
-//                .frame(height: 50)
-//                .cornerRadius(12)
+                SignInWithAppleButton(
+                    onRequest: { request in
+                        request.requestedScopes = [.fullName, .email]
+                    },
+                    onCompletion: { appleResult in
+                        handleSignInWithApple(appleResult: appleResult)
+                    }
+                )
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 50)
+                .cornerRadius(12)
                 
                 // Toggle between Sign In and Sign Up
                 Button(action: {
@@ -273,40 +273,53 @@ struct AuthView: View {
         }
     }
     
-//    func handleSignInWithApple(result: Result<ASAuthorization, Error>) {
-//        switch result {
-//        case .success(let authorization):
-//            if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-//                Task {
-//                    isLoading = true
-//                    defer { isLoading = false }
-//                    
-//                    do {
-//                        // Extract the identity token
-//                        guard let identityToken = appleIDCredential.identityToken,
-//                              let tokenString = String(data: identityToken, encoding: .utf8) else {
-//                            result = .failure(AuthError.appleSignInFailed)
-//                            return
-//                        }
-//                        
-//                        // Sign in with Supabase using the Apple ID token
-//                        try await supabase.auth.signInWithIdToken(
-//                            credentials: .init(
-//                                provider: .apple,
-//                                idToken: tokenString
-//                            )
-//                        )
-//                        
-//                        self.result = .success(())
-//                    } catch {
-//                        self.result = .failure(error)
-//                    }
-//                }
-//            }
-//        case .failure(let error):
-//            result = .failure(error)
-//        }
-//    }
+    func handleSignInWithApple(appleResult: Result<ASAuthorization, Error>) {
+        switch appleResult {
+        case .success(let authorization):
+            if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+                Task {
+                    isLoading = true
+                    defer { isLoading = false }
+
+                    do {
+                        // Extract the identity token
+                        guard let identityToken = appleIDCredential.identityToken,
+                              let tokenString = String(data: identityToken, encoding: .utf8) else {
+                            result = .failure(AuthError.appleSignInFailed)
+                            return
+                        }
+
+                        // Sign in with Supabase using the Apple ID token
+                        try await supabase.auth.signInWithIdToken(
+                            credentials: .init(
+                                provider: .apple,
+                                idToken: tokenString
+                            )
+                        )
+
+                        // Apple only provides full name on first sign-in, so save it to profiles table
+                        if let fullName = appleIDCredential.fullName,
+                           let givenName = fullName.givenName {
+                            let familyName = fullName.familyName ?? ""
+                            let displayName = familyName.isEmpty ? givenName : "\(givenName) \(familyName)"
+                            let currentUser = try await supabase.auth.session.user
+                            try await supabase
+                                .from("profiles")
+                                .update(["full_name": displayName])
+                                .eq("id", value: currentUser.id)
+                                .execute()
+                        }
+
+                        result = .success(())
+                    } catch {
+                        result = .failure(error)
+                    }
+                }
+            }
+        case .failure(let error):
+            result = .failure(error)
+        }
+    }
     
     func forgotPasswordTapped() {
         Task {
