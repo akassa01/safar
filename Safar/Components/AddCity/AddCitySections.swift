@@ -118,19 +118,20 @@ struct PlacesSection: View {
     @Binding var hotels: [Place]
     @Binding var activities: [Place]
     @Binding var shops: [Place]
+    @Binding var nightlife: [Place]
     let onAddPlaces: (PlaceCategory) -> Void
-    
+
     var body: some View {
         Section("Places") {
             PlaceDisclosureGroup(
-                title: "Restaurants",
+                title: "Food & Drink",
                 places: $restaurants,
                 category: .restaurant,
                 color: .orange,
                 icon: "fork.knife",
                 onAdd: onAddPlaces
             )
-            
+
             PlaceDisclosureGroup(
                 title: "Hotels",
                 places: $hotels,
@@ -139,7 +140,7 @@ struct PlacesSection: View {
                 icon: "bed.double",
                 onAdd: onAddPlaces
             )
-            
+
             PlaceDisclosureGroup(
                 title: "Activities",
                 places: $activities,
@@ -148,13 +149,22 @@ struct PlacesSection: View {
                 icon: "popcorn",
                 onAdd: onAddPlaces
             )
-            
+
             PlaceDisclosureGroup(
                 title: "Shops",
                 places: $shops,
                 category: .shop,
                 color: .yellow,
                 icon: "bag",
+                onAdd: onAddPlaces
+            )
+
+            PlaceDisclosureGroup(
+                title: "Nightlife",
+                places: $nightlife,
+                category: .nightlife,
+                color: .pink,
+                icon: "wineglass.fill",
                 onAdd: onAddPlaces
             )
         }

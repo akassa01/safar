@@ -144,6 +144,7 @@ struct CityDetailView: View {
                     onRatingSelected: { rating in
                         Task {
                             await viewModel.updateCityRating(cityId: city.id, rating: rating)
+                            await loadCityData(showLoading: false)
                             print("Successfully updated city \(city.displayName), \(city.country)'s rating to \(rating) (unique ID: \(city.id))")
                         }
                     }

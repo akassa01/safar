@@ -71,10 +71,13 @@ struct FullScreenMapView: View {
                         Button(action: {
                             dismiss()
                         }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.largeTitle)
-                                .foregroundColor(.primary)
-                                .background(.thinMaterial, in: Circle())
+                            Image(systemName: "xmark")
+                                .font(.headline)
+                                .padding(10)
+                                .foregroundColor(Color("Background"))
+                                .background(Color(.accent))
+                                .bold()
+                                .cornerRadius(20)
                         }
                     }
                     

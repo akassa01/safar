@@ -187,6 +187,8 @@ struct PlaceSearchView: View {
             return "attractions"
         case .shop:
             return "shopping"
+        case .nightlife:
+            return "nightlife"
         }
     }
     
@@ -198,9 +200,11 @@ struct PlaceSearchView: View {
         case .hotel:
             return [.hotel].contains(pointOfInterestCategory)
         case .activity:
-            return [.museum, .park, .zoo, .amusementPark, .theater, .movieTheater, .stadium, .nightlife, .musicVenue, .library, .castle, .fortress, .landmark, .nationalMonument, .beauty, .spa, .aquarium, .fairground, .beach, .campground, .marina, .nationalPark, .rvPark, .fishing, .kayaking, .surfing, .swimming, .baseball, .basketball, .bowling, .goKart, .golf, .hiking, .miniGolf, .rockClimbing, .skatePark, .skiing, .soccer, .tennis, .volleyball, .fireStation, .planetarium, .bank, .school, .university].contains(pointOfInterestCategory)
+            return [.museum, .park, .zoo, .amusementPark, .theater, .movieTheater, .stadium, .nightlife, .musicVenue, .library, .castle, .fortress, .landmark, .nationalMonument, .beauty, .spa, .aquarium, .fairground, .beach, .campground, .marina, .nationalPark, .rvPark, .fishing, .kayaking, .surfing, .swimming, .baseball, .basketball, .bowling, .goKart, .golf, .hiking, .miniGolf, .rockClimbing, .skatePark, .skiing, .soccer, .tennis, .volleyball, .fireStation, .planetarium, .bank, .school, .university, .religiousSite].contains(pointOfInterestCategory)
         case .shop:
             return [.store, .gasStation, .bakery, .pharmacy, .bank, .atm].contains(pointOfInterestCategory)
+        case .nightlife:
+            return [.nightlife, .brewery, .winery, .distillery].contains(pointOfInterestCategory)
         }
     }
 }

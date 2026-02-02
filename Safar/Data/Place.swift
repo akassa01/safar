@@ -91,36 +91,40 @@ enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
     case hotel
     case activity
     case shop
+    case nightlife
     
     var id: String { rawValue }
     
     var displayName: String {
         switch self {
         case .hotel: return "Hotel"
-        case .restaurant: return "Restaurant"
+        case .restaurant: return "Food & Drink"
         case .activity: return "Activity"
         case .shop: return "Shop"
+        case .nightlife: return "Nightlife"
         }
     }
-    
+
     var pluralDisplayName: String {
         switch self {
         case .hotel: return "Hotels"
-        case .restaurant: return "Restaurants"
+        case .restaurant: return "Food & Drink"
         case .activity: return "Activities"
         case .shop: return "Shops"
+        case .nightlife: return "Nightlife"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .hotel: return "bed.double.fill"
         case .restaurant: return "fork.knife"
         case .activity: return "popcorn"
         case .shop: return "bag"
+        case .nightlife: return "wineglass.fill"
         }
     }
-    
+
     var systemColor: Color {
         switch self {
         case .restaurant:
@@ -131,6 +135,8 @@ enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
             return .green
         case .shop:
             return .yellow
+        case .nightlife:
+            return .pink
         }
     }
 }
