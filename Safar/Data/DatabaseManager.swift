@@ -782,4 +782,46 @@ extension DatabaseManager {
             throw DatabaseError.networkError("Failed to fetch country leaderboard: \(error.localizedDescription)")
         }
     }
+
+    /// Fetch users ranked by number of cities visited
+    func getTopTravelersByCities(limit: Int = 50, offset: Int = 0) async throws -> [PeopleLeaderboardEntry] {
+        do {
+            var entries: [PeopleLeaderboardEntry] = try await supabase
+                .from("profiles")
+                .select("id, username, full_name, avatar_url, visited_cities_count, visited_countries_count")
+                .gt("visited_cities_count", value: 0)
+                .order("visited_cities_count", ascending: false)
+                .range(from: offset, to: offset + limit - 1)
+                .execute()
+                .value
+
+            for i in 0..<entries.count {
+                entries[i].rank = offset + i + 1
+            }
+            return entries
+        } catch {
+            throw DatabaseError.networkError("Failed to fetch people leaderboard by cities: \(error.localizedDescription)")
+        }
+    }
+
+    /// Fetch users ranked by number of countries visited
+    func getTopTravelersByCountries(limit: Int = 50, offset: Int = 0) async throws -> [PeopleLeaderboardEntry] {
+        do {
+            var entries: [PeopleLeaderboardEntry] = try await supabase
+                .from("profiles")
+                .select("id, username, full_name, avatar_url, visited_cities_count, visited_countries_count")
+                .gt("visited_countries_count", value: 0)
+                .order("visited_countries_count", ascending: false)
+                .range(from: offset, to: offset + limit - 1)
+                .execute()
+                .value
+
+            for i in 0..<entries.count {
+                entries[i].rank = offset + i + 1
+            }
+            return entries
+        } catch {
+            throw DatabaseError.networkError("Failed to fetch people leaderboard by countries: \(error.localizedDescription)")
+        }
+    }
 }

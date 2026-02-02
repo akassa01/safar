@@ -44,3 +44,24 @@ struct CountryLeaderboardEntry: Codable, Identifiable, Hashable {
         case rank
     }
 }
+
+// MARK: - People Leaderboard Entry
+struct PeopleLeaderboardEntry: Codable, Identifiable, Hashable {
+    let id: String
+    let username: String?
+    let fullName: String?
+    let avatarURL: String?
+    let visitedCitiesCount: Int
+    let visitedCountriesCount: Int
+    var rank: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case username
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+        case visitedCitiesCount = "visited_cities_count"
+        case visitedCountriesCount = "visited_countries_count"
+        case rank
+    }
+}
