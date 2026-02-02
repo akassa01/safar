@@ -46,6 +46,7 @@ enum SearchCategory: String, CaseIterable, Hashable, IconRepresentable {
 }
 
 struct SearchMainView: View {
+    @EnvironmentObject var viewModel: UserCitiesViewModel
     @FocusState private var isSearchFieldFocused: Bool
     @State private var searchText: String = ""
     @State private var selectedCategory: SearchCategory = .cities
@@ -54,6 +55,13 @@ struct SearchMainView: View {
     @State private var isLoading = false
     @State private var searchResults = [SearchResultItem]()
     @State private var debounceTask: DispatchWorkItem?
+
+    // Context menu state
+    @State private var cityResultToVisit: SearchResult?
+    @State private var showingRatingSheet = false
+    @State private var cityToRate: SearchResult?
+    @State private var showDeleteConfirmation = false
+    @State private var cityToDelete: SearchResult?
     
     var body: some View {
         NavigationStack {
@@ -119,6 +127,9 @@ struct SearchMainView: View {
                                 }
                                 .opacity(0)
                             }
+                            .contextMenu {
+                                contextMenuItems(for: result)
+                            }
                             .listRowBackground(Color("Background"))
                         case .person(let person):
                             PersonSearchRow(person: person)
@@ -142,6 +153,48 @@ struct SearchMainView: View {
             .onChange(of: selectedCategory) {
                 searchResults = []
                 performSearch()
+            }
+            .sheet(item: $cityResultToVisit) { result in
+                AddCityView(
+                    baseResult: result,
+                    isVisited: true,
+                    onSave: { _ in
+                        Task {
+                            await viewModel.loadUserData()
+                        }
+                    }
+                )
+                .environmentObject(viewModel)
+            }
+            .sheet(isPresented: $showingRatingSheet) {
+                if let result = cityToRate {
+                    CityRatingView(
+                        isPresented: $showingRatingSheet,
+                        cityName: result.title,
+                        country: result.country,
+                        cityID: Int(result.data_id) ?? 0,
+                        onRatingSelected: { rating in
+                            Task {
+                                await viewModel.updateCityRating(cityId: Int(result.data_id) ?? 0, rating: rating)
+                            }
+                        }
+                    )
+                    .presentationBackground(Color("Background"))
+                }
+            }
+            .alert("Remove City", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {
+                    cityToDelete = nil
+                }
+                Button("Remove", role: .destructive) {
+                    if let result = cityToDelete {
+                        Task {
+                            await viewModel.removeCityFromList(cityId: Int(result.data_id) ?? 0)
+                        }
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to remove \(cityToDelete?.title ?? "this city")? This action cannot be undone.")
             }
         }
     }
@@ -211,6 +264,54 @@ struct SearchMainView: View {
                     self.searchResults = []
                 }
                 self.isLoading = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func contextMenuItems(for result: SearchResult) -> some View {
+        let cityId = Int(result.data_id) ?? 0
+        let isVisited = viewModel.visitedCities.contains { $0.id == cityId }
+        let isInBucket = viewModel.bucketListCities.contains { $0.id == cityId }
+
+        if isVisited {
+            Button {
+                cityToRate = result
+                showingRatingSheet = true
+            } label: {
+                Label("Change Rating", systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                cityToDelete = result
+                showDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        } else if isInBucket {
+            Button {
+                cityResultToVisit = result
+            } label: {
+                Label("Mark as Visited", systemImage: "checkmark.circle")
+            }
+            Button(role: .destructive) {
+                Task {
+                    await viewModel.removeCityFromList(cityId: cityId)
+                }
+            } label: {
+                Label("Remove from Bucket List", systemImage: "bookmark.slash")
+            }
+        } else {
+            Button {
+                Task {
+                    await viewModel.addCityToBucketList(cityId: cityId)
+                }
+            } label: {
+                Label("Add to Bucket List", systemImage: "bookmark")
+            }
+            Button {
+                cityResultToVisit = result
+            } label: {
+                Label("Mark as Visited", systemImage: "checkmark.circle")
             }
         }
     }
