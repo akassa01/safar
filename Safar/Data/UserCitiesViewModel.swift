@@ -112,28 +112,58 @@ class UserCitiesViewModel: ObservableObject {
             self.bucketListCities = cachedCities.filter { $0.visited == false }
             self.isOfflineData = true
             print("Loaded \(cachedCities.count) cities from cache")
+
+            // Also load countries from cache
+            loadCountriesFromCache(userId: userId)
         }
     }
     
     func loadCountries(_ cities: [City]) async {
+        guard let userId = _currentUserId else { return }
         error = nil
-        do {
-            // Use countryId to avoid name-matching issues; dedupe IDs first
-            let countryIds = Array(Set(cities.map { $0.countryId }))
-            let countriesData = try await databaseManager.getCountriesByIds(countryIds)
 
-            // Deduplicate names and continents
-            let uniqueCountryNames = Array(Set(countriesData.map { $0.name })).sorted()
-            let uniqueContinents = Array(Set(countriesData.map { $0.continent })).sorted()
+        let isOnline = NetworkMonitor.shared.isConnected
 
-            await MainActor.run {
-                self.visitedCountries = uniqueCountryNames
-                self.visitedContinents = uniqueContinents
+        if isOnline {
+            do {
+                // Use countryId to avoid name-matching issues; dedupe IDs first
+                let countryIds = Array(Set(cities.map { $0.countryId }))
+                let countriesData = try await databaseManager.getCountriesByIds(countryIds)
+
+                // Cache countries for offline use
+                CityCacheManager.shared.saveCountries(countriesData, for: userId)
+
+                // Deduplicate names and continents
+                let uniqueCountryNames = Array(Set(countriesData.map { $0.name })).sorted()
+                let uniqueContinents = Array(Set(countriesData.map { $0.continent })).sorted()
+
+                await MainActor.run {
+                    self.visitedCountries = uniqueCountryNames
+                    self.visitedContinents = uniqueContinents
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                }
+                // Fallback to cache on error
+                loadCountriesFromCache(userId: userId)
             }
-        } catch {
-            await MainActor.run {
-                self.error = error
-            }
+        } else {
+            // Offline: load from cache
+            loadCountriesFromCache(userId: userId)
+        }
+    }
+
+    private func loadCountriesFromCache(userId: UUID) {
+        let cachedCountries = CityCacheManager.shared.loadCountries(for: userId)
+
+        if !cachedCountries.isEmpty {
+            let uniqueCountryNames = Array(Set(cachedCountries.map { $0.name })).sorted()
+            let uniqueContinents = Array(Set(cachedCountries.map { $0.continent })).sorted()
+
+            self.visitedCountries = uniqueCountryNames
+            self.visitedContinents = uniqueContinents
+            print("Loaded \(cachedCountries.count) countries from cache")
         }
     }
     
@@ -219,12 +249,25 @@ class UserCitiesViewModel: ObservableObject {
     
     func getCityById(cityId: Int) async -> City? {
         guard let userId = _currentUserId else { return nil }
-        
-        do {
-            return try await databaseManager.getCityWithUserData(cityId: cityId, userId: userId)
-        } catch {
-            self.error = error
-            return nil
+
+        let isOnline = NetworkMonitor.shared.isConnected
+
+        if isOnline {
+            do {
+                return try await databaseManager.getCityWithUserData(cityId: cityId, userId: userId)
+            } catch {
+                self.error = error
+                // Fallback to cache on error
+                return getCityFromCache(cityId: cityId, userId: userId)
+            }
+        } else {
+            // Offline: return from cache
+            return getCityFromCache(cityId: cityId, userId: userId)
         }
+    }
+
+    private func getCityFromCache(cityId: Int, userId: UUID) -> City? {
+        let cachedCities = CityCacheManager.shared.loadCities(for: userId)
+        return cachedCities.first { $0.id == cityId }
     }
 }

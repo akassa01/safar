@@ -25,7 +25,7 @@ struct HomeView: View {
     var body: some View {
         VStack(spacing: 0) {
             if !networkMonitor.isConnected {
-                OfflineBannerView()
+                OfflineBannerView(lastSyncDate: CityCacheManager.shared.lastSyncDate)
             }
 
             TabView(selection: $selectedTab) {

@@ -54,19 +54,12 @@ struct YourCitiesView: View {
                 List(currentCities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 }).enumerated().map({ $0 }), id: \.element) { i, city in
                     ZStack {
                         CityListMember(index: i, city: city, bucketList: selectedTab.bucketList, locked: currentCities.count < 5)
-                        if networkMonitor.isConnected {
-                            NavigationLink(destination: CityDetailView(cityId: city.id)) {
-                                EmptyView()
-                            }
-                            .opacity(0)
+                        NavigationLink(destination: CityDetailView(cityId: city.id)) {
+                            EmptyView()
                         }
+                        .opacity(0)
                     }
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        if !networkMonitor.isConnected {
-                            showOfflineToast = true
-                        }
-                    }
                     .contextMenu {
                         if networkMonitor.isConnected {
                             if selectedTab == .visited {

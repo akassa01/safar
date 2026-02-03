@@ -12,8 +12,9 @@ import PhotosUI
 struct CityDetailView: View {
     @EnvironmentObject var viewModel: UserCitiesViewModel
     @StateObject private var placesViewModel = CityPlacesViewModel()
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @Environment(\.dismiss) private var dismiss
-    
+
     let cityId: Int
     @State private var city: City?
     @State private var isLoading = true
@@ -31,6 +32,8 @@ struct CityDetailView: View {
     @State private var showingDeleteConfirmation = false
     @State private var selectedPlace: Place?
     @State private var mapCameraPosition: MapCameraPosition
+
+    private var isOffline: Bool { !networkMonitor.isConnected }
     
     init(cityId: Int) {
         self.cityId = cityId
@@ -48,15 +51,21 @@ struct CityDetailView: View {
                     .background(Color("Background"))
             } else if let city = city {
                 ScrollView {
-                    VStack {
-                        headerSection
+                    VStack(spacing: 0) {
+                        if isOffline {
+                            OfflineBannerView(lastSyncDate: CityCacheManager.shared.lastSyncDate)
+                        }
 
-                        if city.visited == true {
-                            visitedCityContent
-                        } else if city.visited == false {
-                            bucketListContent
-                        } else {
-                            unaddedCityContent
+                        VStack {
+                            headerSection
+
+                            if city.visited == true {
+                                visitedCityContent
+                            } else if city.visited == false {
+                                bucketListContent
+                            } else {
+                                unaddedCityContent
+                            }
                         }
                     }
                 }
@@ -79,7 +88,7 @@ struct CityDetailView: View {
         .navigationTitle(city?.displayName ?? "City Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if let city = city {
+            if let city = city, !isOffline {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         if city.visited == true || city.visited == false {
@@ -91,7 +100,7 @@ struct CityDetailView: View {
                             Button("Delete City", systemImage: "trash", role: .destructive) {
                                 showingDeleteConfirmation = true
                             }
-                            
+
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -346,32 +355,34 @@ struct CityDetailView: View {
     
     private var bucketListContent: some View {
         VStack(spacing: 20) {
-            // Action Buttons
-            VStack(spacing: 12) {
-                Button(action: {
-                    showingAddCityView = true
-                }) {
-                    Label("Mark as Visited", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.accent))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+            // Action Buttons (only when online)
+            if !isOffline {
+                VStack(spacing: 12) {
+                    Button(action: {
+                        showingAddCityView = true
+                    }) {
+                        Label("Mark as Visited", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.accent))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+
+                    Button(action: {
+                        removeFromBucketList()
+                    }) {
+                        Label("Remove from Bucket List", systemImage: "trash")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.accent))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
                 }
-                
-                Button(action: {
-                    removeFromBucketList()
-                }) {
-                    Label("Remove from Bucket List", systemImage: "trash")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.accent))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
+                .padding()
             }
-            .padding()
-            
+
             // Basic Info
             if let city = city, let notes = city.notes, !notes.isEmpty {
                 notesSection
@@ -381,30 +392,37 @@ struct CityDetailView: View {
     
     private var unaddedCityContent: some View {
         VStack(spacing: 20) {
-            VStack(spacing: 12) {
-                Button(action: {
-                    showingAddCityView = true
-                }) {
-                    Label("Add to Visited", systemImage: "plus.circle.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.accent))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+            if !isOffline {
+                VStack(spacing: 12) {
+                    Button(action: {
+                        showingAddCityView = true
+                    }) {
+                        Label("Add to Visited", systemImage: "plus.circle.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.accent))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+
+                    Button(action: {
+                        addToBucketList()
+                    }) {
+                        Label("Add to Bucket List", systemImage: "bookmark.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.accent))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
                 }
-                
-                Button(action: {
-                    addToBucketList()
-                }) {
-                    Label("Add to Bucket List", systemImage: "bookmark.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.accent))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
+                .padding()
+            } else {
+                Text("Actions unavailable offline")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding()
             }
-            .padding()
         }
     }
     
@@ -473,11 +491,13 @@ struct CityDetailView: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
                         Spacer()
-                        Button {
-                            activePlaceCategory = category
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.accentColor)
+                        if !isOffline {
+                            Button {
+                                activePlaceCategory = category
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.accentColor)
+                            }
                         }
                     }
                     if categoryPlaces.isEmpty {
@@ -491,24 +511,26 @@ struct CityDetailView: View {
                                 Text(place.name)
                                     .font(.subheadline)
                                 Spacer()
-                                HStack(spacing: 8) {
-                                    Button {
-                                        Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
-                                    } label: {
-                                        Image(systemName: place.liked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                            .foregroundColor(place.liked == true ? .green : .gray)
-                                    }
-                                    Button {
-                                        Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
-                                    } label: {
-                                        Image(systemName: place.liked == false ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                                            .foregroundColor(place.liked == false ? .red : .gray)
-                                    }
-                                    Button(role: .destructive) {
-                                        Task { await placesViewModel.deletePlace(placeId: place.id ?? 0, cityId: cityId) }
-                                    } label: {
-                                        Image(systemName: "xmark")
-                                            .foregroundColor(.red)
+                                if !isOffline {
+                                    HStack(spacing: 8) {
+                                        Button {
+                                            Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
+                                        } label: {
+                                            Image(systemName: place.liked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                                .foregroundColor(place.liked == true ? .green : .gray)
+                                        }
+                                        Button {
+                                            Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
+                                        } label: {
+                                            Image(systemName: place.liked == false ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                                                .foregroundColor(place.liked == false ? .red : .gray)
+                                        }
+                                        Button(role: .destructive) {
+                                            Task { await placesViewModel.deletePlace(placeId: place.id ?? 0, cityId: cityId) }
+                                        } label: {
+                                            Image(systemName: "xmark")
+                                                .foregroundColor(.red)
+                                        }
                                     }
                                 }
                             }
@@ -527,10 +549,12 @@ struct CityDetailView: View {
             HStack {
                 SectionHeader(title: "Notes", icon: "note.text")
                 Spacer()
-                Button((city?.notes?.isEmpty ?? true) ? "Add Notes" : "Edit Notes") {
-                    showingNotesEditor = true
+                if !isOffline {
+                    Button((city?.notes?.isEmpty ?? true) ? "Add Notes" : "Edit Notes") {
+                        showingNotesEditor = true
+                    }
+                    .foregroundColor(.accentColor)
                 }
-                .foregroundColor(.accentColor)
             }
             
             if let city = city, let notes = city.notes, !notes.isEmpty {
@@ -541,7 +565,7 @@ struct CityDetailView: View {
                     .onTapGesture {
                         showingNotesEditor = true
                     }
-            } else {
+            } else if !isOffline {
                 Button(action: {
                     showingNotesEditor = true
                 }) {
@@ -552,6 +576,11 @@ struct CityDetailView: View {
                         .foregroundColor(.accentColor)
                         .cornerRadius(8)
                 }
+            } else {
+                Text("No notes")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding()
             }
         }
         .padding()
