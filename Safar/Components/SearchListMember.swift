@@ -11,12 +11,9 @@ struct SearchListMember: View {
     @State private var showAlert = false
     @State private var alertTitle = "Error"
     @State private var alertMessage = ""
-    
-    @State private var showAddCitySheet = false
-    @State private var addingToVisited = false
-    @State private var tempCityResult: SearchResult? = nil
-    
+
     var result: SearchResult
+    var onMarkVisited: (SearchResult) -> Void
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
     
@@ -63,7 +60,7 @@ struct SearchListMember: View {
                     .foregroundColor(.accent)
             } else {
                 Button(action: {
-                    tempCityResult = result
+                    onMarkVisited(result)
                 }) {
                     Image(systemName: "plus.circle")
                         .foregroundColor(.accent)
@@ -71,19 +68,6 @@ struct SearchListMember: View {
                 }
                 .buttonStyle(BorderlessButtonStyle())
             }
-        }
-        .sheet(item: $tempCityResult) { result in
-            AddCityView(
-                baseResult: result,
-                isVisited: true,
-                onSave: { city in
-                    Task {
-                        await viewModel.loadUserData()
-                    }
-                    print("Successfully saved city: \(city.id)")
-                }
-            )
-            .environmentObject(viewModel)
         }
         .padding(.vertical, 8)
         .background(Color("Background"))

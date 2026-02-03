@@ -121,7 +121,10 @@ struct SearchMainView: View {
                         switch item {
                         case .city(let result):
                             ZStack {
-                                SearchListMember(result: result)
+                                SearchListMember(
+                                    result: result,
+                                    onMarkVisited: { cityResultToVisit = $0 }
+                                )
                                 NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
                                     EmptyView()
                                 }
