@@ -56,6 +56,10 @@ class AuthManager: ObservableObject {
     }
 
     func signOut() async throws {
+        // Clear local cache before signing out
+        if let userId = currentUserId {
+            CityCacheManager.shared.clearCache(for: userId)
+        }
         try await supabase.auth.signOut()
         // State will be updated by the auth listener
     }

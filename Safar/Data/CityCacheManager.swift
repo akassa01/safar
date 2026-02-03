@@ -19,12 +19,49 @@ class CityCacheManager {
 
     private init() {
         do {
-            let schema = Schema([CachedCity.self, CachedPlace.self, CachedCountry.self])
-            let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-            modelContainer = try ModelContainer(for: schema, configurations: [config])
-            modelContext = modelContainer?.mainContext
+            try initializeContainer()
         } catch {
             print("Failed to initialize SwiftData container: \(error)")
+            // Attempt recovery by deleting corrupt store
+            if deleteStoreAndRetry() {
+                print("Successfully recovered SwiftData store")
+            } else {
+                print("Failed to recover SwiftData store")
+            }
+        }
+    }
+
+    private func initializeContainer() throws {
+        let schema = Schema([CachedCity.self, CachedPlace.self, CachedCountry.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        modelContainer = try ModelContainer(for: schema, configurations: [config])
+        modelContext = modelContainer?.mainContext
+    }
+
+    private func deleteStoreAndRetry() -> Bool {
+        let fileManager = FileManager.default
+        guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return false
+        }
+
+        // SwiftData default store files
+        let storeFiles = ["default.store", "default.store-shm", "default.store-wal"]
+
+        for file in storeFiles {
+            let url = appSupport.appendingPathComponent(file)
+            try? fileManager.removeItem(at: url)
+        }
+
+        // Clear last sync date since cache is gone
+        UserDefaults.standard.removeObject(forKey: lastSyncKey)
+
+        // Try to initialize again
+        do {
+            try initializeContainer()
+            return true
+        } catch {
+            print("Failed to initialize after deleting store: \(error)")
+            return false
         }
     }
 

@@ -213,22 +213,21 @@ struct UserProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(viewModel.previewCities, id: \.id) { city in
+                List(viewModel.previewCities.enumerated().map({ $0 }), id: \.element) { i, city in
+                    ZStack {
+                        CityListMember(index: i, city: city, bucketList: false, locked: viewModel.cities.count < 5)
                         NavigationLink(destination: CityDetailView(cityId: city.id, isReadOnly: true, city: city, externalUserId: viewModel.userId)) {
-                            UserCityRow(city: city)
+                            EmptyView()
                         }
-                        .buttonStyle(.plain)
-
-                        if city.id != viewModel.previewCities.last?.id {
-                            Divider()
-                                .padding(.leading, 16)
-                        }
+                        .opacity(0)
                     }
+                    .contentShape(Rectangle())
+                    .listRowBackground(Color("Background"))
+                    .listRowSeparator(.hidden)
                 }
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal)
+                .listStyle(.plain)
+                .frame(height: CGFloat(viewModel.previewCities.count) * 60)
+                .background(Color("Background"))
             }
         }
     }
@@ -241,65 +240,26 @@ struct UserProfileView: View {
                 await viewModel.toggleFollow()
             }
         }) {
-            if viewModel.isFollowLoading {
-                ProgressView()
-                    .scaleEffect(0.8)
-            } else {
-                Text(viewModel.isFollowing ? "Following" : "Follow")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(viewModel.isFollowing ? .primary : .white)
-                    .background(viewModel.isFollowing ? Color(.systemGray5) : Color.accentColor)
-                    .cornerRadius(20)
-		//     .padding(.horizontal, 16)
-                //     .padding(.vertical, 8)
-            }
-        }
-        .disabled(viewModel.isFollowLoading)
-    }
-
-}
-
-// MARK: - User City Row
-
-struct UserCityRow: View {
-    let city: City
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "building.2.fill")
-                .foregroundColor(.accentColor)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(city.displayName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text(city.country)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            if let rating = city.rating {
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                        .font(.caption)
-                    Text(String(format: "%.1f", rating))
+            Group {
+                if viewModel.isFollowLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Text(viewModel.isFollowing ? "Following" : "Follow")
                         .font(.subheadline)
                         .fontWeight(.medium)
                 }
             }
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            .foregroundColor(viewModel.isFollowing ? .primary : .white)
+            .frame(minWidth: 80)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(viewModel.isFollowing ? Color(.systemGray5) : Color.accentColor)
+            .cornerRadius(20)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .disabled(viewModel.isFollowLoading)
     }
+
 }
 
 #Preview {

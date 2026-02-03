@@ -905,29 +905,33 @@ extension DatabaseManager {
     /// Get followers of a user
     func getFollowers(userId: String) async throws -> [FollowUser] {
         do {
-            struct FollowWithProfile: Codable {
+            // Step 1: Get follower IDs
+            struct FollowRecord: Codable {
                 let followerId: String
-                let profiles: FollowUser
-
                 enum CodingKeys: String, CodingKey {
                     case followerId = "follower_id"
-                    case profiles
                 }
             }
 
-            let response: [FollowWithProfile] = try await supabase
+            let followRecords: [FollowRecord] = try await supabase
                 .from("follows")
-                .select("""
-                    follower_id,
-                    profiles:follower_id (
-                        id, username, full_name, avatar_url, visited_cities_count
-                    )
-                """)
+                .select("follower_id")
                 .eq("following_id", value: userId)
                 .execute()
                 .value
 
-            return response.map { $0.profiles }
+            guard !followRecords.isEmpty else { return [] }
+
+            // Step 2: Get profiles for those IDs
+            let followerIds = followRecords.map { $0.followerId }
+            let profiles: [FollowUser] = try await supabase
+                .from("profiles")
+                .select("id, username, full_name, avatar_url, visited_cities_count")
+                .in("id", values: followerIds)
+                .execute()
+                .value
+
+            return profiles
         } catch {
             throw DatabaseError.networkError("Failed to get followers: \(error.localizedDescription)")
         }
@@ -936,29 +940,33 @@ extension DatabaseManager {
     /// Get users that a user is following
     func getFollowing(userId: String) async throws -> [FollowUser] {
         do {
-            struct FollowWithProfile: Codable {
+            // Step 1: Get following IDs
+            struct FollowRecord: Codable {
                 let followingId: String
-                let profiles: FollowUser
-
                 enum CodingKeys: String, CodingKey {
                     case followingId = "following_id"
-                    case profiles
                 }
             }
 
-            let response: [FollowWithProfile] = try await supabase
+            let followRecords: [FollowRecord] = try await supabase
                 .from("follows")
-                .select("""
-                    following_id,
-                    profiles:following_id (
-                        id, username, full_name, avatar_url, visited_cities_count
-                    )
-                """)
+                .select("following_id")
                 .eq("follower_id", value: userId)
                 .execute()
                 .value
 
-            return response.map { $0.profiles }
+            guard !followRecords.isEmpty else { return [] }
+
+            // Step 2: Get profiles for those IDs
+            let followingIds = followRecords.map { $0.followingId }
+            let profiles: [FollowUser] = try await supabase
+                .from("profiles")
+                .select("id, username, full_name, avatar_url, visited_cities_count")
+                .in("id", values: followingIds)
+                .execute()
+                .value
+
+            return profiles
         } catch {
             throw DatabaseError.networkError("Failed to get following: \(error.localizedDescription)")
         }

@@ -62,6 +62,22 @@ struct FollowListView: View {
                 Spacer()
                 ProgressView("Loading...")
                 Spacer()
+            } else if let error = error {
+                Spacer()
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundColor(.red)
+                    Text("Failed to load")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                Spacer()
             } else {
                 let users = selectedTab == .followers ? followers : following
                 if users.isEmpty {

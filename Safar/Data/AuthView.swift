@@ -47,68 +47,77 @@ struct AuthView: View {
             
             // Form Section
             VStack(spacing: 20) {
-                // Email Field
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Email")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                    
-                    TextField("Enter your email", text: $email)
-                        .textContentType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.emailAddress)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                }
-                
-                // Password Field
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Password")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                    
-                    HStack {
-                        if showPassword {
-                            TextField("Enter your password", text: $password)
-                                .textContentType(isSignUp ? .newPassword : .password)
-                        } else {
-                            SecureField("Enter your password", text: $password)
-                                .textContentType(isSignUp ? .newPassword : .password)
+                // Show success message for sign up, replacing the form
+                if isSignUp, case .success = result {
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.green)
+
+                        Text("Account Created!")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("Please check your email for a confirmation link to activate your account.")
+                            .foregroundColor(.secondary)
+                            .font(.body)
+                            .multilineTextAlignment(.center)
+
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isSignUp = false
+                                result = nil
+                                password = ""
+                                confirmPassword = ""
+                            }
+                        }) {
+                            Text("Back to Sign In")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
                         }
-                        
-                        Button(action: { showPassword.toggle() }) {
-                            Image(systemName: showPassword ? "eye.slash" : "eye")
-                                .foregroundColor(.gray)
-                        }
+                        .padding(.top, 10)
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                }
-                
-                // Confirm Password Field (only for sign up)
-                if isSignUp {
+                    .padding(.vertical, 20)
+                } else {
+                    // Email Field
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Confirm Password")
+                        Text("Email")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
-                        
+
+                        TextField("Enter your email", text: $email)
+                            .textContentType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.emailAddress)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                    }
+
+                    // Password Field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Password")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+
                         HStack {
-                            if showConfirmPassword {
-                                TextField("Confirm your password", text: $confirmPassword)
-                                    .textContentType(.newPassword)
+                            if showPassword {
+                                TextField("Enter your password", text: $password)
+                                    .textContentType(isSignUp ? .newPassword : .password)
                             } else {
-                                SecureField("Confirm your password", text: $confirmPassword)
-                                    .textContentType(.newPassword)
+                                SecureField("Enter your password", text: $password)
+                                    .textContentType(isSignUp ? .newPassword : .password)
                             }
-                            
-                            Button(action: { showConfirmPassword.toggle() }) {
-                                Image(systemName: showConfirmPassword ? "eye.slash" : "eye")
+
+                            Button(action: { showPassword.toggle() }) {
+                                Image(systemName: showPassword ? "eye.slash" : "eye")
                                     .foregroundColor(.gray)
                             }
                         }
@@ -116,105 +125,125 @@ struct AuthView: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
                     }
-                }
-                
-                // Error/Success Message
-                if let result = result {
-                    switch result {
-                    case .success:
-                        Text(isSignUp ? "Account created successfully! Please check your email for confirmation." : "Signed in successfully!")
-                            .foregroundColor(.secondary)
-                            .font(.subheadline)
-                            .multilineTextAlignment(.center)
-                    case .failure(let error):
+
+                    // Confirm Password Field (only for sign up)
+                    if isSignUp {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Confirm Password")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+
+                            HStack {
+                                if showConfirmPassword {
+                                    TextField("Confirm your password", text: $confirmPassword)
+                                        .textContentType(.newPassword)
+                                } else {
+                                    SecureField("Confirm your password", text: $confirmPassword)
+                                        .textContentType(.newPassword)
+                                }
+
+                                Button(action: { showConfirmPassword.toggle() }) {
+                                    Image(systemName: showConfirmPassword ? "eye.slash" : "eye")
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                    }
+
+                    // Error Message
+                    if case .failure(let error) = result {
                         Text(error.localizedDescription)
                             .foregroundColor(.red)
                             .font(.subheadline)
                             .multilineTextAlignment(.center)
                     }
-                }
-                
-                // Sign In/Sign Up Button
-                Button(action: {
-                    if isSignUp {
-                        signUpButtonTapped()
-                    } else {
-                        signInButtonTapped()
-                    }
-                }) {
-                    HStack {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.8)
+
+                    // Sign In/Sign Up Button
+                    Button(action: {
+                        if isSignUp {
+                            signUpButtonTapped()
+                        } else {
+                            signInButtonTapped()
                         }
-                        Text(isSignUp ? "Create Account" : "Sign In")
-                            .fontWeight(.semibold)
+                    }) {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            }
+                            Text(isSignUp ? "Create Account" : "Sign In")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                }
-                .disabled(isLoading || email.isEmpty || password.isEmpty || (isSignUp && confirmPassword.isEmpty))
-                
-                // Forgot Password (only show for sign in)
-                if !isSignUp {
-                    Button("Forgot Password?") {
-                        forgotPasswordTapped()
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.accentColor)
-                }
-                
-                // Divider
-                HStack {
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(Color(.systemGray4))
-                    Text("or")
+                    .disabled(isLoading || email.isEmpty || password.isEmpty || (isSignUp && confirmPassword.isEmpty))
+
+                    // Forgot Password (only show for sign in)
+                    if !isSignUp {
+                        Button("Forgot Password?") {
+                            forgotPasswordTapped()
+                        }
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 16)
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(Color(.systemGray4))
-                }
-                .padding(.vertical, 10)
-                
-                // Sign in with Apple Button
-                SignInWithAppleButton(
-                    onRequest: { request in
-                        request.requestedScopes = [.fullName, .email]
-                    },
-                    onCompletion: { appleResult in
-                        handleSignInWithApple(appleResult: appleResult)
+                        .foregroundColor(.accentColor)
                     }
-                )
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 50)
-                .cornerRadius(12)
-                
-                // Toggle between Sign In and Sign Up
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isSignUp.toggle()
-                        result = nil
-                        password = ""
-                        confirmPassword = ""
-                    }
-                }) {
-                    HStack(spacing: 4) {
-                        Text(isSignUp ? "Already have an account?" : "Don't have an account?")
+
+                    // Divider
+                    HStack {
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(Color(.systemGray4))
+                        Text("or")
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text(isSignUp ? "Sign In" : "Sign Up")
-                            .foregroundColor(.accentColor)
-                            .fontWeight(.medium)
+                            .padding(.horizontal, 16)
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(Color(.systemGray4))
                     }
-                    .font(.subheadline)
+                    .padding(.vertical, 10)
+
+                    // Sign in with Apple Button
+                    SignInWithAppleButton(
+                        onRequest: { request in
+                            request.requestedScopes = [.fullName, .email]
+                        },
+                        onCompletion: { appleResult in
+                            handleSignInWithApple(appleResult: appleResult)
+                        }
+                    )
+                    .signInWithAppleButtonStyle(.black)
+                    .frame(height: 50)
+                    .cornerRadius(12)
+
+                    // Toggle between Sign In and Sign Up
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isSignUp.toggle()
+                            result = nil
+                            password = ""
+                            confirmPassword = ""
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Text(isSignUp ? "Already have an account?" : "Don't have an account?")
+                                .foregroundColor(.secondary)
+                            Text(isSignUp ? "Sign In" : "Sign Up")
+                                .foregroundColor(.accentColor)
+                                .fontWeight(.medium)
+                        }
+                        .font(.subheadline)
+                    }
+                    .padding(.top, 10)
                 }
-                .padding(.top, 10)
             }
             .padding(.horizontal, 30)
             .padding(.bottom, 50)
