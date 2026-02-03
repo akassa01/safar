@@ -8,6 +8,7 @@ import SwiftUI
 
 struct YourCitiesView: View {
     @EnvironmentObject var viewModel: UserCitiesViewModel
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     @State private var selectedTab: CityTab = .visited
     @State private var cityToDelete: City?
@@ -15,6 +16,7 @@ struct YourCitiesView: View {
     @State private var showingRatingSheet = false
     @State private var cityToRate: City?
     @State private var cityToMarkVisited: City?
+    @State private var showOfflineToast = false
 
     enum CityTab: String, CaseIterable, Identifiable, IconRepresentable {
         case visited = "Visited"
@@ -52,36 +54,46 @@ struct YourCitiesView: View {
                 List(currentCities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 }).enumerated().map({ $0 }), id: \.element) { i, city in
                     ZStack {
                         CityListMember(index: i, city: city, bucketList: selectedTab.bucketList, locked: currentCities.count < 5)
-                        NavigationLink(destination: CityDetailView(cityId: city.id)) {
-                            EmptyView()
+                        if networkMonitor.isConnected {
+                            NavigationLink(destination: CityDetailView(cityId: city.id)) {
+                                EmptyView()
+                            }
+                            .opacity(0)
                         }
-                        .opacity(0)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if !networkMonitor.isConnected {
+                            showOfflineToast = true
+                        }
                     }
                     .contextMenu {
-                        if selectedTab == .visited {
-                            Button {
-                                cityToRate = city
-                                showingRatingSheet = true
-                            } label: {
-                                Label("Change Rating", systemImage: "pencil")
-                            }
-                            Button(role: .destructive) {
-                                cityToDelete = city
-                                showDeleteConfirmation = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        } else {
-                            Button {
-                                cityToMarkVisited = city
-                            } label: {
-                                Label("Mark as Visited", systemImage: "checkmark.circle")
-                            }
-                            Button(role: .destructive) {
-                                cityToDelete = city
-                                showDeleteConfirmation = true
-                            } label: {
-                                Label("Remove from Bucket List", systemImage: "bookmark.slash")
+                        if networkMonitor.isConnected {
+                            if selectedTab == .visited {
+                                Button {
+                                    cityToRate = city
+                                    showingRatingSheet = true
+                                } label: {
+                                    Label("Change Rating", systemImage: "pencil")
+                                }
+                                Button(role: .destructive) {
+                                    cityToDelete = city
+                                    showDeleteConfirmation = true
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            } else {
+                                Button {
+                                    cityToMarkVisited = city
+                                } label: {
+                                    Label("Mark as Visited", systemImage: "checkmark.circle")
+                                }
+                                Button(role: .destructive) {
+                                    cityToDelete = city
+                                    showDeleteConfirmation = true
+                                } label: {
+                                    Label("Remove from Bucket List", systemImage: "bookmark.slash")
+                                }
                             }
                         }
                     }
@@ -90,6 +102,7 @@ struct YourCitiesView: View {
                 }
                 .listStyle(.plain)
                 .background(Color("Background"))
+                .toast(isPresented: $showOfflineToast, message: "City details unavailable offline")
             }
             .background(Color("Background"))
             .sheet(isPresented: $showingRatingSheet) {

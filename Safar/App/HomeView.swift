@@ -8,25 +8,36 @@ struct HomeView: View {
         )
     )
     @State private var mapPresentation: mapType = .visited
-    
+
     @State private var selectedTab: Int = 0
     @State private var isMapExpanded = false
     @State private var showSearchScreen = false
-    
+    @State private var showOfflineToast = false
+
     @State private var homeNavigationPath = NavigationPath()
     @State private var citiesNavigationPath = NavigationPath()
     @State private var exploreNavigationPath = NavigationPath()
     @State private var feedNavigationPath = NavigationPath()
-    
+
     @EnvironmentObject var viewModel: UserCitiesViewModel
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
     
     var body: some View {
-        TabView(selection: $selectedTab) {
+        VStack(spacing: 0) {
+            if !networkMonitor.isConnected {
+                OfflineBannerView()
+            }
+
+            TabView(selection: $selectedTab) {
             NavigationStack(path: $homeNavigationPath) {
                 VStack {
                      TopBar()
                      Button(action: {
-                         showSearchScreen = true
+                         if networkMonitor.isConnected {
+                             showSearchScreen = true
+                         } else {
+                             showOfflineToast = true
+                         }
                      }) {
                          HStack {
                              Image(systemName: "magnifyingglass")
@@ -57,7 +68,11 @@ struct HomeView: View {
                     // Action Buttons
                     HStack {
                         ActionButton(title: "Add a new city", systemImage: "plus") {
-                            showSearchScreen = true;
+                            if networkMonitor.isConnected {
+                                showSearchScreen = true
+                            } else {
+                                showOfflineToast = true
+                            }
                         }
                         Spacer()
                         ShareLink(item: "Download Safar on the App Store") {
@@ -171,6 +186,8 @@ struct HomeView: View {
                 ProgressView()
             }
         }
+        }
+        .toast(isPresented: $showOfflineToast, message: "This feature is unavailable offline")
     }
 }
 

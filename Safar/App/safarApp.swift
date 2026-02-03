@@ -34,8 +34,8 @@ struct safarApp: App {
                         await userCitiesViewModel.initializeWithCurrentUser()
                     }
                 } else {
-                    // User signed out - clear all data
-                    userCitiesViewModel.clearUserData()
+                    // User signed out - clear all data and cache
+                    userCitiesViewModel.clearUserData(clearCache: true)
                 }
             }
             .onChange(of: networkMonitor.isConnected) { _, isConnected in

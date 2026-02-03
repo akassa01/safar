@@ -11,6 +11,7 @@ class UserCitiesViewModel: ObservableObject {
     @Published var visitedContinents: [String] = []
     @Published var isLoading = false
     @Published var error: Error?
+    @Published var isOfflineData = false
     
     private let databaseManager = DatabaseManager.shared
     private var _currentUserId: UUID?
@@ -39,7 +40,10 @@ class UserCitiesViewModel: ObservableObject {
         }
     }
 
-    func clearUserData() {
+    func clearUserData(clearCache: Bool = false) {
+        if clearCache, let userId = _currentUserId {
+            CityCacheManager.shared.clearCache(for: userId)
+        }
         _currentUserId = nil
         visitedCities = []
         bucketListCities = []
@@ -47,41 +51,66 @@ class UserCitiesViewModel: ObservableObject {
         visitedCountries = []
         visitedContinents = []
         error = nil
+        isOfflineData = false
     }
 
     func loadUserData() async {
         print("Checking user id")
         guard let userId = _currentUserId else { return }
-        
+
         print("Getting user data")
         isLoading = true
         error = nil
-        
-        do {
-            let cities = try await getUserCitiesWithDetails(userId: userId)
-            print(cities.count)
-            for city in cities {
-                print("user city: \(city.displayName)")
-            }
-            
-            self.allUserCities = cities
-            
-            // Filter cities based on visited status
-            self.visitedCities = cities.filter { $0.visited == true }
-            print("Visited cities count: \(self.visitedCities.count)")
-            self.bucketListCities = cities.filter { $0.visited == false }
-            print("Bucket list cities count: \(self.bucketListCities.count)")
+        isOfflineData = false
 
-            
-            if (wantCountries) {
-                await loadCountries(visitedCities)
+        let isOnline = NetworkMonitor.shared.isConnected
+
+        if isOnline {
+            do {
+                let cities = try await getUserCitiesWithDetails(userId: userId)
+                print(cities.count)
+                for city in cities {
+                    print("user city: \(city.displayName)")
+                }
+
+                self.allUserCities = cities
+
+                // Filter cities based on visited status
+                self.visitedCities = cities.filter { $0.visited == true }
+                print("Visited cities count: \(self.visitedCities.count)")
+                self.bucketListCities = cities.filter { $0.visited == false }
+                print("Bucket list cities count: \(self.bucketListCities.count)")
+
+                // Cache cities for offline use
+                CityCacheManager.shared.saveCities(cities, for: userId)
+
+                if (wantCountries) {
+                    await loadCountries(visitedCities)
+                }
+            } catch {
+                self.error = error
+                print("Error loading user cities: \(error)")
+                // Fallback to cache on network error
+                loadFromCache(userId: userId)
             }
-        } catch {
-            self.error = error
-            print("Error loading user cities: \(error)")
+        } else {
+            // Offline: load from cache
+            loadFromCache(userId: userId)
         }
-        
+
         isLoading = false
+    }
+
+    private func loadFromCache(userId: UUID) {
+        let cachedCities = CityCacheManager.shared.loadCities(for: userId)
+
+        if !cachedCities.isEmpty {
+            self.allUserCities = cachedCities
+            self.visitedCities = cachedCities.filter { $0.visited == true }
+            self.bucketListCities = cachedCities.filter { $0.visited == false }
+            self.isOfflineData = true
+            print("Loaded \(cachedCities.count) cities from cache")
+        }
     }
     
     func loadCountries(_ cities: [City]) async {
