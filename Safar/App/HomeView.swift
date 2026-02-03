@@ -58,8 +58,8 @@ struct HomeView: View {
                      
                     // Stat Cards
                     HStack(spacing: 12) {
-                        StatCard(title: String(viewModel.visitedCities.count), subtitle: "Cities")
-                        StatCard(title: String(viewModel.visitedCountries.count), subtitle: "Countries")
+                        StatCard(title: String(viewModel.visitedCitiesCount), subtitle: "Cities")
+                        StatCard(title: String(viewModel.visitedCountriesCount), subtitle: "Countries")
                         StatCard(title: String(viewModel.visitedContinents.count), subtitle: "Continents")
                     }
                     .padding(.horizontal)

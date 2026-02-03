@@ -10,12 +10,16 @@ struct Profile: Codable {
     let fullName: String?
     let avatarURL: String?
     let bio: String?
+    let visitedCitiesCount: Int?
+    let visitedCountriesCount: Int?
 
     enum CodingKeys: String, CodingKey {
       case username
       case fullName = "full_name"
       case avatarURL = "avatar_url"
       case bio
+      case visitedCitiesCount = "visited_cities_count"
+      case visitedCountriesCount = "visited_countries_count"
     }
   }
 

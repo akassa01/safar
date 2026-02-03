@@ -9,6 +9,8 @@ class UserCitiesViewModel: ObservableObject {
     @Published var allUserCities: [City] = []
     @Published var visitedCountries: [String] = []
     @Published var visitedContinents: [String] = []
+    @Published var visitedCitiesCount: Int = 0
+    @Published var visitedCountriesCount: Int = 0
     @Published var isLoading = false
     @Published var error: Error?
     @Published var isOfflineData = false
@@ -52,6 +54,8 @@ class UserCitiesViewModel: ObservableObject {
         allUserCities = []
         visitedCountries = []
         visitedContinents = []
+        visitedCitiesCount = 0
+        visitedCountriesCount = 0
         error = nil
         isOfflineData = false
     }
@@ -89,6 +93,9 @@ class UserCitiesViewModel: ObservableObject {
                 if (wantCountries) {
                     await loadCountries(visitedCities)
                 }
+
+                // Load profile counts for cities and countries
+                await loadProfileCounts()
             } catch {
                 self.error = error
                 print("Error loading user cities: \(error)")
@@ -164,6 +171,25 @@ class UserCitiesViewModel: ObservableObject {
             self.visitedCountries = uniqueCountryNames
             self.visitedContinents = uniqueContinents
             print("Loaded \(cachedCountries.count) countries from cache")
+        }
+    }
+
+    func loadProfileCounts() async {
+        guard let userId = _currentUserId else { return }
+
+        do {
+            let profile: Profile = try await supabase
+                .from("profiles")
+                .select("visited_cities_count, visited_countries_count")
+                .eq("id", value: userId)
+                .single()
+                .execute()
+                .value
+
+            self.visitedCitiesCount = profile.visitedCitiesCount ?? 0
+            self.visitedCountriesCount = profile.visitedCountriesCount ?? 0
+        } catch {
+            print("Error loading profile counts: \(error)")
         }
     }
     
