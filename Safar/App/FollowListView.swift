@@ -121,22 +121,7 @@ struct FollowUserRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            AsyncImage(url: avatarURL) { phase in
-                switch phase {
-                case .empty:
-                    avatarPlaceholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                case .failure:
-                    avatarPlaceholder
-                @unknown default:
-                    avatarPlaceholder
-                }
-            }
-            .frame(width: 44, height: 44)
+            AvatarImageView(avatarPath: user.avatarURL, size: 44, placeholderIconSize: 16)
 
             // User Info
             VStack(alignment: .leading, spacing: 2) {
@@ -178,22 +163,6 @@ struct FollowUserRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-
-    private var avatarPlaceholder: some View {
-        Circle()
-            .fill(Color(.systemGray5))
-            .overlay(
-                Image(systemName: "person.fill")
-                    .foregroundColor(.gray)
-                    .font(.system(size: 16))
-            )
-    }
-
-    private var avatarURL: URL? {
-        guard let path = user.avatarURL, !path.isEmpty else { return nil }
-        return supabaseBaseURL
-            .appendingPathComponent("storage/v1/object/public/avatars/\(path)")
     }
 }
 

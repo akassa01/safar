@@ -12,19 +12,34 @@ struct UserCitiesListView: View {
     let cities: [City]
 
     var body: some View {
-        List {
-            ForEach(cities, id: \.id) { city in
-                NavigationLink(destination: CityDetailView(cityId: city.id, isReadOnly: true, city: city)) {
-                    UserCityRow(city: city)
+        VStack {
+            Spacer(minLength: 24)
+            Text("Cities Visited")
+                .font(.title)
+                .bold()
+
+            List(sortedCities.enumerated().map({ $0 }), id: \.element) { i, city in
+                ZStack {
+                    CityListMember(index: i, city: city, bucketList: false, locked: cities.count < 5)
+                    NavigationLink(destination: CityDetailView(cityId: city.id, isReadOnly: true, city: city, externalUserId: userId)) {
+                        EmptyView()
+                    }
+                    .opacity(0)
                 }
-                .listRowInsets(EdgeInsets())
+                .contentShape(Rectangle())
                 .listRowBackground(Color("Background"))
+                .listRowSeparator(.hidden)
             }
+            .listStyle(.plain)
+            .background(Color("Background"))
         }
-        .listStyle(.plain)
         .background(Color("Background"))
-        .navigationTitle("Cities Visited")
+        .navigationTitle("Cities")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var sortedCities: [City] {
+        cities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 })
     }
 }
 

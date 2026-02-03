@@ -23,6 +23,12 @@ class UserProfileViewModel: ObservableObject {
     private let databaseManager = DatabaseManager.shared
     let userId: String
 
+    /// Whether the current user is viewing their own profile
+    var isOwnProfile: Bool {
+        guard let currentUserId = databaseManager.getCurrentUserId() else { return false }
+        return currentUserId == userId
+    }
+
     init(userId: String) {
         self.userId = userId
     }
@@ -61,6 +67,9 @@ class UserProfileViewModel: ObservableObject {
     }
 
     func toggleFollow() async {
+        // Prevent self-following
+        guard !isOwnProfile else { return }
+
         isFollowLoading = true
 
         do {

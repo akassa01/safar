@@ -59,8 +59,10 @@ struct UserProfileView: View {
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                followButton
+            if !viewModel.isOwnProfile {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    followButton
+                }
             }
         }
         .task {
@@ -74,26 +76,11 @@ struct UserProfileView: View {
     private func headerSection(profile: UserProfile) -> some View {
         VStack(spacing: 16) {
             // Avatar
-            AsyncImage(url: avatarURL(for: profile.avatarURL)) { phase in
-                switch phase {
-                case .empty:
-                    avatarPlaceholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                case .failure:
-                    avatarPlaceholder
-                @unknown default:
-                    avatarPlaceholder
-                }
-            }
-            .frame(width: 120, height: 120)
-            .overlay(
-                Circle()
-                    .stroke(Color(.systemBackground), lineWidth: 4)
-            )
+            AvatarImageView(avatarPath: profile.avatarURL, size: 120, placeholderIconSize: 40)
+                .overlay(
+                    Circle()
+                        .stroke(Color(.systemBackground), lineWidth: 4)
+                )
 
             // Name and Username
             VStack(spacing: 4) {
@@ -228,7 +215,7 @@ struct UserProfileView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(viewModel.previewCities, id: \.id) { city in
-                        NavigationLink(destination: CityDetailView(cityId: city.id, isReadOnly: true, city: city)) {
+                        NavigationLink(destination: CityDetailView(cityId: city.id, isReadOnly: true, city: city, externalUserId: viewModel.userId)) {
                             UserCityRow(city: city)
                         }
                         .buttonStyle(.plain)
@@ -262,32 +249,15 @@ struct UserProfileView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(viewModel.isFollowing ? .primary : .white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
                     .background(viewModel.isFollowing ? Color(.systemGray5) : Color.accentColor)
                     .cornerRadius(20)
+		//     .padding(.horizontal, 16)
+                //     .padding(.vertical, 8)
             }
         }
         .disabled(viewModel.isFollowLoading)
     }
 
-    // MARK: - Helpers
-
-    private var avatarPlaceholder: some View {
-        Circle()
-            .fill(Color(.systemGray5))
-            .overlay(
-                Image(systemName: "person.fill")
-                    .foregroundColor(.gray)
-                    .font(.system(size: 40))
-            )
-    }
-
-    private func avatarURL(for path: String?) -> URL? {
-        guard let path = path, !path.isEmpty else { return nil }
-        return supabaseBaseURL
-            .appendingPathComponent("storage/v1/object/public/avatars/\(path)")
-    }
 }
 
 // MARK: - User City Row

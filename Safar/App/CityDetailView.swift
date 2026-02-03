@@ -18,6 +18,7 @@ struct CityDetailView: View {
     let cityId: Int
     let isReadOnly: Bool
     let initialCity: City?
+    let externalUserId: String?
 
     @State private var city: City?
     @State private var isLoading = true
@@ -38,10 +39,11 @@ struct CityDetailView: View {
 
     private var isOffline: Bool { !networkMonitor.isConnected }
 
-    init(cityId: Int, isReadOnly: Bool = false, city: City? = nil) {
+    init(cityId: Int, isReadOnly: Bool = false, city: City? = nil, externalUserId: String? = nil) {
         self.cityId = cityId
         self.isReadOnly = isReadOnly
         self.initialCity = city
+        self.externalUserId = externalUserId
         self._mapCameraPosition = State(initialValue: .region(MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: city?.latitude ?? 0, longitude: city?.longitude ?? 0),
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
@@ -208,6 +210,11 @@ struct CityDetailView: View {
                     center: CLLocationCoordinate2D(latitude: initialCity.latitude, longitude: initialCity.longitude),
                     span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                 ))
+                // Load places for external user
+                if let externalUserId = externalUserId, let uuid = UUID(uuidString: externalUserId) {
+                    placesViewModel.setUserId(uuid)
+                    await placesViewModel.loadPlaces(for: cityId)
+                }
                 self.isLoading = false
             } else {
                 await loadCityData()
@@ -286,9 +293,7 @@ struct CityDetailView: View {
     private var visitedCityContent: some View {
         VStack(spacing: 20) {
             mapSection
-            if !isReadOnly {
-                placesSection
-            }
+            placesSection
             notesSection
             // photosSection (optional)
         }
@@ -508,7 +513,7 @@ struct CityDetailView: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
                         Spacer()
-                        if !isOffline {
+                        if !isOffline && !isReadOnly {
                             Button {
                                 activePlaceCategory = category
                             } label: {
@@ -528,7 +533,7 @@ struct CityDetailView: View {
                                 Text(place.name)
                                     .font(.subheadline)
                                 Spacer()
-                                if !isOffline {
+                                if !isOffline && !isReadOnly {
                                     HStack(spacing: 8) {
                                         Button {
                                             Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }

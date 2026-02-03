@@ -328,33 +328,7 @@ struct PersonSearchRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: avatarURL) { phase in
-                switch phase {
-                case .empty:
-                    Circle()
-                        .fill(Color(.systemGray5))
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .foregroundColor(.gray)
-                        )
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                case .failure:
-                    Circle()
-                        .fill(Color(.systemGray5))
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .foregroundColor(.gray)
-                        )
-                @unknown default:
-                    Circle()
-                        .fill(Color(.systemGray5))
-                }
-            }
-            .frame(width: 44, height: 44)
+            AvatarImageView(avatarPath: person.avatarURL, size: 44, placeholderIconSize: 18)
 
             VStack(alignment: .leading, spacing: 2) {
                 if let fullName = person.fullName, !fullName.isEmpty {
@@ -392,11 +366,6 @@ struct PersonSearchRow: View {
         }
         .padding(.vertical, 8)
         .background(Color("Background"))
-    }
-
-    private var avatarURL: URL? {
-        guard let path = person.avatarURL, !path.isEmpty else { return nil }
-        return supabaseBaseURL.appendingPathComponent("storage/v1/object/public/avatars/\(path)")
     }
 }
 

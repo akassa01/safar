@@ -115,6 +115,11 @@ class DatabaseManager {
         }
         return user
     }
+
+    /// Get current user's ID string (non-throwing, returns nil if not authenticated)
+    func getCurrentUserId() -> String? {
+        return supabase.auth.currentUser?.id.uuidString
+    }
     
     private func normalizeForSearch(_ text: String) -> String {
         return text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
@@ -841,6 +846,12 @@ extension DatabaseManager {
     /// Follow a user
     func followUser(followingId: String) async throws {
         let currentUser = try await getCurrentUser()
+
+        // Prevent self-following
+        guard currentUser.id.uuidString != followingId else {
+            throw DatabaseError.invalidData
+        }
+
         let payload = FollowInsert(
             followerId: currentUser.id.uuidString,
             followingId: followingId
@@ -955,28 +966,22 @@ extension DatabaseManager {
 
     /// Get follower and following counts for a user
     func getFollowCounts(userId: String) async throws -> (followers: Int, following: Int) {
-        struct CountResult: Codable {
-            let count: Int
-        }
-
         do {
-            // Get follower count
-            let followersResponse: [CountResult] = try await supabase
+            // Get follower count (people who follow this user)
+            let followersResponse = try await supabase
                 .from("follows")
                 .select("*", head: true, count: .exact)
                 .eq("following_id", value: userId)
                 .execute()
-                .value
 
-            // Get following count
-            let followingResponse: [CountResult] = try await supabase
+            // Get following count (people this user follows)
+            let followingResponse = try await supabase
                 .from("follows")
                 .select("*", head: true, count: .exact)
                 .eq("follower_id", value: userId)
                 .execute()
-                .value
 
-            return (followers: followersResponse.first?.count ?? 0, following: followingResponse.first?.count ?? 0)
+            return (followers: followersResponse.count ?? 0, following: followingResponse.count ?? 0)
         } catch {
             // If counts fail, return 0s - we can still show the profile
             return (followers: 0, following: 0)
