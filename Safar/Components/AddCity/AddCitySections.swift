@@ -119,6 +119,7 @@ struct PlacesSection: View {
     @Binding var activities: [Place]
     @Binding var shops: [Place]
     @Binding var nightlife: [Place]
+    @Binding var other: [Place]
     let onAddPlaces: (PlaceCategory) -> Void
 
     var body: some View {
@@ -165,6 +166,15 @@ struct PlacesSection: View {
                 category: .nightlife,
                 color: .pink,
                 icon: "wineglass.fill",
+                onAdd: onAddPlaces
+            )
+
+            PlaceDisclosureGroup(
+                title: "Other",
+                places: $other,
+                category: .other,
+                color: .blue,
+                icon: "ellipsis.circle.fill",
                 onAdd: onAddPlaces
             )
         }

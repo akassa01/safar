@@ -32,6 +32,7 @@ struct AddCityView: View {
     @State private var activities: [Place] = []
     @State private var shops: [Place] = []
     @State private var nightlife: [Place] = []
+    @State private var other: [Place] = []
     
     var body: some View {
         NavigationView {
@@ -53,6 +54,7 @@ struct AddCityView: View {
                     activities: $activities,
                     shops: $shops,
                     nightlife: $nightlife,
+                    other: $other,
                     onAddPlaces: { category in
                         activePlaceCategory = category
                     }
@@ -122,6 +124,8 @@ struct AddCityView: View {
                 shops.append(place)
             case .nightlife:
                 nightlife.append(place)
+            case .other:
+                other.append(place)
             }
         }
     }
@@ -160,7 +164,7 @@ struct AddCityView: View {
                 await viewModel.addCityToBucketList(cityId: cityId)
             }
             // After saving the city, insert any selected places for this city
-            let allPlaces = restaurants + hotels + activities + shops + nightlife
+            let allPlaces = [restaurants, hotels, activities, shops, nightlife, other].flatMap { $0 }
             if !allPlaces.isEmpty, let userId = viewModel.currentUserId {
                 do {
                     try await DatabaseManager.shared.insertUserPlaces(userId: userId, cityId: cityId, places: allPlaces)

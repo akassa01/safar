@@ -33,8 +33,10 @@ class UserCitiesViewModel: ObservableObject {
         do {
             print("Initializing current user data..." )
             let user = try await databaseManager.getCurrentUser()
-            self.setUserId(user.id)
+            self._currentUserId = user.id
             print("Current user id: \(user.id)")
+            // Await data load directly instead of spawning a detached Task
+            await loadUserData()
         } catch {
             self.error = error
         }

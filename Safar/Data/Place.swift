@@ -92,9 +92,10 @@ enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
     case activity
     case shop
     case nightlife
-    
+    case other
+
     var id: String { rawValue }
-    
+
     var displayName: String {
         switch self {
         case .hotel: return "Hotel"
@@ -102,6 +103,7 @@ enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
         case .activity: return "Activity"
         case .shop: return "Shop"
         case .nightlife: return "Nightlife"
+        case .other: return "Other"
         }
     }
 
@@ -112,6 +114,7 @@ enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
         case .activity: return "Activities"
         case .shop: return "Shops"
         case .nightlife: return "Nightlife"
+        case .other: return "Other"
         }
     }
 
@@ -122,6 +125,7 @@ enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
         case .activity: return "popcorn"
         case .shop: return "bag"
         case .nightlife: return "wineglass.fill"
+        case .other: return "ellipsis.circle.fill"
         }
     }
 
@@ -137,6 +141,8 @@ enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
             return .yellow
         case .nightlife:
             return .pink
+        case .other:
+            return .blue
         }
     }
 }

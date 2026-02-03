@@ -13,11 +13,12 @@ struct safarApp: App {
     @StateObject private var userCitiesViewModel = UserCitiesViewModel()
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showOfflineView = false
+    @State private var isDataPreloaded = false
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if authManager.isLoading {
+                if authManager.isLoading || (authManager.isAuthenticated && !isDataPreloaded) {
                     LoadingView()
                 } else if authManager.isAuthenticated {
                     HomeView()
@@ -27,20 +28,36 @@ struct safarApp: App {
                 }
             }
             .environmentObject(authManager)
-            .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
-                if isAuthenticated {
-                    // User signed in - initialize their data
+            .onChange(of: authManager.isLoading) { _, isLoading in
+                // When auth check completes and user is authenticated, preload data
+                if !isLoading && authManager.isAuthenticated && !isDataPreloaded {
                     Task {
                         await userCitiesViewModel.initializeWithCurrentUser()
+                        isDataPreloaded = true
+                    }
+                }
+            }
+            .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+                if isAuthenticated {
+                    // User just signed in - preload their data
+                    Task {
+                        await userCitiesViewModel.initializeWithCurrentUser()
+                        isDataPreloaded = true
                     }
                 } else {
                     // User signed out - clear all data and cache
                     userCitiesViewModel.clearUserData(clearCache: true)
+                    isDataPreloaded = false
                 }
             }
             .onChange(of: networkMonitor.isConnected) { _, isConnected in
-                // Show offline view if not connected and not authenticated
-                if !isConnected && !authManager.isAuthenticated && !authManager.isLoading {
+                if isConnected && authManager.isAuthenticated {
+                    // WiFi reconnected - reload all data
+                    Task {
+                        await userCitiesViewModel.loadUserData()
+                    }
+                } else if !isConnected && !authManager.isAuthenticated && !authManager.isLoading {
+                    // Show offline view if not connected and not authenticated
                     showOfflineView = true
                 }
             }
