@@ -44,6 +44,7 @@ struct ExploreView: View {
         .task {
             await leaderboardViewModel.loadTopCities(limit: 5)
             await leaderboardViewModel.loadTopCountries(limit: 5)
+            await leaderboardViewModel.loadTopTravelersByCities(limit: 5)
         }
     }
 
@@ -203,6 +204,11 @@ struct ExploreView: View {
     @ViewBuilder
     private var leaderboardPreviewSection: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // Top Travelers
+            if !leaderboardViewModel.topTravelersByCities.isEmpty {
+                topTravelersSection
+            }
+
             // Top Rated Cities
             if !leaderboardViewModel.topCities.isEmpty {
                 topRatedCitiesSection
@@ -287,6 +293,46 @@ struct ExploreView: View {
                         .padding(.vertical, 8)
 
                     if country.id != leaderboardViewModel.topCountries.prefix(5).last?.id {
+                        Divider()
+                            .padding(.horizontal)
+                    }
+                }
+            }
+            .background(Color(.systemGray6).opacity(0.5))
+            .cornerRadius(12)
+            .padding(.horizontal)
+        }
+    }
+
+    private var topTravelersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Top Travelers")
+                        .font(.title2)
+                        .bold()
+                    Text("Most cities visited")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                NavigationLink(destination: LeaderboardView()) {
+                    Text("See All")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal)
+
+            VStack(spacing: 0) {
+                ForEach(leaderboardViewModel.topTravelersByCities.prefix(5)) { person in
+                    LeaderboardPersonRow(entry: person, rankBy: .cities)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+
+                    if person.id != leaderboardViewModel.topTravelersByCities.prefix(5).last?.id {
                         Divider()
                             .padding(.horizontal)
                     }
