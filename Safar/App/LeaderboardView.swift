@@ -232,9 +232,12 @@ struct LeaderboardView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(viewModel.topCountries) { country in
-                        LeaderboardCountryRow(entry: country)
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
+                        NavigationLink(destination: CountryDetailView(country: country)) {
+                            LeaderboardCountryRow(entry: country)
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
 
                         if country.id != viewModel.topCountries.last?.id {
                             Divider()

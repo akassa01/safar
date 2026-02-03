@@ -197,16 +197,17 @@ class DatabaseManager {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw DatabaseError.invalidData
         }
-        
+
         do {
             let response: [Country] = try await supabase
                 .from("countries")
-                .select("name")
+                .select("id, name, country_code, capital, continent, population, average_rating")
                 .ilike("name", pattern: "%\(query)%")
+                .order("population", ascending: false)
                 .limit(50)
                 .execute()
                 .value
-            
+
             return response
         } catch {
             throw DatabaseError.networkError("Failed to search countries: \(error.localizedDescription)")
@@ -827,6 +828,30 @@ extension DatabaseManager {
             return entries
         } catch {
             throw DatabaseError.networkError("Failed to fetch people leaderboard by countries: \(error.localizedDescription)")
+        }
+    }
+
+    /// Fetch top-rated cities for a specific country (cities with 5+ ratings)
+    func getTopCitiesForCountry(countryName: String, limit: Int = 50) async throws -> [CityLeaderboardEntry] {
+        do {
+            var entries: [CityLeaderboardEntry] = try await supabase
+                .from("cities")
+                .select("id, display_name, admin, country, average_rating, rating_count")
+                .eq("country", value: countryName)
+                .not("average_rating", operator: .is, value: "null")
+                .gte("rating_count", value: Self.minimumRatingsForLeaderboard)
+                .order("average_rating", ascending: false)
+                .order("rating_count", ascending: false)
+                .limit(limit)
+                .execute()
+                .value
+
+            for i in 0..<entries.count {
+                entries[i].rank = i + 1
+            }
+            return entries
+        } catch {
+            throw DatabaseError.networkError("Failed to fetch top cities for country: \(error.localizedDescription)")
         }
     }
 }

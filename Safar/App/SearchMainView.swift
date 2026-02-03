@@ -22,11 +22,13 @@ struct SearchResult: Identifiable {
 
 enum SearchResultItem: Identifiable {
     case city(SearchResult)
+    case country(CountryLeaderboardEntry)
     case person(ProfileSearchResult)
 
     var id: String {
         switch self {
         case .city(let result): return result.id.uuidString
+        case .country(let result): return "country-\(result.id)"
         case .person(let result): return result.id
         }
     }
@@ -134,6 +136,15 @@ struct SearchMainView: View {
                                 contextMenuItems(for: result)
                             }
                             .listRowBackground(Color("Background"))
+                        case .country(let country):
+                            ZStack {
+                                CountrySearchRow(country: country)
+                                NavigationLink(destination: CountryDetailView(country: country)) {
+                                    EmptyView()
+                                }
+                                .opacity(0)
+                            }
+                            .listRowBackground(Color("Background"))
                         case .person(let person):
                             ZStack {
                                 PersonSearchRow(person: person)
@@ -213,6 +224,12 @@ struct SearchMainView: View {
             switch (a, b) {
             case (.city(let cityA), .city(let cityB)):
                 return cityA.population > cityB.population
+            case (.country(let countryA), .country(let countryB)):
+                // Sort by rating if both have ratings, otherwise keep order
+                if countryA.averageRating > 0 && countryB.averageRating > 0 {
+                    return countryA.averageRating > countryB.averageRating
+                }
+                return false
             default:
                 return false
             }
@@ -255,9 +272,16 @@ struct SearchMainView: View {
         case .countries:
             Task {
                 do {
-                    let results = try await DatabaseManager.shared.searchCountries(query: currentQuery)
-                        .map { SearchResult(title: $0.name, subtitle: "", latitude: nil, longitude: nil, population: Int($0.population), country: "", admin: "", data_id: String($0.id)) }
-                    self.searchResults = results.map { .city($0) }
+                    let countries = try await DatabaseManager.shared.searchCountries(query: currentQuery)
+                    self.searchResults = countries.map { country in
+                        .country(CountryLeaderboardEntry(
+                            id: country.id,
+                            name: country.name,
+                            continent: country.continent,
+                            averageRating: country.averageRating ?? 0,
+                            rank: nil
+                        ))
+                    }
                 } catch {
                     self.searchResults = []
                 }
@@ -362,6 +386,54 @@ struct PersonSearchRow: View {
             }
 
             Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 8)
+        .background(Color("Background"))
+    }
+}
+
+struct CountrySearchRow: View {
+    let country: CountryLeaderboardEntry
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Globe icon placeholder
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "globe")
+                    .font(.system(size: 20))
+                    .foregroundColor(.accentColor)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(country.name)
+                    .font(.body)
+                    .fontWeight(.medium)
+
+                Text(country.continent)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Rating (if available)
+            if country.averageRating > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.yellow)
+                        .font(.system(size: 12))
+                    Text(String(format: "%.1f", country.averageRating))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+            }
 
             Image(systemName: "chevron.right")
                 .font(.caption)
