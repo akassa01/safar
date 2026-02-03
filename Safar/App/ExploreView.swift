@@ -328,9 +328,12 @@ struct ExploreView: View {
 
             VStack(spacing: 0) {
                 ForEach(leaderboardViewModel.topTravelersByCities.prefix(5)) { person in
-                    LeaderboardPersonRow(entry: person, rankBy: .cities)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
+                    NavigationLink(destination: UserProfileView(userId: person.id)) {
+                        LeaderboardPersonRow(entry: person, rankBy: .cities)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
 
                     if person.id != leaderboardViewModel.topTravelersByCities.prefix(5).last?.id {
                         Divider()

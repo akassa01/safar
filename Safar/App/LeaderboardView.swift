@@ -106,9 +106,12 @@ struct LeaderboardView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(viewModel.topTravelersByCities.prefix(5).enumerated()), id: \.element.id) { index, person in
-                            LeaderboardPersonRow(entry: person, rankBy: .cities)
-                                .padding(.horizontal)
-                                .padding(.vertical, 8)
+                            NavigationLink(destination: UserProfileView(userId: person.id)) {
+                                LeaderboardPersonRow(entry: person, rankBy: .cities)
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
 
                             if index < min(4, viewModel.topTravelersByCities.count - 1) {
                                 Divider()
@@ -145,9 +148,12 @@ struct LeaderboardView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(viewModel.topTravelersByCountries.prefix(5).enumerated()), id: \.element.id) { index, person in
-                            LeaderboardPersonRow(entry: person, rankBy: .countries)
-                                .padding(.horizontal)
-                                .padding(.vertical, 8)
+                            NavigationLink(destination: UserProfileView(userId: person.id)) {
+                                LeaderboardPersonRow(entry: person, rankBy: .countries)
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
 
                             if index < min(4, viewModel.topTravelersByCountries.count - 1) {
                                 Divider()

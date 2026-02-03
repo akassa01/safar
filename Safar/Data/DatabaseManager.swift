@@ -688,7 +688,7 @@ extension DatabaseManager {
         do {
             let response: [ProfileSearchResult] = try await supabase
                 .from("profiles")
-                .select("id, username, full_name, avatar_url")
+                .select("id, username, full_name, avatar_url, visited_cities_count")
                 .or("username.ilike.%\(trimmed)%,full_name.ilike.%\(trimmed)%")
                 .limit(50)
                 .execute()
@@ -822,6 +822,275 @@ extension DatabaseManager {
             return entries
         } catch {
             throw DatabaseError.networkError("Failed to fetch people leaderboard by countries: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - Follow Operations
+extension DatabaseManager {
+    private struct FollowInsert: Codable {
+        let followerId: String
+        let followingId: String
+
+        enum CodingKeys: String, CodingKey {
+            case followerId = "follower_id"
+            case followingId = "following_id"
+        }
+    }
+
+    /// Follow a user
+    func followUser(followingId: String) async throws {
+        let currentUser = try await getCurrentUser()
+        let payload = FollowInsert(
+            followerId: currentUser.id.uuidString,
+            followingId: followingId
+        )
+        do {
+            try await supabase
+                .from("follows")
+                .insert(payload)
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to follow user: \(error.localizedDescription)")
+        }
+    }
+
+    /// Unfollow a user
+    func unfollowUser(followingId: String) async throws {
+        let currentUser = try await getCurrentUser()
+        do {
+            try await supabase
+                .from("follows")
+                .delete()
+                .eq("follower_id", value: currentUser.id.uuidString)
+                .eq("following_id", value: followingId)
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to unfollow user: \(error.localizedDescription)")
+        }
+    }
+
+    /// Check if current user follows another user
+    func isFollowing(userId: String) async throws -> Bool {
+        let currentUser = try await getCurrentUser()
+        struct FollowCheck: Codable {
+            let id: Int64
+        }
+        do {
+            let response: [FollowCheck] = try await supabase
+                .from("follows")
+                .select("id")
+                .eq("follower_id", value: currentUser.id.uuidString)
+                .eq("following_id", value: userId)
+                .limit(1)
+                .execute()
+                .value
+            return !response.isEmpty
+        } catch {
+            throw DatabaseError.networkError("Failed to check follow status: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get followers of a user
+    func getFollowers(userId: String) async throws -> [FollowUser] {
+        do {
+            struct FollowWithProfile: Codable {
+                let followerId: String
+                let profiles: FollowUser
+
+                enum CodingKeys: String, CodingKey {
+                    case followerId = "follower_id"
+                    case profiles
+                }
+            }
+
+            let response: [FollowWithProfile] = try await supabase
+                .from("follows")
+                .select("""
+                    follower_id,
+                    profiles:follower_id (
+                        id, username, full_name, avatar_url, visited_cities_count
+                    )
+                """)
+                .eq("following_id", value: userId)
+                .execute()
+                .value
+
+            return response.map { $0.profiles }
+        } catch {
+            throw DatabaseError.networkError("Failed to get followers: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get users that a user is following
+    func getFollowing(userId: String) async throws -> [FollowUser] {
+        do {
+            struct FollowWithProfile: Codable {
+                let followingId: String
+                let profiles: FollowUser
+
+                enum CodingKeys: String, CodingKey {
+                    case followingId = "following_id"
+                    case profiles
+                }
+            }
+
+            let response: [FollowWithProfile] = try await supabase
+                .from("follows")
+                .select("""
+                    following_id,
+                    profiles:following_id (
+                        id, username, full_name, avatar_url, visited_cities_count
+                    )
+                """)
+                .eq("follower_id", value: userId)
+                .execute()
+                .value
+
+            return response.map { $0.profiles }
+        } catch {
+            throw DatabaseError.networkError("Failed to get following: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get follower and following counts for a user
+    func getFollowCounts(userId: String) async throws -> (followers: Int, following: Int) {
+        struct CountResult: Codable {
+            let count: Int
+        }
+
+        do {
+            // Get follower count
+            let followersResponse: [CountResult] = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("following_id", value: userId)
+                .execute()
+                .value
+
+            // Get following count
+            let followingResponse: [CountResult] = try await supabase
+                .from("follows")
+                .select("*", head: true, count: .exact)
+                .eq("follower_id", value: userId)
+                .execute()
+                .value
+
+            return (followers: followersResponse.first?.count ?? 0, following: followingResponse.first?.count ?? 0)
+        } catch {
+            // If counts fail, return 0s - we can still show the profile
+            return (followers: 0, following: 0)
+        }
+    }
+}
+
+// MARK: - User Profile Operations
+extension DatabaseManager {
+    /// Get a user's full profile
+    func getUserProfile(userId: String) async throws -> UserProfile {
+        do {
+            let response: UserProfile = try await supabase
+                .from("profiles")
+                .select("id, username, full_name, avatar_url, bio, visited_cities_count, visited_countries_count")
+                .eq("id", value: userId)
+                .single()
+                .execute()
+                .value
+            return response
+        } catch {
+            throw DatabaseError.networkError("Failed to get user profile: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get visited cities for any user (for viewing other profiles)
+    func getVisitedCitiesForUser(userId: String) async throws -> [City] {
+        do {
+            struct UserCityResponse: Codable {
+                let visited: Bool
+                let rating: Double?
+                let notes: String?
+                let cities: CityData
+
+                struct CityData: Codable {
+                    let id: Int
+                    let displayName: String
+                    let plainName: String
+                    let admin: String
+                    let country: String
+                    let countryId: Int64
+                    let population: Int
+                    let latitude: Double
+                    let longitude: Double
+                    let averageRating: Double?
+                    let ratingCount: Int?
+
+                    enum CodingKeys: String, CodingKey {
+                        case id
+                        case displayName = "display_name"
+                        case plainName = "plain_name"
+                        case admin
+                        case country
+                        case countryId = "country_id"
+                        case population
+                        case latitude
+                        case longitude
+                        case averageRating = "average_rating"
+                        case ratingCount = "rating_count"
+                    }
+                }
+            }
+
+            let response: [UserCityResponse] = try await supabase
+                .from("user_city")
+                .select("""
+                    visited, rating, notes,
+                    cities:city_id (
+                        id, display_name, plain_name, admin, country,
+                        country_id, population, latitude, longitude,
+                        average_rating, rating_count
+                    )
+                """)
+                .eq("user_id", value: userId)
+                .eq("visited", value: true)
+                .execute()
+                .value
+
+            return response.map { userCity in
+                City(
+                    id: userCity.cities.id,
+                    displayName: userCity.cities.displayName,
+                    plainName: userCity.cities.plainName,
+                    admin: userCity.cities.admin,
+                    country: userCity.cities.country,
+                    countryId: userCity.cities.countryId,
+                    population: userCity.cities.population,
+                    latitude: userCity.cities.latitude,
+                    longitude: userCity.cities.longitude,
+                    visited: userCity.visited,
+                    rating: userCity.rating,
+                    notes: userCity.notes,
+                    userId: nil,
+                    averageRating: userCity.cities.averageRating,
+                    ratingCount: userCity.cities.ratingCount
+                )
+            }
+        } catch {
+            throw DatabaseError.networkError("Failed to get user's visited cities: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get continents count for a user based on their visited cities
+    func getContinentsCountForUser(userId: String) async throws -> Int {
+        do {
+            let cities = try await getVisitedCitiesForUser(userId: userId)
+            let countryIds = Array(Set(cities.map { $0.countryId }))
+            guard !countryIds.isEmpty else { return 0 }
+
+            let countries = try await getCountriesByIds(countryIds)
+            let continents = Set(countries.map { $0.continent })
+            return continents.count
+        } catch {
+            return 0
         }
     }
 }

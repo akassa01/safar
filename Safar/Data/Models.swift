@@ -28,13 +28,53 @@ struct ProfileSearchResult: Codable, Identifiable {
     let username: String?
     let fullName: String?
     let avatarURL: String?
+    let visitedCitiesCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
         case username
         case fullName = "full_name"
         case avatarURL = "avatar_url"
+        case visitedCitiesCount = "visited_cities_count"
     }
 }
 
+// User displayed in follow lists
+struct FollowUser: Codable, Identifiable {
+    let id: String
+    let username: String?
+    let fullName: String?
+    let avatarURL: String?
+    let visitedCitiesCount: Int?
+    var isFollowing: Bool?
 
+    enum CodingKeys: String, CodingKey {
+        case id
+        case username
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+        case visitedCitiesCount = "visited_cities_count"
+        case isFollowing = "is_following"
+    }
+}
+
+// Full user profile for UserProfileView
+struct UserProfile: Codable, Identifiable {
+    let id: String
+    let username: String?
+    let fullName: String?
+    let avatarURL: String?
+    let bio: String?
+    let visitedCitiesCount: Int?
+    let visitedCountriesCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case username
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+        case bio
+        case visitedCitiesCount = "visited_cities_count"
+        case visitedCountriesCount = "visited_countries_count"
+    }
+}

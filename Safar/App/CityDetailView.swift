@@ -16,6 +16,9 @@ struct CityDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let cityId: Int
+    let isReadOnly: Bool
+    let initialCity: City?
+
     @State private var city: City?
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -34,11 +37,13 @@ struct CityDetailView: View {
     @State private var mapCameraPosition: MapCameraPosition
 
     private var isOffline: Bool { !networkMonitor.isConnected }
-    
-    init(cityId: Int) {
+
+    init(cityId: Int, isReadOnly: Bool = false, city: City? = nil) {
         self.cityId = cityId
+        self.isReadOnly = isReadOnly
+        self.initialCity = city
         self._mapCameraPosition = State(initialValue: .region(MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            center: CLLocationCoordinate2D(latitude: city?.latitude ?? 0, longitude: city?.longitude ?? 0),
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
         )))
     }
@@ -88,7 +93,7 @@ struct CityDetailView: View {
         .navigationTitle(city?.displayName ?? "City Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if let city = city, !isOffline {
+            if let city = city, !isOffline, !isReadOnly {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         if city.visited == true || city.visited == false {
@@ -196,7 +201,17 @@ struct CityDetailView: View {
         }
         .background(Color("Background"))
         .task {
-            await loadCityData()
+            if isReadOnly, let initialCity = initialCity {
+                // For read-only mode, use the provided city directly
+                self.city = initialCity
+                self.mapCameraPosition = .region(MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: initialCity.latitude, longitude: initialCity.longitude),
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                ))
+                self.isLoading = false
+            } else {
+                await loadCityData()
+            }
         }
     }
     
@@ -271,7 +286,9 @@ struct CityDetailView: View {
     private var visitedCityContent: some View {
         VStack(spacing: 20) {
             mapSection
-            placesSection
+            if !isReadOnly {
+                placesSection
+            }
             notesSection
             // photosSection (optional)
         }
@@ -355,8 +372,8 @@ struct CityDetailView: View {
     
     private var bucketListContent: some View {
         VStack(spacing: 20) {
-            // Action Buttons (only when online)
-            if !isOffline {
+            // Action Buttons (only when online and not read-only)
+            if !isOffline && !isReadOnly {
                 VStack(spacing: 12) {
                     Button(action: {
                         showingAddCityView = true
@@ -392,7 +409,7 @@ struct CityDetailView: View {
     
     private var unaddedCityContent: some View {
         VStack(spacing: 20) {
-            if !isOffline {
+            if !isOffline && !isReadOnly {
                 VStack(spacing: 12) {
                     Button(action: {
                         showingAddCityView = true
@@ -417,7 +434,7 @@ struct CityDetailView: View {
                     }
                 }
                 .padding()
-            } else {
+            } else if isOffline && !isReadOnly {
                 Text("Actions unavailable offline")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -549,23 +566,25 @@ struct CityDetailView: View {
             HStack {
                 SectionHeader(title: "Notes", icon: "note.text")
                 Spacer()
-                if !isOffline {
+                if !isOffline && !isReadOnly {
                     Button((city?.notes?.isEmpty ?? true) ? "Add Notes" : "Edit Notes") {
                         showingNotesEditor = true
                     }
                     .foregroundColor(.accentColor)
                 }
             }
-            
+
             if let city = city, let notes = city.notes, !notes.isEmpty {
                 Text(notes)
                     .padding()
                     .background(Color.accentColor.opacity(0.1))
                     .cornerRadius(8)
                     .onTapGesture {
-                        showingNotesEditor = true
+                        if !isReadOnly {
+                            showingNotesEditor = true
+                        }
                     }
-            } else if !isOffline {
+            } else if !isOffline && !isReadOnly {
                 Button(action: {
                     showingNotesEditor = true
                 }) {

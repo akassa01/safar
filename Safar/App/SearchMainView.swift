@@ -132,8 +132,14 @@ struct SearchMainView: View {
                             }
                             .listRowBackground(Color("Background"))
                         case .person(let person):
-                            PersonSearchRow(person: person)
-                                .listRowBackground(Color("Background"))
+                            ZStack {
+                                PersonSearchRow(person: person)
+                                NavigationLink(destination: UserProfileView(userId: person.id)) {
+                                    EmptyView()
+                                }
+                                .opacity(0)
+                            }
+                            .listRowBackground(Color("Background"))
                         }
                     }
                     .listStyle(.plain)
@@ -355,15 +361,34 @@ struct PersonSearchRow: View {
                     Text(fullName)
                         .font(.body)
                         .fontWeight(.medium)
+                } else if let username = person.username {
+                    Text(username)
+                        .font(.body)
+                        .fontWeight(.medium)
                 }
-                if let username = person.username, !username.isEmpty {
-                    Text("@\(username)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+
+                HStack(spacing: 4) {
+                    if let username = person.username, person.fullName != nil && !person.fullName!.isEmpty {
+                        Text("@\(username)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text("•")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    if let citiesCount = person.visitedCitiesCount {
+                        Text("\(citiesCount) cities")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
 
             Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .padding(.vertical, 8)
         .background(Color("Background"))
