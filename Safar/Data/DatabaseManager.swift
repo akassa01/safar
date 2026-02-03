@@ -1132,3 +1132,383 @@ extension DatabaseManager {
         }
     }
 }
+
+// MARK: - Feed Operations
+extension DatabaseManager {
+
+    /// Get IDs of users the current user follows
+    private func getFollowingIds(userId: String) async throws -> [String] {
+        struct FollowRecord: Codable {
+            let followingId: String
+            enum CodingKeys: String, CodingKey {
+                case followingId = "following_id"
+            }
+        }
+
+        let records: [FollowRecord] = try await supabase
+            .from("follows")
+            .select("following_id")
+            .eq("follower_id", value: userId)
+            .execute()
+            .value
+
+        return records.map { $0.followingId }
+    }
+
+    /// Get profiles by IDs (batch fetch)
+    private func getProfilesByIds(_ ids: [String]) async throws -> [ProfileSearchResult] {
+        guard !ids.isEmpty else { return [] }
+
+        return try await supabase
+            .from("profiles")
+            .select("id, username, full_name, avatar_url, visited_cities_count")
+            .in("id", values: ids)
+            .execute()
+            .value
+    }
+
+    /// Get like counts for multiple posts
+    private func getLikeCounts(for postIds: [Int64]) async throws -> [Int64: Int] {
+        guard !postIds.isEmpty else { return [:] }
+
+        struct LikeRecord: Codable {
+            let userCityId: Int64
+            enum CodingKeys: String, CodingKey {
+                case userCityId = "user_city_id"
+            }
+        }
+
+        let likes: [LikeRecord] = try await supabase
+            .from("post_likes")
+            .select("user_city_id")
+            .in("user_city_id", values: postIds.map { Int($0) })
+            .execute()
+            .value
+
+        // Count likes per post
+        var counts: [Int64: Int] = [:]
+        for like in likes {
+            counts[like.userCityId, default: 0] += 1
+        }
+        return counts
+    }
+
+    /// Check which posts the current user has liked
+    private func getUserLikeStatus(for postIds: [Int64], userId: String) async throws -> Set<Int64> {
+        guard !postIds.isEmpty else { return [] }
+
+        struct UserLike: Codable {
+            let userCityId: Int64
+            enum CodingKeys: String, CodingKey {
+                case userCityId = "user_city_id"
+            }
+        }
+
+        let likes: [UserLike] = try await supabase
+            .from("post_likes")
+            .select("user_city_id")
+            .eq("user_id", value: userId)
+            .in("user_city_id", values: postIds.map { Int($0) })
+            .execute()
+            .value
+
+        return Set(likes.map { $0.userCityId })
+    }
+
+    /// Get comment counts for multiple posts
+    private func getCommentCounts(for postIds: [Int64]) async throws -> [Int64: Int] {
+        guard !postIds.isEmpty else { return [:] }
+
+        struct CommentRecord: Codable {
+            let userCityId: Int64
+            enum CodingKeys: String, CodingKey {
+                case userCityId = "user_city_id"
+            }
+        }
+
+        let comments: [CommentRecord] = try await supabase
+            .from("post_comments")
+            .select("user_city_id")
+            .in("user_city_id", values: postIds.map { Int($0) })
+            .execute()
+            .value
+
+        var counts: [Int64: Int] = [:]
+        for comment in comments {
+            counts[comment.userCityId, default: 0] += 1
+        }
+        return counts
+    }
+
+    /// Get feed posts from followed users
+    func getFeedPosts(limit: Int = 20, offset: Int = 0) async throws -> [FeedPost] {
+        let currentUser = try await getCurrentUser()
+        let currentUserId = currentUser.id.uuidString
+
+        // Step 1: Get followed user IDs
+        let followedIds = try await getFollowingIds(userId: currentUserId)
+        guard !followedIds.isEmpty else { return [] }
+
+        // Step 2: Fetch user_city entries with city data
+        let response: [FeedPost.FeedPostResponse] = try await supabase
+            .from("user_city")
+            .select("""
+                id, user_id, visited, rating, notes, visited_at,
+                city_id (id, display_name, admin, country, latitude, longitude)
+            """)
+            .in("user_id", values: followedIds)
+            .eq("visited", value: true)
+            .order("visited_at", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
+            .execute()
+            .value
+
+        guard !response.isEmpty else { return [] }
+
+        // Step 3: Get unique user IDs and fetch profiles
+        let userIds = Array(Set(response.map { $0.userId }))
+        let profiles = try await getProfilesByIds(userIds)
+        let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+
+        // Step 4: Get like counts and current user like status
+        let postIds = response.map { $0.id }
+        let likeCounts = try await getLikeCounts(for: postIds)
+        let userLikes = try await getUserLikeStatus(for: postIds, userId: currentUserId)
+
+        // Step 5: Get comment counts
+        let commentCounts = try await getCommentCounts(for: postIds)
+
+        // Step 6: Fetch places for each post (batch by city)
+        var placesMap: [Int64: [Place]] = [:]
+        for item in response {
+            if let userId = UUID(uuidString: item.userId) {
+                let places = try await getUserPlaces(userId: userId, cityId: item.cities.id)
+                placesMap[item.id] = places
+            }
+        }
+
+        // Step 7: Assemble FeedPost objects
+        return response.map { item in
+            let profile = profileMap[item.userId]
+            var post = FeedPost(from: item)
+            post.username = profile?.username
+            post.fullName = profile?.fullName
+            post.avatarURL = profile?.avatarURL
+            post.likeCount = likeCounts[item.id] ?? 0
+            post.commentCount = commentCounts[item.id] ?? 0
+            post.isLikedByCurrentUser = userLikes.contains(item.id)
+            post.places = placesMap[item.id] ?? []
+            return post
+        }
+    }
+
+    // MARK: - Like Operations
+
+    /// Like a post
+    func likePost(userCityId: Int64) async throws {
+        let currentUser = try await getCurrentUser()
+
+        struct LikeInsert: Codable {
+            let userCityId: Int64
+            let userId: String
+
+            enum CodingKeys: String, CodingKey {
+                case userCityId = "user_city_id"
+                case userId = "user_id"
+            }
+        }
+
+        do {
+            try await supabase
+                .from("post_likes")
+                .insert(LikeInsert(userCityId: userCityId, userId: currentUser.id.uuidString))
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to like post: \(error.localizedDescription)")
+        }
+    }
+
+    /// Unlike a post
+    func unlikePost(userCityId: Int64) async throws {
+        let currentUser = try await getCurrentUser()
+
+        do {
+            try await supabase
+                .from("post_likes")
+                .delete()
+                .eq("user_city_id", value: Int(userCityId))
+                .eq("user_id", value: currentUser.id.uuidString)
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to unlike post: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get all likes for a post (with user profiles)
+    func getPostLikes(userCityId: Int64) async throws -> [PostLike] {
+        struct LikeResponse: Codable {
+            let id: Int64
+            let userCityId: Int64
+            let userId: String
+            let createdAt: Date
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case userCityId = "user_city_id"
+                case userId = "user_id"
+                case createdAt = "created_at"
+            }
+        }
+
+        let likes: [LikeResponse] = try await supabase
+            .from("post_likes")
+            .select("id, user_city_id, user_id, created_at")
+            .eq("user_city_id", value: Int(userCityId))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        guard !likes.isEmpty else { return [] }
+
+        // Fetch profiles for likers
+        let userIds = likes.map { $0.userId }
+        let profiles = try await getProfilesByIds(userIds)
+        let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+
+        return likes.map { like in
+            var postLike = PostLike(
+                id: like.id,
+                userCityId: like.userCityId,
+                userId: like.userId,
+                createdAt: like.createdAt
+            )
+            postLike.username = profileMap[like.userId]?.username
+            postLike.fullName = profileMap[like.userId]?.fullName
+            postLike.avatarURL = profileMap[like.userId]?.avatarURL
+            return postLike
+        }
+    }
+
+    // MARK: - Comment Operations
+
+    /// Get all comments for a post
+    func getPostComments(userCityId: Int64) async throws -> [PostComment] {
+        struct CommentResponse: Codable {
+            let id: Int64
+            let userCityId: Int64
+            let userId: String
+            let content: String
+            let createdAt: Date
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case userCityId = "user_city_id"
+                case userId = "user_id"
+                case content
+                case createdAt = "created_at"
+            }
+        }
+
+        let comments: [CommentResponse] = try await supabase
+            .from("post_comments")
+            .select("id, user_city_id, user_id, content, created_at")
+            .eq("user_city_id", value: Int(userCityId))
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+
+        guard !comments.isEmpty else { return [] }
+
+        // Fetch profiles for commenters
+        let userIds = Array(Set(comments.map { $0.userId }))
+        let profiles = try await getProfilesByIds(userIds)
+        let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+
+        return comments.map { comment in
+            var postComment = PostComment(
+                id: comment.id,
+                userCityId: comment.userCityId,
+                userId: comment.userId,
+                content: comment.content,
+                createdAt: comment.createdAt
+            )
+            postComment.username = profileMap[comment.userId]?.username
+            postComment.fullName = profileMap[comment.userId]?.fullName
+            postComment.avatarURL = profileMap[comment.userId]?.avatarURL
+            return postComment
+        }
+    }
+
+    /// Add a comment to a post
+    func addComment(userCityId: Int64, content: String) async throws -> PostComment {
+        let currentUser = try await getCurrentUser()
+
+        struct CommentInsert: Codable {
+            let userCityId: Int64
+            let userId: String
+            let content: String
+
+            enum CodingKeys: String, CodingKey {
+                case userCityId = "user_city_id"
+                case userId = "user_id"
+                case content
+            }
+        }
+
+        struct CommentResponse: Codable {
+            let id: Int64
+            let userCityId: Int64
+            let userId: String
+            let content: String
+            let createdAt: Date
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case userCityId = "user_city_id"
+                case userId = "user_id"
+                case content
+                case createdAt = "created_at"
+            }
+        }
+
+        let response: CommentResponse = try await supabase
+            .from("post_comments")
+            .insert(CommentInsert(userCityId: userCityId, userId: currentUser.id.uuidString, content: content))
+            .select()
+            .single()
+            .execute()
+            .value
+
+        // Get current user's profile for the returned comment
+        let profile = try await getUserProfile(userId: currentUser.id.uuidString)
+
+        var comment = PostComment(
+            id: response.id,
+            userCityId: response.userCityId,
+            userId: response.userId,
+            content: response.content,
+            createdAt: response.createdAt
+        )
+        comment.username = profile.username
+        comment.fullName = profile.fullName
+        comment.avatarURL = profile.avatarURL
+
+        return comment
+    }
+
+    /// Delete a comment (only own comments)
+    func deleteComment(commentId: Int64) async throws {
+        let currentUser = try await getCurrentUser()
+
+        do {
+            try await supabase
+                .from("post_comments")
+                .delete()
+                .eq("id", value: Int(commentId))
+                .eq("user_id", value: currentUser.id.uuidString)
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to delete comment: \(error.localizedDescription)")
+        }
+    }
+}
