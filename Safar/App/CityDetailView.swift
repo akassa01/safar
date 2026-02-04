@@ -95,6 +95,15 @@ struct CityDetailView: View {
         .navigationTitle(city?.displayName ?? "City Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink(destination: CityOverviewView(cityId: cityId)) {
+                        Label("Community", systemImage: "person.3")
+                            .labelStyle(.titleAndIcon)
+                            .font(.subheadline)
+                    }
+                }
+            
             if let city = city, !isOffline, !isReadOnly {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {

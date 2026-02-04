@@ -1512,3 +1512,107 @@ extension DatabaseManager {
         }
     }
 }
+
+// MARK: - City Overview Operations
+extension DatabaseManager {
+    /// Get friends (people current user follows) who have visited a specific city
+    func getFriendsWhoVisitedCity(cityId: Int, userId: String) async throws -> [FriendCityVisit] {
+        // Step 1: Get IDs of users the current user follows
+        struct FollowRecord: Codable {
+            let followingId: String
+            enum CodingKeys: String, CodingKey {
+                case followingId = "following_id"
+            }
+        }
+
+        let followRecords: [FollowRecord] = try await supabase
+            .from("follows")
+            .select("following_id")
+            .eq("follower_id", value: userId)
+            .execute()
+            .value
+
+        guard !followRecords.isEmpty else { return [] }
+        let followingIds = followRecords.map { $0.followingId }
+
+        // Step 2: Get user_city entries for those users who visited this city
+        struct UserCityRecord: Codable {
+            let id: Int64
+            let userId: String
+            let rating: Double?
+            let visitedAt: Date?
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case userId = "user_id"
+                case rating
+                case visitedAt = "visited_at"
+            }
+        }
+
+        let userCityRecords: [UserCityRecord] = try await supabase
+            .from("user_city")
+            .select("id, user_id, rating, visited_at")
+            .eq("city_id", value: cityId)
+            .eq("visited", value: true)
+            .in("user_id", values: followingIds)
+            .order("visited_at", ascending: false)
+            .execute()
+            .value
+
+        guard !userCityRecords.isEmpty else { return [] }
+
+        // Step 3: Get profiles for those users
+        let userIds = userCityRecords.map { $0.userId }
+        let profiles: [ProfileSearchResult] = try await supabase
+            .from("profiles")
+            .select("id, username, full_name, avatar_url, visited_cities_count")
+            .in("id", values: userIds)
+            .execute()
+            .value
+
+        let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+
+        // Step 4: Combine into FriendCityVisit objects
+        return userCityRecords.map { record in
+            let profile = profileMap[record.userId]
+            return FriendCityVisit(
+                id: String(record.id),
+                userId: record.userId,
+                username: profile?.username,
+                fullName: profile?.fullName,
+                avatarURL: profile?.avatarURL,
+                rating: record.rating,
+                visitedAt: record.visitedAt
+            )
+        }
+    }
+
+    /// Get the current user's status for a city (visited, bucket list, or not added)
+    func getUserCityStatus(cityId: Int, userId: String) async throws -> UserCityStatus {
+        struct UserCityRecord: Codable {
+            let visited: Bool
+            let rating: Double?
+            let notes: String?
+        }
+
+        let records: [UserCityRecord] = try await supabase
+            .from("user_city")
+            .select("visited, rating, notes")
+            .eq("city_id", value: cityId)
+            .eq("user_id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+
+        guard let record = records.first else {
+            return .notAdded
+        }
+
+        if record.visited {
+            return .visited(rating: record.rating, notes: record.notes)
+        } else {
+            return .bucketList
+        }
+    }
+}
