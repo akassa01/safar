@@ -81,7 +81,8 @@ struct AddCityView: View {
                 }
             }
             .sheet(isPresented: $showingRating) {
-                CityRatingView( isPresented: $showingRating,
+                CityRatingView(
+                    isPresented: $showingRating,
                     cityName: baseResult.title,
                     country: baseResult.country,
                     cityID: Int(baseResult.data_id) ?? 0,
@@ -90,6 +91,7 @@ struct AddCityView: View {
                         saveCity()
                     }
                 )
+                .environmentObject(viewModel)
                 .presentationBackground(Color("Background"))
             }
             .sheet(item: $activePlaceCategory) { category in

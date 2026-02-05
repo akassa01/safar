@@ -111,6 +111,7 @@ struct YourCitiesView: View {
                             }
                         }
                     )
+                    .environmentObject(viewModel)
                     .presentationBackground(Color("Background"))
                 }
             }

@@ -28,8 +28,8 @@ struct CityRatingView: View {
     @State private var tempCityRating: Double? = nil
     
     private let minimumCitiesForRating = 5
-    
-    @StateObject private var viewModel = UserCitiesViewModel()
+
+    @EnvironmentObject var viewModel: UserCitiesViewModel
     
     private var ratedCities: [City] {
         viewModel.visitedCities.filter { $0.id != cityID }
@@ -64,7 +64,9 @@ struct CityRatingView: View {
         }
         .task {
             // Ensure rated cities are loaded for comparison logic
-            await viewModel.initializeWithCurrentUser()
+            if viewModel.currentUserId == nil {
+                await viewModel.initializeWithCurrentUser()
+            }
             print("Entered city rating view")
         }
         .background(Color("Background"))
@@ -274,13 +276,15 @@ struct CityRatingView: View {
         print("Rating first city in category: \(category)")
         selectedCategory = category
         tempCityRating = category.baseRating
-        
+
         if ratedCities.count > 0 {
             currentStep = .comparison
             startFirstCitiesComparison()
         } else {
             selectedRating = tempCityRating
-            completeRating()
+            Task {
+                await completeRating()
+            }
         }
     }
 
@@ -311,7 +315,9 @@ struct CityRatingView: View {
             currentStep = .comparison
         } else {
             selectedRating = tempCityRating
-            completeRating()
+            Task {
+                await completeRating()
+            }
         }
     }
 
@@ -348,12 +354,12 @@ struct CityRatingView: View {
         } else {
             // No cities to compare
             selectedRating = seedRating
-            completeRating()
+            Task {
+                await completeRating()
+            }
         }
     }
 
-
-    
     private func recordComparison(newCityWins: Bool) {
         guard let opponent = currentComparisonCity,
               let opponentRating = opponent.rating else {
@@ -384,42 +390,46 @@ struct CityRatingView: View {
             currentComparisonCity = median
         } else {
             selectedRating = (ratingBounds.lowerBound + ratingBounds.upperBound) / 2
-            completeRating()
+            Task {
+                await completeRating()
+            }
         }
     }
 
-    
     private func calculateFirstCitiesRating() {
         print("Calculating first cities rating...")
         guard let category = selectedCategory else { return }
-        
+
         let wins = comparisonResults.filter { $0.newCityWins }.count
         let total = comparisonResults.count
-        
+
         if total == 0 {
             selectedRating = tempCityRating
         } else {
             let winPercentage = Double(wins) / Double(total)
             let averageOpponentRating = comparisonResults.compactMap { $0.comparedCity.rating }.reduce(0.0, +) / Double(comparisonResults.count)
-            
+
             // Calculate rating based on comparisons
             let baseRating = category.baseRating
             let comparisonAdjustment = (winPercentage - 0.5) * 2.0
             let opponentAdjustment = (averageOpponentRating - baseRating) * 0.3
-            
+
             let calculatedRating = baseRating + comparisonAdjustment + opponentAdjustment
             selectedRating = max(1.0, min(10.0, calculatedRating))
         }
-        
+
         // Ensure unique ratings for first 5 cities
         ensureUniqueRatingsForFirstCities()
-        
+
         // If this will be the 5th city, prepare for rating revelation
-        if ratedCities.count + 1 == minimumCitiesForRating {
-            revealAllRatings()
+        let shouldRevealRatings = ratedCities.count + 1 == minimumCitiesForRating
+
+        Task {
+            if shouldRevealRatings {
+                await revealAllRatings()
+            }
+            await completeRating()
         }
-        
-        completeRating()
     }
     
     private func ensureUniqueRatingsForFirstCities() {
@@ -444,84 +454,81 @@ struct CityRatingView: View {
         }
     }
     
-    private func revealAllRatings() {
+    private func revealAllRatings() async {
         // This is called when the 5th city is being rated
-        ensureBestCityHas10()
-        
+        await ensureBestCityHas10()
+
         // Apply any final scaling or adjustments
-        normalizeRatingsDistribution()
+        await normalizeRatingsDistribution()
     }
     
-    private func normalizeRatingsDistribution() {
+    private func normalizeRatingsDistribution() async {
         print("Normalizing ratings")
         // Ensure good distribution across the rating scale
         var allRatings: [(city: City?, rating: Double)] = []
-        
+
         for city in ratedCities {
             if let rating = city.rating {
                 allRatings.append((city: city, rating: rating))
             }
         }
-        
+
         if let newRating = selectedRating {
             allRatings.append((city: nil, rating: newRating))
         }
-        
+
         allRatings.sort { $0.rating < $1.rating }
-        
+
         // Ensure minimum gaps between ratings
         let minGap = 0.1
         for i in 1..<allRatings.count {
             let currentRating = allRatings[i].rating
             let previousRating = allRatings[i-1].rating
-            
+
             if currentRating - previousRating < minGap {
                 let adjustment = minGap - (currentRating - previousRating)
-                let newRating = min(10.0, currentRating + adjustment)
-                
+                let adjustedRating = min(10.0, currentRating + adjustment)
+
                 if let city = allRatings[i].city {
-                    Task {
-                        await viewModel.updateCityRating(cityId: city.id, rating: newRating)
-                    }
+                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: adjustedRating)
                 } else {
-                    selectedRating = newRating
+                    selectedRating = adjustedRating
                 }
-                
-                allRatings[i] = (city: allRatings[i].city, rating: newRating)
+
+                allRatings[i] = (city: allRatings[i].city, rating: adjustedRating)
             }
         }
     }
     
-    private func applyDynamicRatingAdjustments() {
+    private func applyDynamicRatingAdjustments() async {
         guard let newRating = selectedRating else { return }
         print("Dynamically adjusting ratings...")
-        
+
         let adjustmentFactor = 0.1
-        
+
         for city in ratedCities {
             guard let currentRating = city.rating else { continue }
-            
+
             let distance = abs(currentRating - newRating)
             if distance <= 2.0 {
                 let adjustment = adjustmentFactor * (2.0 - distance) / 2.0
-                
+
                 if currentRating > newRating {
-                    Task {
-                        await viewModel.updateCityRating(cityId: city.id, rating: min(10.0, currentRating + adjustment))
-                    }
+                    let newAdjustedRating = min(10.0, currentRating + adjustment)
+                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: newAdjustedRating)
+                    print("Adjusted rating of \(city.displayName) from \(currentRating) to \(newAdjustedRating)")
                 } else {
-                    Task {
-                        await viewModel.updateCityRating(cityId: city.id, rating: max(0.1, currentRating - adjustment))
-                    }
+                    let newAdjustedRating = max(0.1, currentRating - adjustment)
+                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: newAdjustedRating)
+                    print("Adjusted rating of \(city.displayName) from \(currentRating) to \(newAdjustedRating)")
                 }
-                print("Adjusted rating of \(city.displayName) from \(currentRating) to \(city.rating ?? 0)")
             }
         }
-        
-        ensureBestCityHas10()
+
+        await ensureBestCityHas10()
     }
     
-    private func ensureBestCityHas10() {
+    private func ensureBestCityHas10() async {
         var allRatings: [(city: City?, rating: Double)] = []
         for city in ratedCities {
             if let rating = city.rating {
@@ -531,20 +538,18 @@ struct CityRatingView: View {
         if let newRating = selectedRating {
             allRatings.append((city: nil, rating: newRating))
         }
-        
+
         let highestRating = allRatings.max { $0.rating < $1.rating }?.rating ?? 0
-        
+
         if highestRating < 10.0 {
             let scaleFactor = 10.0 / highestRating
-            
+
             for city in ratedCities {
                 if let rating = city.rating {
-                    Task {
-                        await viewModel.updateCityRating(cityId: city.id, rating: min(10.0, rating * scaleFactor))
-                    }
+                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: min(10.0, rating * scaleFactor))
                 }
             }
-            
+
             if let newRating = selectedRating {
                 selectedRating = min(10.0, newRating * Double(scaleFactor))
             }
@@ -573,16 +578,20 @@ struct CityRatingView: View {
         }
     }
     
-    private func completeRating() {
+    private func completeRating() async {
         guard let rating = selectedRating else { return }
-        applyDynamicRatingAdjustments()
-        
+        await applyDynamicRatingAdjustments()
+
         // The rating update is handled by the parent view through the onRatingSelected callback
         // which uses the UserCitiesViewModel.updateCityRating() function
-        
-        onRatingSelected(rating)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isPresented = false
+
+        await MainActor.run {
+            onRatingSelected(rating)
+        }
+
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        await MainActor.run {
+            isPresented = false
         }
     }
     

@@ -199,6 +199,7 @@ struct SearchMainView: View {
                             }
                         }
                     )
+                    .environmentObject(viewModel)
                     .presentationBackground(Color("Background"))
                 }
             }

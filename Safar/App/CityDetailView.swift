@@ -174,6 +174,7 @@ struct CityDetailView: View {
                         }
                     }
                 )
+                .environmentObject(viewModel)
                 .presentationBackground(Color("Background"))
             }
         }

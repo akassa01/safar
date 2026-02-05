@@ -209,8 +209,11 @@ class UserCitiesViewModel: ObservableObject {
     }
     
     func markCityAsVisited(cityId: Int, rating: Double? = nil, notes: String? = nil) async {
-        guard let userId = _currentUserId else { return }
-        
+        guard let userId = _currentUserId else {
+            print("🔴 markCityAsVisited failed: no current user ID")
+            return
+        }
+
         do {
             try await databaseManager.markCityAsVisited(
                 userId: userId,
@@ -218,8 +221,10 @@ class UserCitiesViewModel: ObservableObject {
                 rating: rating,
                 notes: notes
             )
+            print("🟢 ViewModel markCityAsVisited succeeded for cityId: \(cityId)")
             await loadUserData() // Refresh data
         } catch {
+            print("🔴 ViewModel markCityAsVisited error for cityId \(cityId): \(error)")
             self.error = error
         }
     }
@@ -241,10 +246,16 @@ class UserCitiesViewModel: ObservableObject {
     }
     
     // MARK: - Rating Functions
-    
+
     func updateCityRating(cityId: Int, rating: Double) async {
+        await updateCityRatingWithoutRefresh(cityId: cityId, rating: rating)
+        await loadUserData()
+    }
+
+    /// Updates city rating without refreshing data - use this for batch updates
+    func updateCityRatingWithoutRefresh(cityId: Int, rating: Double) async {
         guard let userId = _currentUserId else { return }
-        
+
         do {
             let ratingUpdate = CityRatingUpdate(
                 cityId: cityId,
@@ -252,8 +263,8 @@ class UserCitiesViewModel: ObservableObject {
                 userId: userId
             )
             try await databaseManager.updateCityRating(ratingUpdate)
-            await loadUserData() // Refresh data
         } catch {
+            print("🔴 updateCityRatingWithoutRefresh error for cityId \(cityId): \(error)")
             self.error = error
         }
     }
