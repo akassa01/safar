@@ -14,6 +14,9 @@
 		6462E2602E395D64005B4AAA /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E25F2E395D64005B4AAA /* Storage */; };
 		6462E2622E395D64005B4AAA /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 6462E2612E395D64005B4AAA /* Supabase */; };
 		647E801C2E161DF100E36B1F /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 647E801B2E161DF100E36B1F /* SQLite */; };
+		648A2B1B2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */; };
+		648A2B1C2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */; };
+		648A2B1D2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		64C360952E13632A00CA5CE5 /* Safar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Safar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		64C360A22E13632B00CA5CE5 /* SafarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SafarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		64C360AC2E13632B00CA5CE5 /* SafarUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SafarUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -105,6 +109,7 @@
 		64C3608C2E13632A00CA5CE5 = {
 			isa = PBXGroup;
 			children = (
+				648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */,
 				64C360972E13632A00CA5CE5 /* Safar */,
 				64C360A52E13632B00CA5CE5 /* safarTests */,
 				64C360AF2E13632B00CA5CE5 /* safarUITests */,
@@ -253,6 +258,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				648A2B1B2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,6 +266,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				648A2B1C2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -267,6 +274,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				648A2B1D2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,6 +320,7 @@
 /* Begin XCBuildConfiguration section */
 		64C360B42E13632B00CA5CE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -375,6 +384,7 @@
 		};
 		64C360B52E13632B00CA5CE5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -431,6 +441,7 @@
 		};
 		64C360B72E13632B00CA5CE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -464,6 +475,7 @@
 		};
 		64C360B82E13632B00CA5CE5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -497,6 +509,7 @@
 		};
 		64C360BA2E13632B00CA5CE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -515,6 +528,7 @@
 		};
 		64C360BB2E13632B00CA5CE5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -533,6 +547,7 @@
 		};
 		64C360BD2E13632B00CA5CE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -549,6 +564,7 @@
 		};
 		64C360BE2E13632B00CA5CE5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

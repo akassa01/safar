@@ -29,14 +29,7 @@ struct LeaderboardCityRow: View {
 
             // Rating display
             VStack(alignment: .trailing, spacing: 2) {
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                        .font(.system(size: 14))
-                    Text(String(format: "%.1f", entry.averageRating))
-                        .font(.headline)
-                        .bold()
-                }
+                RatingCircle(rating: entry.averageRating, size: 35)
                 Text("\(entry.ratingCount) ratings")
                     .font(.caption2)
                     .foregroundColor(.secondary)

@@ -426,14 +426,7 @@ struct CountrySearchRow: View {
 
             // Rating (if available)
             if country.averageRating > 0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                        .font(.system(size: 12))
-                    Text(String(format: "%.1f", country.averageRating))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                }
+                RatingCircle(rating: country.averageRating, size: 30)
             }
 
             Image(systemName: "chevron.right")

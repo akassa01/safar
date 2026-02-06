@@ -72,18 +72,7 @@ struct FriendsWhoVisitedSection: View {
                 Spacer()
 
                 if let rating = friend.rating {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.caption)
-                            .foregroundColor(.yellow)
-                        Text(String(format: "%.1f", rating))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    RatingCircle(rating: rating, size: 35)
                 }
 
                 Image(systemName: "chevron.right")
@@ -164,18 +153,7 @@ struct FriendsWhoVisitedListView: View {
                         Spacer()
 
                         if let rating = friend.rating {
-                            HStack(spacing: 4) {
-                                Image(systemName: "star.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.yellow)
-                                Text(String(format: "%.1f", rating))
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
+                            RatingCircle(rating: rating, size: 35)
                         }
                     }
                     .padding(.vertical, 4)

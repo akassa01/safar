@@ -99,30 +99,16 @@ struct CityOverviewView: View {
     // MARK: - Header Section
     @ViewBuilder
     private func headerSection(city: City) -> some View {
-        VStack(spacing: 12) {
-            Spacer().frame(height: 20)
-
-            Text(city.displayName)
-                .font(.title)
-                .bold()
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Rectangle().fill(Color.accent))
-                .cornerRadius(20)
-
-            HStack {
-                Image(systemName: "location.fill")
-                    .foregroundColor(.white.opacity(0.9))
-                Text("\(city.admin), \(city.country)")
-                    .font(.headline)
-                    .foregroundColor(.white.opacity(0.9))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color.black.opacity(0.2))
-            .cornerRadius(20)
-        }
+        CityBannerView(
+            cityId: city.id,
+            cityName: city.displayName,
+            admin: city.admin,
+            country: city.country,
+            population: city.population,
+            rating: nil,
+            isVisited: nil,
+            showActionButtons: false
+        )
     }
 
     // MARK: - Community Rating Section
@@ -207,18 +193,7 @@ struct CityOverviewView: View {
 
                 if let rating = rating {
                     Spacer()
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
-                            .font(.caption)
-                        Text(String(format: "%.1f", rating))
-                            .font(.headline)
-                            .fontWeight(.bold)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    RatingCircle(rating: rating, size: 35)
                 } else {
                     Spacer()
                 }

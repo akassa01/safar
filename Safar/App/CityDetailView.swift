@@ -235,64 +235,34 @@ struct CityDetailView: View {
     @ViewBuilder
     private var headerSection: some View {
         if let city = city {
-            VStack(spacing: 20) {
-                Spacer()
-                // City name and location
-                VStack(spacing: 12) {
-                    Text(city.displayName)
-                        .font(.title)
-                        .bold(true)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Rectangle().fill(Color.accent))
-                        .cornerRadius(20)
+            VStack(spacing: 0) {
+                // City banner with photo background
+                CityBannerView(
+                    cityId: city.id,
+                    cityName: city.displayName,
+                    admin: city.admin,
+                    country: city.country,
+                    population: city.population,
+                    rating: viewModel.visitedCities.count >= 5 ? city.rating : nil,
+                    isVisited: city.visited,
+                    showActionButtons: !isReadOnly && !isOffline,
+                    onAddToVisited: { showingAddCityView = true },
+                    onAddToBucketList: { addToBucketList() }
+                )
 
-                    HStack {
-                        Image(systemName: "location.fill")
-                            .foregroundColor(.white.opacity(0.9))
-                        Text("\(city.admin), \(city.country)")
-                            .font(.headline)
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.2))
-                    .cornerRadius(20)
-                }
-                // Status and rating section
-                HStack(spacing: 16) {
-                    if city.visited == true {
-                        EnhancedStatusBadge(
-                            icon: "checkmark.circle.fill",
-                            text: "Visited",
-                            color: .accent
-                        )
-
-                        if let rating = city.rating {
-                            if viewModel.visitedCities.count >= 5 {
-                                EnhancedRatingDisplay(rating: rating)
-                            } else {
-                                LockDisplay()
-                            }
-                        }
-                    } else if city.visited == false {
-                        EnhancedStatusBadge(
-                            icon: "star.fill",
-                            text: "Bucket List",
-                            color: .accent
-                        )
-                    }
-                }
-
-                // Community rating (shown for cities with 5+ ratings)
+                // Community rating badge (shown for cities with 5+ ratings)
                 if let avgRating = city.averageRating,
                    let ratingCount = city.ratingCount,
                    ratingCount >= 5 {
-                    CommunityRatingBadge(
-                        averageRating: avgRating,
-                        ratingCount: ratingCount
-                    )
+                    HStack {
+                        Spacer()
+                        CommunityRatingBadge(
+                            averageRating: avgRating,
+                            ratingCount: ratingCount
+                        )
+                        .padding(.top, 8)
+                    }
+                    .padding(.horizontal)
                 }
             }
         } else {

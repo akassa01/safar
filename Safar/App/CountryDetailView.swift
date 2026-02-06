@@ -202,24 +202,7 @@ struct CountryRatingDisplay: View {
     let rating: Double
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "star.fill")
-                .foregroundColor(.yellow)
-                .font(.system(size: 16))
-            Text(String(format: "%.1f", rating))
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-            Text("/ 10")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.8))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.black.opacity(0.3))
-                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-        )
+        RatingCircle(rating: rating, size: 40)
     }
 }
 
@@ -244,15 +227,7 @@ struct CountryCityRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             // Rating display
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
-                    .font(.system(size: 14))
-                Text(String(format: "%.1f", entry.averageRating))
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .bold()
-            }
+            RatingCircle(rating: entry.averageRating, size: 35)
 
             Image(systemName: "chevron.right")
                 .font(.caption)

@@ -27,14 +27,7 @@ struct LeaderboardCountryRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             // Rating display
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
-                    .font(.system(size: 14))
-                Text(String(format: "%.1f", entry.averageRating))
-                    .font(.headline)
-                    .bold()
-            }
+            RatingCircle(rating: entry.averageRating, size: 35)
         }
         .padding(.vertical, 4)
     }

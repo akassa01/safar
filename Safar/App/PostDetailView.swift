@@ -97,23 +97,7 @@ struct PostDetailView: View {
             Spacer()
 
             if let rating = post.rating {
-                VStack(spacing: 2) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
-                        Text(String(format: "%.1f", rating))
-                            .fontWeight(.bold)
-                    }
-                    .font(.title3)
-
-                    Text("rating")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
+                RatingCircle(rating: rating, size: 50)
             }
         }
     }

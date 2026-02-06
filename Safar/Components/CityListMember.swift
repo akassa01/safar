@@ -38,12 +38,7 @@ struct CityListMember: View {
                         .foregroundColor(.accent)
                         .frame(width: 30)
                 } else {
-                    Text(String(Double(round(10 * (city.rating!)) / 10))).font(.subheadline)
-                        .bold()
-                        .foregroundStyle(Color("Background")).padding()
-                        .background(Color(.accent))
-                        .clipShape(Circle())
-                        .frame(width: 70)
+                    RatingCircle(rating: city.rating!)
                 }
             }
         }

@@ -1,1 +1,5 @@
 Safar/Data/*.sqlite
+
+# Secrets and config files
+Secrets.xcconfig
+*.xcconfig
