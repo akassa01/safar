@@ -255,8 +255,6 @@ struct ProfileView: View {
             .onTapGesture {
                 isBioFocused = false
             }
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
             .alert("Sign Out", isPresented: $showingSignOutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {

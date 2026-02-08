@@ -56,8 +56,6 @@ struct UserProfileView: View {
                 .background(Color("Background"))
             }
         }
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !viewModel.isOwnProfile {
                 ToolbarItem(placement: .navigationBarTrailing) {

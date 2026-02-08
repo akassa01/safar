@@ -93,8 +93,6 @@ struct CityDetailView: View {
                 .background(Color("Background"))
             }
         }
-        .navigationTitle(city?.displayName ?? "City Details")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let city = city, !isOffline, !isReadOnly {
                 ToolbarItem(placement: .navigationBarTrailing) {

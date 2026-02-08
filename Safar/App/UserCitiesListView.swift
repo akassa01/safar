@@ -34,8 +34,6 @@ struct UserCitiesListView: View {
             .background(Color("Background"))
         }
         .background(Color("Background"))
-        .navigationTitle("Cities")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var sortedCities: [City] {

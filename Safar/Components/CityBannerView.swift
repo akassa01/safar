@@ -177,7 +177,7 @@ struct CityBannerView: View {
                 }
                 .buttonStyle(BorderlessButtonStyle())
             }
-        } else if showActionButtons {
+        } else if isVisited == nil && showActionButtons {
             // Not added: show add to visited + bucket list buttons
             HStack(spacing: 10) {
                 Button {

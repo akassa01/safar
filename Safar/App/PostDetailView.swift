@@ -52,8 +52,6 @@ struct PostDetailView: View {
             .padding()
         }
         .background(Color("Background"))
-        .navigationTitle("\(post.fullName ?? post.username ?? "Unknown")'s trip to \(post.cityName)")
-        .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             commentInputSection
         }

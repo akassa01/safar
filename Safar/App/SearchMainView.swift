@@ -168,8 +168,6 @@ struct SearchMainView: View {
                     isSearchFieldFocused = true
                 }
             }
-            .navigationTitle("Search")
-            .navigationBarTitleDisplayMode(.inline)
             .onChange(of: selectedCategory) {
                 searchResults = []
                 performSearch()

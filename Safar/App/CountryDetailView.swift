@@ -39,8 +39,6 @@ struct CountryDetailView: View {
                 .ignoresSafeArea(edges: .top)
             }
         }
-        .navigationTitle(country.name)
-        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .background(Color("Background"))
