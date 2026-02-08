@@ -18,11 +18,13 @@ struct FullScreenMapView: View {
     @State var isFullScreen: Bool
     @State var cameraPosition: MapCameraPosition
     @Binding var mapPresentation: mapType
-    
+
     @ObservedObject var viewModel: UserCitiesViewModel
+    var onCityTapped: ((City) -> Void)? = nil
 
     @Environment(\.dismiss) var dismiss
-    
+    @State private var selectedCity: City? = nil
+
     private var mapPins: [City] {
         switch mapPresentation {
         case .visited:
@@ -43,11 +45,24 @@ struct FullScreenMapView: View {
                             .fill((city.visited ?? false) ? Color.green : Color.yellow)
                             .frame(width: 12, height: 12)
                             .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            .onTapGesture {
+                                if let onCityTapped {
+                                    onCityTapped(city)
+                                } else {
+                                    selectedCity = city
+                                }
+                            }
                     }
                 }
             }
             .mapStyle(.standard)
             .ignoresSafeArea()
+            .sheet(item: $selectedCity) { city in
+                NavigationStack {
+                    CityDetailView(cityId: city.id)
+                        .environmentObject(viewModel)
+                }
+            }
           
             VStack {
                 // Top bar with a "Close" button
@@ -59,7 +74,7 @@ struct FullScreenMapView: View {
                         Text(mapPresentation.rawValue)
                             .font(.headline)
                             .padding(10)
-                            .foregroundColor(Color("Background"))
+                            .foregroundColor(.white)
                             .background(Color(.accent))
                             .bold(true)
                             .cornerRadius(20)
@@ -74,7 +89,7 @@ struct FullScreenMapView: View {
                             Image(systemName: "xmark")
                                 .font(.headline)
                                 .padding(10)
-                                .foregroundColor(Color("Background"))
+                                .foregroundColor(.white)
                                 .background(Color(.accent))
                                 .bold()
                                 .cornerRadius(20)

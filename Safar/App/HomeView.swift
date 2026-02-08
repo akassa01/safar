@@ -87,38 +87,51 @@ struct HomeView: View {
                                 .cornerRadius(20)
                                 .bold(true)
                             }
-                            .foregroundColor(Color("Background"))
+                            .foregroundColor(Color.white)
                         
                     }
                     .padding(.horizontal)
                     .padding(.bottom)
 
-                    ZStack {
-                        if !showSearchScreen {
-                            FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel)
-                                .frame(height : 400)
-                                .frame(width: 360)
-                                .cornerRadius(20)
-                                .onTapGesture {
+                    if !showSearchScreen {
+                        FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel) { city in
+                                homeNavigationPath.append(city)
+                            }
+                            .frame(height: 400)
+                            .cornerRadius(20)
+                            .padding(.horizontal)
+                            .overlay(alignment: .topTrailing) {
+                                Button(action: {
                                     withAnimation(.spring()) {
                                         isMapExpanded.toggle()
                                     }
+                                }) {
+                                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                        .font(.headline)
+                                        .padding(10)
+                                        .foregroundColor(Color.white)
+                                        .background(Color(.accent))
+                                        .bold()
+                                        .cornerRadius(20)
                                 }
-                        }
-                       
-                        Button(action: {
-                            selectedTab = 1
-                        }) {
-                            Text("View List")
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 30)
-                                .padding(.vertical, 12)
-                                .background(Color(.systemGray5))
-                                .clipShape(Capsule())
-                                .foregroundColor(.primary)
-                        }
-                        .opacity(0.8)
-                        .padding(.top, 325)
+                                .padding(.top, 16)
+                                .padding(.trailing, 24)
+                            }
+                            .overlay(alignment: .bottom) {
+                                Button(action: {
+                                    selectedTab = 1
+                                }) {
+                                    Text("View List")
+                                        .fontWeight(.semibold)
+                                        .padding(.horizontal, 30)
+                                        .padding(.vertical, 12)
+                                        .background(Color(.systemGray5))
+                                        .clipShape(Capsule())
+                                        .foregroundColor(.primary)
+                                }
+                                .opacity(0.8)
+                                .padding(.bottom, 16)
+                            }
                     }
                     Spacer()
                 
@@ -130,6 +143,11 @@ struct HomeView: View {
                 }
                 .fullScreenCover(isPresented: $isMapExpanded) {
                     FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel)
+                        .environmentObject(viewModel)
+                }
+                .navigationDestination(for: City.self) { city in
+                    CityDetailView(cityId: city.id)
+                        .environmentObject(viewModel)
                 }
                 .toolbar(.hidden, for: .navigationBar)
             }

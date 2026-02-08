@@ -19,7 +19,7 @@ struct StatCard: View {
             Text(subtitle)
                 .font(.subheadline)
         }
-        .foregroundColor(Color("Background"))
+        .foregroundColor(.white)
         .frame(maxWidth: .infinity,)
         .frame(height: 65)
         .padding()

@@ -28,6 +28,6 @@ struct ActionButton: View {
             .cornerRadius(20)
             .bold(true)
         }
-        .foregroundColor(Color("Background"))
+        .foregroundColor(.white)
     }
 }
