@@ -72,9 +72,7 @@ struct CityDetailView: View {
 
                             if city.visited == true {
                                 visitedCityContent
-                            } else if city.visited == false {
-                                bucketListContent
-                            } 
+                            }
                         }
                     }
                 }
@@ -356,43 +354,6 @@ struct CityDetailView: View {
         .padding()
         .background(Color("Background"))
         .cornerRadius(12)
-    }
-    
-    private var bucketListContent: some View {
-        VStack(spacing: 20) {
-            // Action Buttons (only when online and not read-only)
-            if !isOffline && !isReadOnly {
-                VStack(spacing: 12) {
-                    Button(action: {
-                        showingAddCityView = true
-                    }) {
-                        Label("Mark as Visited", systemImage: "checkmark.circle.fill")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.accent))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-
-                    Button(action: {
-                        removeFromBucketList()
-                    }) {
-                        Label("Remove from Bucket List", systemImage: "trash")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.accent))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                }
-                .padding()
-            }
-
-            // Basic Info
-            if let city = city, let notes = city.notes, !notes.isEmpty {
-                notesSection
-            }
-        }
     }
     
 //    private var photosSection: some View {

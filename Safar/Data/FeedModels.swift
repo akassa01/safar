@@ -141,4 +141,22 @@ extension FeedPost {
         self.notes = response.notes
         self.visitedAt = response.visitedAt ?? Date()
     }
+
+    /// Create FeedPost from a friend's city visit
+    init(from friendVisit: FriendCityVisit, city: City) {
+        self.id = Int64(friendVisit.id) ?? 0
+        self.userId = friendVisit.userId
+        self.cityId = city.id
+        self.cityName = city.displayName
+        self.cityAdmin = city.admin
+        self.cityCountry = city.country
+        self.cityLatitude = city.latitude
+        self.cityLongitude = city.longitude
+        self.rating = friendVisit.rating
+        self.notes = friendVisit.notes
+        self.visitedAt = friendVisit.visitedAt ?? Date()
+        self.username = friendVisit.username
+        self.fullName = friendVisit.fullName
+        self.avatarURL = friendVisit.avatarURL
+    }
 }

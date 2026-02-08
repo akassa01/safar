@@ -708,7 +708,7 @@ extension DatabaseManager {
 
 // MARK: - Leaderboard Methods
 extension DatabaseManager {
-    private static let minimumRatingsForLeaderboard = 5
+    private static let minimumRatingsForLeaderboard = 1
 
     /// Fetch top-rated cities for leaderboard
     func getTopRatedCities(limit: Int = 50, offset: Int = 0) async throws -> [CityLeaderboardEntry] {
@@ -1240,6 +1240,19 @@ extension DatabaseManager {
         return counts
     }
 
+    /// Get social data (like count, comment count, like status) for a single post
+    func getPostSocialData(userCityId: Int64) async throws -> (likeCount: Int, commentCount: Int, isLiked: Bool) {
+        let currentUserId = getCurrentUserId() ?? ""
+        let likeCounts = try await getLikeCounts(for: [userCityId])
+        let commentCounts = try await getCommentCounts(for: [userCityId])
+        let userLikes = try await getUserLikeStatus(for: [userCityId], userId: currentUserId)
+        return (
+            likeCount: likeCounts[userCityId] ?? 0,
+            commentCount: commentCounts[userCityId] ?? 0,
+            isLiked: userLikes.contains(userCityId)
+        )
+    }
+
     /// Get feed posts from followed users
     func getFeedPosts(limit: Int = 20, offset: Int = 0) async throws -> [FeedPost] {
         let currentUser = try await getCurrentUser()
@@ -1540,19 +1553,21 @@ extension DatabaseManager {
             let id: Int64
             let userId: String
             let rating: Double?
+            let notes: String?
             let visitedAt: Date?
 
             enum CodingKeys: String, CodingKey {
                 case id
                 case userId = "user_id"
                 case rating
+                case notes
                 case visitedAt = "visited_at"
             }
         }
 
         let userCityRecords: [UserCityRecord] = try await supabase
             .from("user_city")
-            .select("id, user_id, rating, visited_at")
+            .select("id, user_id, rating, notes, visited_at")
             .eq("city_id", value: cityId)
             .eq("visited", value: true)
             .in("user_id", values: followingIds)
@@ -1583,36 +1598,10 @@ extension DatabaseManager {
                 fullName: profile?.fullName,
                 avatarURL: profile?.avatarURL,
                 rating: record.rating,
-                visitedAt: record.visitedAt
+                visitedAt: record.visitedAt,
+                notes: record.notes
             )
         }
     }
 
-    /// Get the current user's status for a city (visited, bucket list, or not added)
-    func getUserCityStatus(cityId: Int, userId: String) async throws -> UserCityStatus {
-        struct UserCityRecord: Codable {
-            let visited: Bool
-            let rating: Double?
-            let notes: String?
-        }
-
-        let records: [UserCityRecord] = try await supabase
-            .from("user_city")
-            .select("visited, rating, notes")
-            .eq("city_id", value: cityId)
-            .eq("user_id", value: userId)
-            .limit(1)
-            .execute()
-            .value
-
-        guard let record = records.first else {
-            return .notAdded
-        }
-
-        if record.visited {
-            return .visited(rating: record.rating, notes: record.notes)
-        } else {
-            return .bucketList
-        }
-    }
 }
