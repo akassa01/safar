@@ -36,11 +36,13 @@ struct CountryDetailView: View {
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color("Background"))
+                .ignoresSafeArea(edges: .top)
             }
         }
         .navigationTitle(country.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color("Background"))
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .background(Color("Background"))
         .task {
             await loadTopCities()

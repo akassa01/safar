@@ -78,6 +78,7 @@ struct CityDetailView: View {
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color("Background"))
+                .ignoresSafeArea(edges: .top)
             } else {
                 VStack {
                     Text("City not found")
@@ -120,12 +121,13 @@ struct CityDetailView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .foregroundColor(.accent)
+                            .foregroundColor(.white)
                     }
                 }
             }
         }
-        .toolbarBackground(Color("Background"))
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .sheet(isPresented: $showingAddCityView) {
             if let city = city {
                 AddCityView(
@@ -389,42 +391,6 @@ struct CityDetailView: View {
             // Basic Info
             if let city = city, let notes = city.notes, !notes.isEmpty {
                 notesSection
-            }
-        }
-    }
-    
-    private var unaddedCityContent: some View {
-        VStack(spacing: 20) {
-            if !isOffline && !isReadOnly {
-                VStack(spacing: 12) {
-                    Button(action: {
-                        showingAddCityView = true
-                    }) {
-                        Label("Add to Visited", systemImage: "plus.circle.fill")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.accent))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-
-                    Button(action: {
-                        addToBucketList()
-                    }) {
-                        Label("Add to Bucket List", systemImage: "bookmark.fill")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(.accent))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                }
-                .padding()
-            } else if isOffline && !isReadOnly {
-                Text("Actions unavailable offline")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .padding()
             }
         }
     }

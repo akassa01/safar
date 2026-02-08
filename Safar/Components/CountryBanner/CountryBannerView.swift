@@ -14,7 +14,7 @@ struct CountryBannerView: View {
     @StateObject private var photoViewModel = CountryPhotoViewModel()
     @State private var showingAttribution = false
 
-    private var bannerHeight: CGFloat { UIScreen.main.bounds.height * 0.25 }
+    private var bannerHeight: CGFloat { UIScreen.main.bounds.height * 0.4 }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -67,7 +67,7 @@ struct CountryBannerView: View {
             }
         }
         .frame(height: bannerHeight)
-        .clipped()
+	.clipped()
         .task {
             await photoViewModel.loadPhoto(for: Int(countryId), countryName: countryName)
         }

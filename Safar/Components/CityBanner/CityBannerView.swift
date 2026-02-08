@@ -24,7 +24,7 @@ struct CityBannerView: View {
     @State private var showingAttribution = false
 
     private static let populationThreshold = 125_000
-    private var bannerHeight: CGFloat { UIScreen.main.bounds.height * 0.25 }
+    private var bannerHeight: CGFloat { UIScreen.main.bounds.height * 0.4 }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -105,10 +105,13 @@ struct CityBannerView: View {
                     placeholderGradient
                         .overlay(ProgressView().tint(.white))
                 case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    Color.clear
                         .frame(height: bannerHeight)
+                        .overlay(
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        )
                         .clipped()
                 case .failure:
                     placeholderGradient

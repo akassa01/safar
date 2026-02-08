@@ -43,6 +43,7 @@ struct CityOverviewView: View {
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color("Background"))
+                .ignoresSafeArea(edges: .top)
             } else {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
@@ -64,7 +65,8 @@ struct CityOverviewView: View {
         }
         .navigationTitle(viewModel.city?.displayName ?? "City")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color("Background"))
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .background(Color("Background"))
         .task {
             await viewModel.loadData(cityId: cityId)
