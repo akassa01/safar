@@ -16,15 +16,10 @@ struct LeaderboardCountryRow: View {
             RankBadge(rank: entry.rank ?? 0)
 
             // Country info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.name)
-                    .font(.headline)
-                    .lineLimit(1)
-                Text(entry.continent)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(entry.name)
+                .font(.headline)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             // Rating display
             RatingCircle(rating: entry.averageRating, size: 35)

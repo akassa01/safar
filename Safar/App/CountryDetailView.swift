@@ -49,69 +49,17 @@ struct CountryDetailView: View {
 
     @ViewBuilder
     private var headerSection: some View {
-        VStack(spacing: 20) {
-            Spacer()
-                .frame(height: 20)
-
-            // Country name and continent
-            VStack(spacing: 12) {
-                Text(country.name)
-                    .font(.title)
-                    .bold(true)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Rectangle().fill(Color.accent))
-                    .cornerRadius(20)
-
-                HStack {
-                    Image(systemName: "globe")
-                        .foregroundColor(.white.opacity(0.9))
-                    Text(country.continent)
-                        .font(.headline)
-                        .foregroundColor(.white.opacity(0.9))
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.black.opacity(0.2))
-                .cornerRadius(20)
-            }
-
-            // Rank and rating section
-            HStack(spacing: 16) {
-                // Rank badge (only shown if country has rank from leaderboard)
-                if let rank = country.rank {
-                    CountryRankBadge(rank: rank)
-                }
-
-                // Rating display (only shown if country has a rating)
-                if country.averageRating > 0 {
-                    CountryRatingDisplay(rating: country.averageRating)
-                }
-            }
-
-            Spacer()
-                .frame(height: 20)
-        }
-        .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                colors: [Color.accentColor.opacity(0.8), Color.accentColor.opacity(0.4)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+        CountryBannerView(
+            countryId: country.id,
+            countryName: country.name,
+            rating: country.averageRating,
+            rank: country.rank
         )
     }
 
     private var topCitiesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                SectionHeader(title: "Top Cities", icon: "building.2.fill")
-                Spacer()
-                Text("\(topCities.count) cities with 5+ ratings")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+        	SectionHeader(title: "Top Cities", icon: "building.2.fill")
             .padding(.horizontal)
             .padding(.top, 20)
 
@@ -195,14 +143,6 @@ struct CountryRankBadge: View {
                 .fill(Color.orange)
                 .shadow(color: .orange.opacity(0.4), radius: 4, x: 0, y: 2)
         )
-    }
-}
-
-struct CountryRatingDisplay: View {
-    let rating: Double
-
-    var body: some View {
-        RatingCircle(rating: rating, size: 40)
     }
 }
 

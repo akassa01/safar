@@ -412,22 +412,11 @@ struct CountrySearchRow: View {
                     .foregroundColor(.accentColor)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(country.name)
-                    .font(.body)
-                    .fontWeight(.medium)
-
-                Text(country.continent)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
+            Text(country.name)
+                .font(.body)
+                .fontWeight(.medium)
 
             Spacer()
-
-            // Rating (if available)
-            if country.averageRating > 0 {
-                RatingCircle(rating: country.averageRating, size: 30)
-            }
 
             Image(systemName: "chevron.right")
                 .font(.caption)
