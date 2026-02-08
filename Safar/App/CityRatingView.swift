@@ -23,10 +23,13 @@ struct CityRatingView: View {
     @State private var comparisonResults: [ComparisonResult] = []
     @State private var ratingBounds = RatingBounds()
     @State private var currentComparisonCity: City? = nil
-    
+
     @State private var isFirstFiveCitiesFlow = false
     @State private var tempCityRating: Double? = nil
-    
+    @State private var isSubmitting = false
+    @State private var tiedCityId: Int? = nil
+    @State private var hasAdjustedRatings = false
+
     private let minimumCitiesForRating = 5
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
@@ -62,6 +65,18 @@ struct CityRatingView: View {
                 }
             }
         }
+        .overlay {
+            if isSubmitting {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .overlay {
+                        ProgressView("Saving rating...")
+                            .padding(24)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    }
+            }
+        }
+        .allowsHitTesting(!isSubmitting)
         .task {
             // Ensure rated cities are loaded for comparison logic
             if viewModel.currentUserId == nil {
@@ -266,6 +281,20 @@ struct CityRatingView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
+
+                    Button(action: {
+                        recordTie()
+                    }) {
+                        Text("Can't Choose")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 10)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(20)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
         }
@@ -337,14 +366,17 @@ struct CityRatingView: View {
     private func startComparison() {
         guard let category = selectedCategory else { return }
 
-        ratingBounds.lowerBound = 0.0000001
-        ratingBounds.upperBound = 10.0000001
+        let categoryRange = category.ratingRange
+        ratingBounds.lowerBound = categoryRange.lowerBound
+        ratingBounds.upperBound = categoryRange.upperBound
 
-        // Closest to category midpoint
+        // Find seed city: closest to category midpoint, within category range
         let seedRating = category.baseRating
         let closestCity = ratedCities
-            .filter { $0.rating != nil }
-            .filter { $0.id != cityID }
+            .filter { city in
+                guard let rating = city.rating else { return false }
+                return rating >= categoryRange.lowerBound && rating <= categoryRange.upperBound && city.id != cityID
+            }
             .min(by: { abs(($0.rating ?? 0) - seedRating) < abs(($1.rating ?? 0) - seedRating) })
 
         if let seed = closestCity {
@@ -352,7 +384,7 @@ struct CityRatingView: View {
             comparisonResults = []
             currentStep = .comparison
         } else {
-            // No cities to compare
+            // No cities in category range to compare against
             selectedRating = seedRating
             Task {
                 await completeRating()
@@ -377,7 +409,17 @@ struct CityRatingView: View {
         nextComparison()
     }
 
-    
+    private func recordTie() {
+        guard let opponent = currentComparisonCity,
+              let opponentRating = opponent.rating else { return }
+
+        selectedRating = Double(opponentRating)
+        tiedCityId = opponent.id
+        Task {
+            await completeRating()
+        }
+    }
+
     private func nextComparison() {
         let candidates = ratedCities
             .filter {
@@ -434,159 +476,106 @@ struct CityRatingView: View {
     
     private func ensureUniqueRatingsForFirstCities() {
         guard let newRating = selectedRating else { return }
-        
+
         let existingRatings = ratedCities.compactMap { $0.rating }
-        
+
         if existingRatings.contains(newRating) {
-            var adjustedRating = newRating
-            let increment = 0.1
-            var attempts = 0
-            
-            while existingRatings.contains(adjustedRating) && attempts < 20 {
-                adjustedRating += increment
-                if adjustedRating > 10.0 {
-                    adjustedRating = newRating - increment
+            let step = 0.1
+            for attempt in 1...20 {
+                let offset = step * Double((attempt + 1) / 2) * (attempt.isMultiple(of: 2) ? -1.0 : 1.0)
+                let candidate = newRating + offset
+                if candidate >= 1.0 && candidate <= 10.0 && !existingRatings.contains(candidate) {
+                    selectedRating = candidate
+                    return
                 }
-                attempts += 1
             }
-            
-            selectedRating = max(1.0, min(10.0, adjustedRating))
+            selectedRating = max(1.0, min(10.0, newRating + step))
         }
     }
     
     private func revealAllRatings() async {
         // This is called when the 5th city is being rated
-        await ensureBestCityHas10()
-
-        // Apply any final scaling or adjustments
-        await normalizeRatingsDistribution()
+        // adjustRatingsAroundNewCity handles both gap enforcement and scaling to 10
+        await adjustRatingsAroundNewCity()
     }
     
-    private func normalizeRatingsDistribution() async {
-        print("Normalizing ratings")
-        // Ensure good distribution across the rating scale
-        var allRatings: [(city: City?, rating: Double)] = []
-
-        for city in ratedCities {
-            if let rating = city.rating {
-                allRatings.append((city: city, rating: rating))
-            }
-        }
-
-        if let newRating = selectedRating {
-            allRatings.append((city: nil, rating: newRating))
-        }
-
-        allRatings.sort { $0.rating < $1.rating }
-
-        // Ensure minimum gaps between ratings
-        let minGap = 0.1
-        for i in 1..<allRatings.count {
-            let currentRating = allRatings[i].rating
-            let previousRating = allRatings[i-1].rating
-
-            if currentRating - previousRating < minGap {
-                let adjustment = minGap - (currentRating - previousRating)
-                let adjustedRating = min(10.0, currentRating + adjustment)
-
-                if let city = allRatings[i].city {
-                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: adjustedRating)
-                } else {
-                    selectedRating = adjustedRating
-                }
-
-                allRatings[i] = (city: allRatings[i].city, rating: adjustedRating)
-            }
-        }
-    }
-    
-    private func applyDynamicRatingAdjustments() async {
+    private func adjustRatingsAroundNewCity() async {
         guard let newRating = selectedRating else { return }
-        print("Dynamically adjusting ratings...")
+        print("Adjusting ratings around new city (order-preserving)...")
 
-        let adjustmentFactor = 0.1
+        // Build sorted list of all ratings including the new city (nil = new city)
+        var all: [(city: City?, rating: Double)] = ratedCities
+            .compactMap { city in city.rating.map { (city, $0) } }
+        all.append((nil, newRating))
+        all.sort { $0.rating < $1.rating }
 
-        for city in ratedCities {
-            guard let currentRating = city.rating else { continue }
+        let n = all.count
+        // Density-aware min gap: shrinks as cities grow, capped at 0.2
+        let minGap = max(0.001, min(0.2, 10.0 / Double(n + 1)))
 
-            let distance = abs(currentRating - newRating)
-            if distance <= 2.0 {
-                let adjustment = adjustmentFactor * (2.0 - distance) / 2.0
+        // Find position of the new city
+        guard let newIndex = all.firstIndex(where: { $0.city == nil }) else { return }
 
-                if currentRating > newRating {
-                    let newAdjustedRating = min(10.0, currentRating + adjustment)
-                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: newAdjustedRating)
-                    print("Adjusted rating of \(city.displayName) from \(currentRating) to \(newAdjustedRating)")
-                } else {
-                    let newAdjustedRating = max(0.1, currentRating - adjustment)
-                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: newAdjustedRating)
-                    print("Adjusted rating of \(city.displayName) from \(currentRating) to \(newAdjustedRating)")
-                }
+        // Push cities below the new city downward if too close, preserving order
+        for i in stride(from: newIndex - 1, through: 0, by: -1) {
+            let ceiling = all[i + 1].rating - minGap
+            if all[i].rating > ceiling {
+                let clamped = max(0.0001, ceiling)
+                all[i] = (all[i].city, clamped)
             }
         }
 
-        await ensureBestCityHas10()
-    }
-    
-    private func ensureBestCityHas10() async {
-        var allRatings: [(city: City?, rating: Double)] = []
-        for city in ratedCities {
-            if let rating = city.rating {
-                allRatings.append((city: city, rating: rating))
+        // Push cities above the new city upward if too close, preserving order
+        for i in (newIndex + 1)..<n {
+            let floor = all[i - 1].rating + minGap
+            if all[i].rating < floor {
+                let clamped = min(10.0, floor)
+                all[i] = (all[i].city, clamped)
             }
         }
-        if let newRating = selectedRating {
-            allRatings.append((city: nil, rating: newRating))
-        }
 
-        let highestRating = allRatings.max { $0.rating < $1.rating }?.rating ?? 0
-
-        if highestRating < 10.0 {
+        // Scale so highest rating reaches 10.0 (operates on local array, not stale viewModel)
+        let highestRating = all.max { $0.rating < $1.rating }?.rating ?? 0
+        if highestRating < 10.0 && highestRating > 0 {
             let scaleFactor = 10.0 / highestRating
+            all = all.map { ($0.city, min(10.0, $0.rating * scaleFactor)) }
+        }
 
-            for city in ratedCities {
-                if let rating = city.rating {
-                    await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: min(10.0, rating * scaleFactor))
-                }
-            }
+        // Update selectedRating from the local array (new city entry has city == nil)
+        if let newEntry = all.first(where: { $0.city == nil }) {
+            selectedRating = newEntry.rating
+        }
 
-            if let newRating = selectedRating {
-                selectedRating = min(10.0, newRating * Double(scaleFactor))
+        // Persist only changed ratings (skip the new city and any tied city)
+        for entry in all {
+            if let city = entry.city,
+               let original = city.rating,
+               original != entry.rating,
+               city.id != tiedCityId {
+                print("Adjusted rating of \(city.displayName) from \(original) to \(entry.rating)")
+                await viewModel.updateCityRatingWithoutRefresh(cityId: city.id, rating: entry.rating)
             }
         }
-    }
-    
-    private func ensureUniqueRatings() {
-        guard let newRating = selectedRating else { return }
-        
-        let existingRatings = ratedCities.compactMap { $0.rating }
-        
-        if existingRatings.contains(newRating) {
-            var adjustedRating = newRating
-            let increment = 0.1
-            var attempts = 0
-            
-            while existingRatings.contains(adjustedRating) && attempts < 20 {
-                adjustedRating += increment
-                if adjustedRating > 10.0 {
-                    adjustedRating = newRating - 2.0 * increment
-                }
-                attempts += 1
-            }
-            
-            selectedRating = max(1.0, min(10.0, adjustedRating))
-        }
+
+        hasAdjustedRatings = true
     }
     
     private func completeRating() async {
         guard let rating = selectedRating else { return }
-        await applyDynamicRatingAdjustments()
+        isSubmitting = true
+
+        if !hasAdjustedRatings {
+            await adjustRatingsAroundNewCity()
+        }
+
+        // Use the potentially updated selectedRating (scaling may have changed it)
+        let finalRating = selectedRating ?? rating
 
         // The rating update is handled by the parent view through the onRatingSelected callback
         // which uses the UserCitiesViewModel.updateCityRating() function
 
         await MainActor.run {
-            onRatingSelected(rating)
+            onRatingSelected(finalRating)
         }
 
         try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
