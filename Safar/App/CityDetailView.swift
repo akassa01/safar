@@ -247,7 +247,8 @@ struct CityDetailView: View {
                     isVisited: city.visited,
                     showActionButtons: !isReadOnly && !isOffline,
                     onAddToVisited: { showingAddCityView = true },
-                    onAddToBucketList: { addToBucketList() }
+                    onAddToBucketList: { addToBucketList() },
+                    onRemoveFromBucketList: { removeFromBucketList() }
                 )
 
                 // Community rating badge (shown for cities with 5+ ratings)

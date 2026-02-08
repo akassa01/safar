@@ -18,6 +18,7 @@ struct CityBannerView: View {
     // Action callbacks
     var onAddToVisited: (() -> Void)?
     var onAddToBucketList: (() -> Void)?
+    var onRemoveFromBucketList: (() -> Void)?
 
     @StateObject private var photoViewModel = CityPhotoViewModel()
     @State private var showingAttribution = false
@@ -89,7 +90,7 @@ struct CityBannerView: View {
         .sheet(isPresented: $showingAttribution) {
             if let photo = photoViewModel.cityPhoto {
                 PhotoAttributionSheet(photo: photo)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.height(250)])
             }
         }
     }
@@ -107,6 +108,8 @@ struct CityBannerView: View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
+                        .frame(height: bannerHeight)
+                        .clipped()
                 case .failure:
                     placeholderGradient
                 @unknown default:
@@ -131,42 +134,53 @@ struct CityBannerView: View {
 
     @ViewBuilder
     private var rightContent: some View {
+        let buttonSize: CGFloat = 25.0;
         if isVisited == true {
             // Visited: show rating if available
             if let rating = rating {
-                EnhancedRatingDisplay(rating: rating)
+                RatingCircle(rating: rating, size: 50)
             }
-        } else if isVisited == false {
-            // Bucket list: show status badge
-            EnhancedStatusBadge(
-                icon: "bookmark.fill",
-                text: "Bucket List",
-                color: .accentColor
-            )
-        } else if showActionButtons {
-            // Not added: show action buttons
-            VStack(spacing: 8) {
-                Button(action: { onAddToVisited?() }) {
-                    Label("Visited", systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.accentColor)
-                        .cornerRadius(16)
+        } else if isVisited == false && showActionButtons {
+            // Bucket list: show mark visited + remove buttons
+            HStack(spacing: 10) {
+                Button {
+                    onAddToVisited?()
+                } label: {
+                    Image(systemName: "plus.circle")
+                        .foregroundColor(.accent)
+                        .font(.system(size: buttonSize))
                 }
+                .buttonStyle(BorderlessButtonStyle())
 
-                Button(action: { onAddToBucketList?() }) {
-                    Label("Bucket List", systemImage: "bookmark.fill")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.4))
-                        .cornerRadius(16)
+                Button {
+                    onRemoveFromBucketList?()
+                } label: {
+                    Image(systemName: "bookmark.fill")
+                        .foregroundColor(.accent)
+                        .font(.system(size: buttonSize))
                 }
+                .buttonStyle(BorderlessButtonStyle())
+            }
+        } else if showActionButtons {
+            // Not added: show add to visited + bucket list buttons
+            HStack(spacing: 10) {
+                Button {
+                    onAddToVisited?()
+                } label: {
+                    Image(systemName: "plus.circle")
+                        .foregroundColor(.accent)
+                        .font(.system(size: buttonSize))
+                }
+                .buttonStyle(BorderlessButtonStyle())
+
+                Button {
+                    onAddToBucketList?()
+                } label: {
+                    Image(systemName: "bookmark")
+                        .foregroundColor(.accent)
+                        .font(.system(size: buttonSize))
+                }
+                .buttonStyle(BorderlessButtonStyle())
             }
         }
     }
@@ -175,90 +189,61 @@ struct CityBannerView: View {
 // MARK: - Photo Attribution Sheet
 
 struct PhotoAttributionSheet: View {
-    let photo: CityPhoto
+    let photo: any PhotoAttributable
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                // Photo preview
-                if let url = URL(string: photo.photoURLSmall) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 150)
-                                .overlay(ProgressView())
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 150)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        case .failure:
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 150)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
-                }
-
+            VStack(spacing: 16) {
                 // Attribution info
-                VStack(spacing: 16) {
-                    // Photographer
-                    if let photographerURL = photo.photographerURL {
-                        Link(destination: photographerURL) {
-                            HStack {
-                                Image(systemName: "camera.fill")
-                                    .foregroundColor(.accentColor)
-                                VStack(alignment: .leading) {
-                                    Text("Photo by")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text(photo.photographerName)
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                }
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
+                // Photographer
+                if let photographerURL = photo.photographerURL {
+                    Link(destination: photographerURL) {
+                        HStack {
+                            Image(systemName: "camera.fill")
+                                .foregroundColor(.accentColor)
+                            VStack(alignment: .leading) {
+                                Text("Photo by")
+                                    .font(.caption)
                                     .foregroundColor(.secondary)
+                                Text(photo.photographerName)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
                             }
-                            .padding()
-                            .background(Color(.secondarySystemBackground))
-                            .cornerRadius(12)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .foregroundColor(.secondary)
                         }
-                    }
-
-                    // View on Unsplash
-                    if let unsplashURL = photo.photoPageURL {
-                        Link(destination: unsplashURL) {
-                            HStack {
-                                Image(systemName: "photo.on.rectangle")
-                                    .foregroundColor(.accentColor)
-                                VStack(alignment: .leading) {
-                                    Text("View on")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("Unsplash")
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                }
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding()
-                            .background(Color(.secondarySystemBackground))
-                            .cornerRadius(12)
-                        }
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(12)
                     }
                 }
 
-                Spacer()
-
+                // View on Unsplash
+                if let unsplashURL = photo.photoPageURL {
+                    Link(destination: unsplashURL) {
+                        HStack {
+                            Image(systemName: "photo.on.rectangle")
+                                .foregroundColor(.accentColor)
+                            VStack(alignment: .leading) {
+                                Text("View on")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("Unsplash")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(12)
+                    }
+                }
+                
                 // Unsplash attribution text
                 Text("Photos provided by Unsplash")
                     .font(.caption)

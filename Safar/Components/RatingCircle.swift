@@ -18,7 +18,7 @@ struct RatingCircle: View {
     var body: some View {
         Text(String(format: "%.1f", rating))
             .font(.system(size: fontSize, weight: .bold))
-            .foregroundStyle(Color("Background"))
+	    .foregroundStyle(Color.white)
             .frame(width: size, height: size)
             .background(Color.accent)
             .clipShape(Circle())

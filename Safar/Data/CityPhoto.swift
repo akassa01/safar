@@ -9,7 +9,7 @@ import SwiftUI
 // MARK: - CityPhoto Model
 
 /// Represents a cached city photo stored in Supabase
-struct CityPhoto: Codable, Identifiable {
+struct CityPhoto: Codable, Identifiable, PhotoAttributable {
     let id: Int64
     let cityId: Int
     let unsplashId: String
@@ -34,20 +34,6 @@ struct CityPhoto: Codable, Identifiable {
         case createdAt = "created_at"
     }
 
-    /// Attribution text for Unsplash guidelines
-    var attributionText: String {
-        "Photo by \(photographerName) on Unsplash"
-    }
-
-    /// URL to photographer's Unsplash profile
-    var photographerURL: URL? {
-        URL(string: "https://unsplash.com/@\(photographerUsername)?utm_source=safar&utm_medium=referral")
-    }
-
-    /// URL to the photo on Unsplash
-    var photoPageURL: URL? {
-        URL(string: unsplashURL + "?utm_source=safar&utm_medium=referral")
-    }
 }
 
 // MARK: - CityPhoto Insert Payload

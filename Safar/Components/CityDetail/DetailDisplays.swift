@@ -1,5 +1,5 @@
 //
-//  EnhancedStatusBadge.swift
+//  DetailDisplays.swift
 //  safar
 //
 //  Created by Arman Kassam on 2025-07-17.
@@ -22,7 +22,7 @@ struct SectionHeader: View {
     }
 }
 
-struct EnhancedStatusBadge: View {
+struct StatusBadge: View {
     let icon: String
     let text: String
     let color: Color
@@ -41,14 +41,6 @@ struct EnhancedStatusBadge: View {
     }
 }
 
-struct EnhancedRatingDisplay: View {
-    let rating: Double
-    
-    var body: some View {
-        RatingCircle(rating: rating, size: 40)
-    }
-}
-
 struct LockDisplay: View {
     var body: some View {
         HStack(spacing: 6) {
@@ -63,30 +55,6 @@ struct LockDisplay: View {
                 .fill(Color.black.opacity(0.3))
                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
         )
-    }
-}
-
-struct StatusBadge: View {
-    let icon: String
-    let text: String
-    let color: Color
-    
-    var body: some View {
-        Label(text, systemImage: icon)
-            .font(.headline)
-            .foregroundColor(color)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(color.opacity(0.1))
-            .cornerRadius(20)
-    }
-}
-
-struct RatingDisplay: View {
-    let rating: Double
-
-    var body: some View {
-        RatingCircle(rating: rating, size: 40)
     }
 }
 

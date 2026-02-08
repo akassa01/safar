@@ -64,7 +64,7 @@ struct FeedPostHeader: View {
 
             // Rating badge
             if let rating = post.rating {
-                RatingCircle(rating: rating, size: 35)
+                RatingCircle(rating: rating, size: 45)
             }
         }
     }
