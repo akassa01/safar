@@ -12,14 +12,14 @@ struct CityOverviewView: View {
     @EnvironmentObject var userCitiesViewModel: UserCitiesViewModel
     @StateObject private var viewModel = CityOverviewViewModel()
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
-
+    
     let cityId: Int
-
+    
     @State private var showingAddCityView = false
     @State private var addAsVisited = true
-
+    
     private var isOffline: Bool { !networkMonitor.isConnected }
-
+    
     var body: some View {
         Group {
             if viewModel.isLoading {
@@ -32,12 +32,11 @@ struct CityOverviewView: View {
                         if isOffline {
                             OfflineBannerView(lastSyncDate: CityCacheManager.shared.lastSyncDate)
                         }
-
+                        
                         VStack(spacing: 20) {
                             headerSection(city: city)
                             communityRatingSection(city: city)
                             friendsSection(city: city)
-                            userStatusSection(city: city)
                         }
                         .padding(.bottom, 20)
                     }
@@ -95,7 +94,7 @@ struct CityOverviewView: View {
             }
         }
     }
-
+    
     // MARK: - Header Section
     @ViewBuilder
     private func headerSection(city: City) -> some View {
@@ -107,16 +106,16 @@ struct CityOverviewView: View {
             population: city.population,
             rating: nil,
             isVisited: nil,
-            showActionButtons: false
+            showActionButtons: true
         )
     }
-
+    
     // MARK: - Community Rating Section
     @ViewBuilder
     private func communityRatingSection(city: City) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Community Rating", icon: "person.3.fill")
-
+            
             if let avgRating = city.averageRating,
                let ratingCount = city.ratingCount,
                ratingCount >= 5 {
@@ -150,7 +149,7 @@ struct CityOverviewView: View {
         .cornerRadius(12)
         .padding(.horizontal)
     }
-
+    
     // MARK: - Friends Who Visited Section
     @ViewBuilder
     private func friendsSection(city: City) -> some View {
@@ -160,120 +159,7 @@ struct CityOverviewView: View {
         )
         .padding(.horizontal)
     }
-
-    // MARK: - User Status Section
-    @ViewBuilder
-    private func userStatusSection(city: City) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Your Status", icon: "person.fill")
-
-            switch viewModel.userStatus {
-            case .visited(let rating, _):
-                visitedStatusView(rating: rating)
-            case .bucketList:
-                bucketListStatusView
-            case .notAdded:
-                notAddedStatusView
-            }
-        }
-        .padding()
-        .background(Color("Background"))
-        .cornerRadius(12)
-        .padding(.horizontal)
-    }
-
-    private func visitedStatusView(rating: Double?) -> some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.accent)
-                Text("Visited")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
-                if let rating = rating {
-                    Spacer()
-                    RatingCircle(rating: rating, size: 35)
-                } else {
-                    Spacer()
-                }
-            }
-
-            NavigationLink(destination: CityDetailView(cityId: cityId)) {
-                Label("View My City Details", systemImage: "arrow.right.circle")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accent)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-            }
-        }
-    }
-
-    private var bucketListStatusView: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "bookmark.fill")
-                    .foregroundColor(.accent)
-                Text("On Bucket List")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-
-            if !isOffline {
-                Button {
-                    addAsVisited = true
-                    showingAddCityView = true
-                } label: {
-                    Label("Mark as Visited", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.accent)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-            }
-        }
-    }
-
-    private var notAddedStatusView: some View {
-        VStack(spacing: 12) {
-            if !isOffline {
-                Button {
-                    addAsVisited = true
-                    showingAddCityView = true
-                } label: {
-                    Label("Add to Visited", systemImage: "plus.circle.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.accent)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-
-                Button {
-                    Task {
-                        await userCitiesViewModel.addCityToBucketList(cityId: cityId)
-                        await viewModel.refreshUserStatus(cityId: cityId)
-                    }
-                } label: {
-                    Label("Add to Bucket List", systemImage: "bookmark.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.accent)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-            } else {
-                Text("Actions unavailable offline")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
 }
-
 #Preview {
     NavigationStack {
         CityOverviewView(cityId: 1)
