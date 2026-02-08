@@ -22,7 +22,7 @@ struct TopBar: View {
                
                 HStack(spacing: 20) {
                     NavigationLink(destination: {
-                        ProfileView()
+                        UserProfileView(userId: DatabaseManager.shared.getCurrentUserId() ?? "")
                     }, label: {
                         Image(systemName: "person.crop.circle")
                             .foregroundColor(Color.accentColor)

@@ -18,6 +18,8 @@ class UserProfileViewModel: ObservableObject {
     @Published var isFollowing: Bool = false
     @Published var isLoading = true
     @Published var isFollowLoading = false
+    @Published var recentPosts: [FeedPost] = []
+    @Published var isLoadingPosts = false
     @Published var error: Error?
 
     private let databaseManager = DatabaseManager.shared
@@ -26,7 +28,7 @@ class UserProfileViewModel: ObservableObject {
     /// Whether the current user is viewing their own profile
     var isOwnProfile: Bool {
         guard let currentUserId = databaseManager.getCurrentUserId() else { return false }
-        return currentUserId == userId
+        return currentUserId.lowercased() == userId.lowercased()
     }
 
     init(userId: String) {
@@ -63,7 +65,21 @@ class UserProfileViewModel: ObservableObject {
             self.error = error
         }
 
+        if isOwnProfile || isFollowing {
+            await loadRecentPosts()
+        }
+
         isLoading = false
+    }
+
+    func loadRecentPosts() async {
+        isLoadingPosts = true
+        do {
+            recentPosts = try await databaseManager.getUserFeedPosts(userId: userId, limit: 10)
+        } catch {
+            print("Error loading recent posts: \(error)")
+        }
+        isLoadingPosts = false
     }
 
     func toggleFollow() async {
@@ -87,6 +103,36 @@ class UserProfileViewModel: ObservableObject {
         }
 
         isFollowLoading = false
+
+        // Load or clear recent posts based on follow state
+        if isFollowing {
+            await loadRecentPosts()
+        } else {
+            recentPosts = []
+        }
+    }
+
+    func toggleLike(for post: FeedPost) async {
+        guard let index = recentPosts.firstIndex(where: { $0.id == post.id }) else { return }
+
+        let wasLiked = recentPosts[index].isLikedByCurrentUser
+
+        recentPosts[index].isLikedByCurrentUser.toggle()
+        recentPosts[index].likeCount += recentPosts[index].isLikedByCurrentUser ? 1 : -1
+
+        do {
+            if wasLiked {
+                try await databaseManager.unlikePost(userCityId: post.id)
+            } else {
+                try await databaseManager.likePost(userCityId: post.id)
+            }
+        } catch {
+            if let revertIndex = recentPosts.firstIndex(where: { $0.id == post.id }) {
+                recentPosts[revertIndex].isLikedByCurrentUser = wasLiked
+                recentPosts[revertIndex].likeCount += wasLiked ? 1 : -1
+            }
+            self.error = error
+        }
     }
 
     // Preview cities (top 5 by rating)

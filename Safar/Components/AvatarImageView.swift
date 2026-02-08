@@ -68,10 +68,10 @@ struct AvatarImageView: View {
                     )
             } else {
                 Circle()
-                    .fill(Color(.systemGray5))
+                    .fill(Color.accentColor)
                     .overlay(
                         Image(systemName: "person.fill")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.white)
                             .font(.system(size: placeholderIconSize))
                     )
             }

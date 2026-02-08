@@ -38,7 +38,7 @@ struct CityListMember: View {
                         .foregroundColor(.accent)
                         .frame(width: 30)
                 } else {
-                    RatingCircle(rating: city.rating!, size: 40)
+                    RatingCircle(rating: city.rating!, size: 50)
                 }
             }
         }

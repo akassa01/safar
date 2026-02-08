@@ -3,7 +3,7 @@ import Storage
 import Supabase
 import SwiftUI
 
-struct ProfileView: View {
+struct EditProfileView: View {
     @EnvironmentObject var authManager: AuthManager
 
     @State var username = ""
@@ -56,10 +56,6 @@ struct ProfileView: View {
                             }
                             .frame(width: 120, height: 120)
                             .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(Color(.systemBackground), lineWidth: 4)
-                            )
 
                             // Edit Button Overlay
                             PhotosPicker(selection: $imageSelection, matching: .images) {
@@ -437,5 +433,5 @@ struct ProfileView: View {
 }
 
 #Preview {
-    ProfileView()
+    EditProfileView()
 }

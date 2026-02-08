@@ -2,7 +2,7 @@
 //  UserProfileView.swift
 //  safar
 //
-//  View for displaying another user's profile
+//  View for displaying a user's profile (own or another user's)
 //
 
 import SwiftUI
@@ -10,6 +10,8 @@ import SwiftUI
 struct UserProfileView: View {
     @StateObject private var viewModel: UserProfileViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showingEditProfile = false
+    @State private var selectedPost: FeedPost?
 
     init(userId: String) {
         _viewModel = StateObject(wrappedValue: UserProfileViewModel(userId: userId))
@@ -24,17 +26,11 @@ struct UserProfileView: View {
             } else if let profile = viewModel.profile {
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Header Section
                         headerSection(profile: profile)
 
-                        // Stats Section
-                        statsSection
+                        compactStatsSection
 
-                        // Follow Counts Section
-                        followCountsSection
-
-                        // Cities Preview Section
-                        citiesPreviewSection
+                        recentTripsSection
 
                         Spacer(minLength: 100)
                     }
@@ -57,11 +53,31 @@ struct UserProfileView: View {
             }
         }
         .toolbar {
+            if viewModel.isOwnProfile {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingEditProfile = true
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                }
+            }
             if !viewModel.isOwnProfile {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     followButton
                 }
             }
+        }
+        .sheet(isPresented: $showingEditProfile) {
+            EditProfileView()
+                .onDisappear {
+                    Task { await viewModel.loadProfile() }
+                }
+        }
+        .navigationDestination(item: $selectedPost) { post in
+            PostDetailView(post: post, feedViewModel: nil)
         }
         .task {
             await viewModel.loadProfile()
@@ -73,14 +89,8 @@ struct UserProfileView: View {
     @ViewBuilder
     private func headerSection(profile: UserProfile) -> some View {
         VStack(spacing: 16) {
-            // Avatar
             AvatarImageView(avatarPath: profile.avatarURL, size: 120, placeholderIconSize: 40)
-                .overlay(
-                    Circle()
-                        .stroke(Color(.systemBackground), lineWidth: 4)
-                )
 
-            // Name and Username
             VStack(spacing: 4) {
                 if let fullName = profile.fullName, !fullName.isEmpty {
                     Text(fullName)
@@ -104,7 +114,6 @@ struct UserProfileView: View {
                 }
             }
 
-            // Bio
             if let bio = profile.bio, !bio.isEmpty {
                 Text(bio)
                     .font(.subheadline)
@@ -119,115 +128,117 @@ struct UserProfileView: View {
         .background(Color("Background"))
     }
 
-    // MARK: - Stats Section
+    // MARK: - Compact Stats Section
 
-    private var statsSection: some View {
-        HStack(spacing: 12) {
-            StatCard(
-                title: String(viewModel.profile?.visitedCitiesCount ?? 0),
-                subtitle: "Cities"
-            )
-            StatCard(
-                title: String(viewModel.profile?.visitedCountriesCount ?? 0),
-                subtitle: "Countries"
-            )
-            StatCard(
-                title: String(viewModel.continentsCount),
-                subtitle: "Continents"
-            )
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 16)
-    }
-
-    // MARK: - Follow Counts Section
-
-    private var followCountsSection: some View {
+    private var compactStatsSection: some View {
         HStack(spacing: 0) {
             NavigationLink(destination: FollowListView(userId: viewModel.userId, initialTab: .followers)) {
                 VStack(spacing: 4) {
                     Text("\(viewModel.followerCount)")
                         .font(.headline)
                         .fontWeight(.bold)
-                    Text("Followers")
+                    Text("followers")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
             }
             .buttonStyle(.plain)
-
-            Divider()
-                .frame(height: 40)
 
             NavigationLink(destination: FollowListView(userId: viewModel.userId, initialTab: .following)) {
                 VStack(spacing: 4) {
                     Text("\(viewModel.followingCount)")
                         .font(.headline)
                         .fontWeight(.bold)
-                    Text("Following")
+                    Text("following")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
             }
             .buttonStyle(.plain)
+
+            if viewModel.isOwnProfile {
+                NavigationLink(destination: YourCitiesView()) {
+                    VStack(spacing: 4) {
+                        Text("\(viewModel.cities.count)")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        Text("visited")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+            } else {
+                NavigationLink(destination: UserCitiesListView(userId: viewModel.userId, cities: viewModel.cities, userName: viewModel.profile?.fullName ?? viewModel.profile?.username ?? "User")) {
+                    VStack(spacing: 4) {
+                        Text("\(viewModel.cities.count)")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        Text("visited")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-        .padding(.horizontal)
-        .padding(.bottom, 16)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
     }
 
-    // MARK: - Cities Preview Section
+    // MARK: - Recent Trips Section
 
-    private var citiesPreviewSection: some View {
+    private var recentTripsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Cities Visited")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                Spacer()
-                if viewModel.cities.count > 5 {
-                    NavigationLink(destination: UserCitiesListView(userId: viewModel.userId, cities: viewModel.cities)) {
-                        HStack(spacing: 4) {
-                            Text("See All")
-                                .font(.subheadline)
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                        }
-                        .foregroundColor(.accentColor)
-                    }
-                }
-            }
-            .padding(.horizontal)
+            Text("Recent Trips")
+                .font(.title3)
+                .fontWeight(.bold)
+                .padding(.horizontal)
 
-            if viewModel.cities.isEmpty {
-                Text("No cities visited yet")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            } else {
-                List(viewModel.previewCities.enumerated().map({ $0 }), id: \.element) { i, city in
-                    ZStack {
-                        CityListMember(index: i, city: city, bucketList: false, locked: viewModel.cities.count < 5)
-                        NavigationLink(destination: CityDetailView(cityId: city.id, isReadOnly: true, city: city, externalUserId: viewModel.userId)) {
-                            EmptyView()
+            if viewModel.isOwnProfile || viewModel.isFollowing {
+                if viewModel.isLoadingPosts {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                } else if viewModel.recentPosts.isEmpty {
+                    Text("No trips yet")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                } else {
+                    LazyVStack(spacing: 16) {
+                        ForEach(viewModel.recentPosts) { post in
+                            FeedPostCard(
+                                post: post,
+                                onLikeTapped: {
+                                    Task { await viewModel.toggleLike(for: post) }
+                                },
+                                onUserTapped: { },
+                                onCityTapped: { },
+                                onPostTapped: { selectedPost = post }
+                            )
                         }
-                        .opacity(0)
                     }
-                    .contentShape(Rectangle())
-                    .listRowBackground(Color("Background"))
-                    .listRowSeparator(.hidden)
+                    .padding(.horizontal)
                 }
-                .listStyle(.plain)
-                .frame(height: CGFloat(viewModel.previewCities.count) * 60)
-                .background(Color("Background"))
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.fill")
+                        .foregroundColor(.accentColor)
+                    Text("Only \(viewModel.profile?.fullName ?? viewModel.profile?.username ?? "this user")'s followers can view their recent trips")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
             }
         }
+        .padding(.top, 8)
     }
 
     // MARK: - Follow Button
@@ -249,12 +260,14 @@ struct UserProfileView: View {
                 }
             }
             .foregroundColor(viewModel.isFollowing ? .primary : .white)
-            .frame(minWidth: 80)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(viewModel.isFollowing ? Color(.systemGray5) : Color.accentColor)
-            .cornerRadius(20)
+            .background(
+                Capsule()
+                    .fill(viewModel.isFollowing ? Color(.systemGray5) : Color.accentColor)
+            )
         }
+        .buttonStyle(.plain)
         .disabled(viewModel.isFollowLoading)
     }
 
