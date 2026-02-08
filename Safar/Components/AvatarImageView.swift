@@ -7,6 +7,43 @@
 
 import SwiftUI
 
+@MainActor
+final class AvatarCache {
+    static let shared = AvatarCache()
+    private var cache: [String: UIImage] = [:]
+    private var inFlight: [String: Task<UIImage?, Never>] = [:]
+
+    private init() {}
+
+    func image(for path: String) async -> UIImage? {
+        if let cached = cache[path] {
+            return cached
+        }
+
+        if let existing = inFlight[path] {
+            return await existing.value
+        }
+
+        let task = Task<UIImage?, Never> {
+            do {
+                let data = try await supabase.storage.from("avatars").download(path: path)
+                let image = UIImage(data: data)
+                if let image { cache[path] = image }
+                return image
+            } catch is CancellationError {
+                return nil
+            } catch {
+                return nil
+            }
+        }
+
+        inFlight[path] = task
+        let result = await task.value
+        inFlight.removeValue(forKey: path)
+        return result
+    }
+}
+
 struct AvatarImageView: View {
     let avatarPath: String?
     var size: CGFloat = 40
@@ -51,16 +88,14 @@ struct AvatarImageView: View {
             return
         }
 
+        if loadedImage != nil { return }
+
         isLoading = true
         defer { isLoading = false }
 
-        do {
-            let data = try await supabase.storage.from("avatars").download(path: path)
-            if let uiImage = UIImage(data: data) {
-                loadedImage = Image(uiImage: uiImage)
-            }
-        } catch {
-            debugPrint("Failed to load avatar: \(error)")
+        if let uiImage = await AvatarCache.shared.image(for: path) {
+            loadedImage = Image(uiImage: uiImage)
+        } else {
             loadedImage = nil
         }
     }
