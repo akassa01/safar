@@ -11,47 +11,53 @@ struct FeedPostCard: View {
     let post: FeedPost
     let onLikeTapped: () -> Void
     let onUserTapped: () -> Void
+    let onCityTapped: () -> Void
+    let onPostTapped: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header with user info and rating
-            FeedPostHeader(
-                post: post,
-                onUserTapped: onUserTapped
-            )
+        Button(action: onPostTapped) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Header with user info and rating
+                FeedPostHeader(
+                    post: post,
+                    onUserTapped: onUserTapped,
+                    onCityTapped: onCityTapped
+                )
 
-            // Mini map with places
-            if !post.places.isEmpty {
-                FeedPostMap(
+                // Map with places
+                CityMapView(
                     latitude: post.cityLatitude,
                     longitude: post.cityLongitude,
-                    places: post.places
+                    places: post.places,
+                    height: 150,
+                    isInteractive: false
+                )
+
+                // Notes/caption
+                if let notes = post.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .lineLimit(3)
+                }
+
+                // Places disclosure groups
+                FeedPlacesSection(places: post.places)
+
+                // Interaction bar (likes, comments)
+                FeedInteractionBar(
+                    likeCount: post.likeCount,
+                    commentCount: post.commentCount,
+                    isLiked: post.isLikedByCurrentUser,
+                    onLikeTapped: onLikeTapped
                 )
             }
-
-            // Notes/caption
-            if let notes = post.notes, !notes.isEmpty {
-                Text(notes)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                    .lineLimit(3)
-            }
-
-            // Places disclosure groups
-            FeedPlacesSection(places: post.places)
-
-            // Interaction bar (likes, comments)
-            FeedInteractionBar(
-                likeCount: post.likeCount,
-                commentCount: post.commentCount,
-                isLiked: post.isLikedByCurrentUser,
-                onLikeTapped: onLikeTapped
-            )
+            .padding(16)
+            .background(Color("Background"))
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
         }
-        .padding(16)
-        .background(Color("Background"))
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+        .buttonStyle(.plain)
     }
 }
 
@@ -72,7 +78,9 @@ struct FeedPostCard: View {
                 visitedAt: Date().addingTimeInterval(-7200)
             ),
             onLikeTapped: {},
-            onUserTapped: {}
+            onUserTapped: {},
+            onCityTapped: {},
+            onPostTapped: {}
         )
         .padding()
     }

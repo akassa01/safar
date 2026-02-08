@@ -7,12 +7,23 @@
 
 import SwiftUI
 
+/// Wrapper to make a user ID navigable
+private struct UserNavigation: Hashable {
+    let userId: String
+}
+
+/// Wrapper to make a city ID navigable
+private struct CityNavigation: Hashable {
+    let cityId: Int
+}
+
 struct FeedView: View {
     @StateObject private var viewModel = FeedViewModel()
     @State private var selectedPost: FeedPost?
+    @State private var navPath = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             Group {
                 if viewModel.isLoading && viewModel.posts.isEmpty {
                     loadingView
@@ -30,6 +41,12 @@ struct FeedView: View {
             }
             .navigationDestination(item: $selectedPost) { post in
                 PostDetailView(post: post, feedViewModel: viewModel)
+            }
+            .navigationDestination(for: UserNavigation.self) { nav in
+                UserProfileView(userId: nav.userId)
+            }
+            .navigationDestination(for: CityNavigation.self) { nav in
+                CityDetailView(cityId: nav.cityId, isReadOnly: true)
             }
         }
     }
@@ -73,13 +90,15 @@ struct FeedView: View {
                             Task { await viewModel.toggleLike(for: post) }
                         },
                         onUserTapped: {
-                            // Navigate to user profile - handled separately
+                            navPath.append(UserNavigation(userId: post.userId))
+                        },
+                        onCityTapped: {
+                            navPath.append(CityNavigation(cityId: post.cityId))
+                        },
+                        onPostTapped: {
+                            selectedPost = post
                         }
                     )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedPost = post
-                    }
                     .onAppear {
                         Task { await viewModel.loadMoreIfNeeded(currentPost: post) }
                     }

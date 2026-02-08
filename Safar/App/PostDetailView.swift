@@ -6,17 +6,16 @@
 //
 
 import SwiftUI
-import MapKit
 
 struct PostDetailView: View {
     let post: FeedPost
-    @ObservedObject var feedViewModel: FeedViewModel
+    var feedViewModel: FeedViewModel?
     @StateObject private var viewModel: PostDetailViewModel
     @State private var commentText = ""
     @State private var showLikesSheet = false
     @Environment(\.dismiss) private var dismiss
 
-    init(post: FeedPost, feedViewModel: FeedViewModel) {
+    init(post: FeedPost, feedViewModel: FeedViewModel? = nil) {
         self.post = post
         self.feedViewModel = feedViewModel
         self._viewModel = StateObject(wrappedValue: PostDetailViewModel(post: post))
@@ -101,32 +100,13 @@ struct PostDetailView: View {
     }
 
     private var mapSection: some View {
-        Map(initialPosition: .region(MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: post.cityLatitude, longitude: post.cityLongitude),
-            span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
-        ))) {
-            // City center
-            Annotation("", coordinate: CLLocationCoordinate2D(latitude: post.cityLatitude, longitude: post.cityLongitude)) {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.3))
-                    .frame(width: 24, height: 24)
-                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
-            }
-
-            // Places
-            ForEach(post.places, id: \.localKey) { place in
-                Annotation(place.name, coordinate: place.coordinate) {
-                    VStack(spacing: 2) {
-                        Circle()
-                            .fill(place.category.systemColor)
-                            .frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                    }
-                }
-            }
-        }
-        .frame(height: 250)
-        .cornerRadius(16)
+        CityMapView(
+            latitude: post.cityLatitude,
+            longitude: post.cityLongitude,
+            places: post.places,
+            height: 250,
+            isInteractive: true
+        )
     }
 
     private func notesSection(_ notes: String) -> some View {
@@ -190,7 +170,7 @@ struct PostDetailView: View {
         HStack(spacing: 20) {
             // Like button
             Button {
-                Task { await feedViewModel.toggleLike(for: post) }
+                Task { await feedViewModel?.toggleLike(for: post) }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: currentPost.isLikedByCurrentUser ? "heart.fill" : "heart")
@@ -251,7 +231,7 @@ struct PostDetailView: View {
                         onDelete: {
                             Task {
                                 await viewModel.deleteComment(comment)
-                                feedViewModel.updateCommentCount(for: post.id, delta: -1)
+                                feedViewModel?.updateCommentCount(for: post.id, delta: -1)
                             }
                         }
                     )
@@ -275,7 +255,7 @@ struct PostDetailView: View {
                         let success = await viewModel.addComment(content: commentText)
                         if success {
                             commentText = ""
-                            feedViewModel.updateCommentCount(for: post.id, delta: 1)
+                            feedViewModel?.updateCommentCount(for: post.id, delta: 1)
                         }
                     }
                 }
@@ -337,7 +317,7 @@ struct PostDetailView: View {
 
     /// Get the current state of the post from the feed viewmodel (for like updates)
     private var currentPost: FeedPost {
-        feedViewModel.posts.first(where: { $0.id == post.id }) ?? post
+        feedViewModel?.posts.first(where: { $0.id == post.id }) ?? post
     }
 
     private func timeAgoString(from date: Date) -> String {

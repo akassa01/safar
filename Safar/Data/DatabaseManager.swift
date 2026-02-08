@@ -49,6 +49,73 @@ struct City: Codable, Identifiable, Hashable {
     }
 }
 
+// MARK: - Supabase Response Helpers
+/// Shared response type for user_city queries with nested city data
+struct UserCityResponse: Codable {
+    let visited: Bool
+    let rating: Double?
+    let notes: String?
+    let cities: CityData
+
+    struct CityData: Codable {
+        let id: Int
+        let displayName: String
+        let plainName: String
+        let admin: String
+        let country: String
+        let countryId: Int64
+        let population: Int
+        let latitude: Double
+        let longitude: Double
+        let averageRating: Double?
+        let ratingCount: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case displayName = "display_name"
+            case plainName = "plain_name"
+            case admin
+            case country
+            case countryId = "country_id"
+            case population
+            case latitude
+            case longitude
+            case averageRating = "average_rating"
+            case ratingCount = "rating_count"
+        }
+    }
+
+    func toCity(userId: Int64? = nil) -> City {
+        City(
+            id: cities.id,
+            displayName: cities.displayName,
+            plainName: cities.plainName,
+            admin: cities.admin,
+            country: cities.country,
+            countryId: cities.countryId,
+            population: cities.population,
+            latitude: cities.latitude,
+            longitude: cities.longitude,
+            visited: visited,
+            rating: rating,
+            notes: notes,
+            userId: userId,
+            averageRating: cities.averageRating,
+            ratingCount: cities.ratingCount
+        )
+    }
+}
+
+/// Shared select query for user_city with nested city data
+let userCitySelectQuery = """
+    visited, rating, notes,
+    cities:city_id (
+        id, display_name, plain_name, admin, country,
+        country_id, population, latitude, longitude,
+        average_rating, rating_count
+    )
+"""
+
 struct Country: Codable, Identifiable, Hashable {
     let id: Int64
     let name: String
@@ -258,76 +325,14 @@ class DatabaseManager {
     
     func getUserCities(userId: UUID) async throws -> [City] {
         do {
-            // Define the response structure for the nested query
-            struct UserCityResponse: Codable {
-                let visited: Bool
-                let rating: Double?
-                let notes: String?
-                let cities: CityData
-
-                struct CityData: Codable {
-                    let id: Int
-                    let displayName: String
-                    let plainName: String
-                    let admin: String
-                    let country: String
-                    let countryId: Int64
-                    let population: Int
-                    let latitude: Double
-                    let longitude: Double
-                    let averageRating: Double?
-                    let ratingCount: Int?
-
-                    enum CodingKeys: String, CodingKey {
-                        case id
-                        case displayName = "display_name"
-                        case plainName = "plain_name"
-                        case admin
-                        case country
-                        case countryId = "country_id"
-                        case population
-                        case latitude
-                        case longitude
-                        case averageRating = "average_rating"
-                        case ratingCount = "rating_count"
-                    }
-                }
-            }
-
             let response: [UserCityResponse] = try await supabase
                 .from("user_city")
-                .select("""
-                    visited, rating, notes,
-                    cities:city_id (
-                        id, display_name, plain_name, admin, country,
-                        country_id, population, latitude, longitude,
-                        average_rating, rating_count
-                    )
-                """)
+                .select(userCitySelectQuery)
                 .eq("user_id", value: userId.uuidString)
                 .execute()
                 .value
 
-            // Convert the nested response to City objects
-            return response.map { userCity in
-                City(
-                    id: userCity.cities.id,
-                    displayName: userCity.cities.displayName,
-                    plainName: userCity.cities.plainName,
-                    admin: userCity.cities.admin,
-                    country: userCity.cities.country,
-                    countryId: userCity.cities.countryId,
-                    population: userCity.cities.population,
-                    latitude: userCity.cities.latitude,
-                    longitude: userCity.cities.longitude,
-                    visited: userCity.visited,
-                    rating: userCity.rating,
-                    notes: userCity.notes,
-                    userId: Int64(userId.hashValue),
-                    averageRating: userCity.cities.averageRating,
-                    ratingCount: userCity.cities.ratingCount
-                )
-            }
+            return response.map { $0.toCity(userId: Int64(userId.hashValue)) }
         } catch {
             throw DatabaseError.networkError("Failed to get user cities: \(error.localizedDescription)")
         }
@@ -1043,77 +1048,34 @@ extension DatabaseManager {
     /// Get visited cities for any user (for viewing other profiles)
     func getVisitedCitiesForUser(userId: String) async throws -> [City] {
         do {
-            struct UserCityResponse: Codable {
-                let visited: Bool
-                let rating: Double?
-                let notes: String?
-                let cities: CityData
-
-                struct CityData: Codable {
-                    let id: Int
-                    let displayName: String
-                    let plainName: String
-                    let admin: String
-                    let country: String
-                    let countryId: Int64
-                    let population: Int
-                    let latitude: Double
-                    let longitude: Double
-                    let averageRating: Double?
-                    let ratingCount: Int?
-
-                    enum CodingKeys: String, CodingKey {
-                        case id
-                        case displayName = "display_name"
-                        case plainName = "plain_name"
-                        case admin
-                        case country
-                        case countryId = "country_id"
-                        case population
-                        case latitude
-                        case longitude
-                        case averageRating = "average_rating"
-                        case ratingCount = "rating_count"
-                    }
-                }
-            }
-
             let response: [UserCityResponse] = try await supabase
                 .from("user_city")
-                .select("""
-                    visited, rating, notes,
-                    cities:city_id (
-                        id, display_name, plain_name, admin, country,
-                        country_id, population, latitude, longitude,
-                        average_rating, rating_count
-                    )
-                """)
+                .select(userCitySelectQuery)
                 .eq("user_id", value: userId)
                 .eq("visited", value: true)
                 .execute()
                 .value
 
-            return response.map { userCity in
-                City(
-                    id: userCity.cities.id,
-                    displayName: userCity.cities.displayName,
-                    plainName: userCity.cities.plainName,
-                    admin: userCity.cities.admin,
-                    country: userCity.cities.country,
-                    countryId: userCity.cities.countryId,
-                    population: userCity.cities.population,
-                    latitude: userCity.cities.latitude,
-                    longitude: userCity.cities.longitude,
-                    visited: userCity.visited,
-                    rating: userCity.rating,
-                    notes: userCity.notes,
-                    userId: nil,
-                    averageRating: userCity.cities.averageRating,
-                    ratingCount: userCity.cities.ratingCount
-                )
-            }
+            return response.map { $0.toCity() }
         } catch {
             throw DatabaseError.networkError("Failed to get user's visited cities: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get bucket list cities for any user (for viewing other profiles)
+    func getBucketListCitiesForUser(userId: String) async throws -> [City] {
+        do {
+            let response: [UserCityResponse] = try await supabase
+                .from("user_city")
+                .select(userCitySelectQuery)
+                .eq("user_id", value: userId)
+                .eq("visited", value: false)
+                .execute()
+                .value
+
+            return response.map { $0.toCity() }
+        } catch {
+            throw DatabaseError.networkError("Failed to get user's bucket list cities: \(error.localizedDescription)")
         }
     }
 
@@ -1301,6 +1263,55 @@ extension DatabaseManager {
         }
 
         // Step 7: Assemble FeedPost objects
+        return response.map { item in
+            let profile = profileMap[item.userId]
+            var post = FeedPost(from: item)
+            post.username = profile?.username
+            post.fullName = profile?.fullName
+            post.avatarURL = profile?.avatarURL
+            post.likeCount = likeCounts[item.id] ?? 0
+            post.commentCount = commentCounts[item.id] ?? 0
+            post.isLikedByCurrentUser = userLikes.contains(item.id)
+            post.places = placesMap[item.id] ?? []
+            return post
+        }
+    }
+
+    /// Get feed posts for a specific user
+    func getUserFeedPosts(userId: String, limit: Int = 20, offset: Int = 0) async throws -> [FeedPost] {
+        let currentUserId = getCurrentUserId() ?? ""
+
+        let response: [FeedPost.FeedPostResponse] = try await supabase
+            .from("user_city")
+            .select("""
+                id, user_id, visited, rating, notes, visited_at,
+                city_id (id, display_name, admin, country, latitude, longitude)
+            """)
+            .eq("user_id", value: userId)
+            .eq("visited", value: true)
+            .order("visited_at", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
+            .execute()
+            .value
+
+        guard !response.isEmpty else { return [] }
+
+        let profiles = try await getProfilesByIds([userId])
+        let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+
+        let postIds = response.map { $0.id }
+        let likeCounts = try await getLikeCounts(for: postIds)
+        let userLikes = try await getUserLikeStatus(for: postIds, userId: currentUserId)
+        let commentCounts = try await getCommentCounts(for: postIds)
+
+        var placesMap: [Int64: [Place]] = [:]
+        for item in response {
+            if let uid = UUID(uuidString: item.userId) {
+                let places = try await getUserPlaces(userId: uid, cityId: item.cities.id)
+                placesMap[item.id] = places
+            }
+        }
+
         return response.map { item in
             let profile = profileMap[item.userId]
             var post = FeedPost(from: item)

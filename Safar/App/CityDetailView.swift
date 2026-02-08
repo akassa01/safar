@@ -34,7 +34,6 @@ struct CityDetailView: View {
     @State private var activePlaceCategory: PlaceCategory? = nil
     @State private var selectedPlaceCategory: PlaceCategory = .restaurant
     @State private var showingDeleteConfirmation = false
-    @State private var selectedPlace: Place?
     @State private var mapCameraPosition: MapCameraPosition
     @State private var friendsWhoVisited: [FriendCityVisit] = []
     @State private var friendsSectionExpanded = true
@@ -283,70 +282,16 @@ struct CityDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "City Map", icon: "map.fill")
             if let city = city {
-                Map(position: $mapCameraPosition, selection: $selectedPlace) {
-
-                    // Place markers (flattened from categories) as circles
-                    let allPlaces = PlaceCategory.allCases.flatMap { category in
-                        placesViewModel.placesByCategory[category] ?? []
-                    }
-                    ForEach(allPlaces, id: \.localKey) { place in
-                        Annotation(place.name, coordinate: place.coordinate) {
-                            Circle()
-                                .fill(place.category.systemColor)
-                                .frame(width: 10, height: 10)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                .popover(
-                                    isPresented: Binding(
-                                        get: { selectedPlace == place },
-                                        set: { if !$0 { selectedPlace = nil } }
-                                    ),
-                                    arrowEdge: .bottom
-                                ) {
-                                    VStack(spacing: 12) {
-                                        Text(place.name)
-                                            .font(.headline)
-                                        Button {
-                                            openInAppleMaps(place: place)
-                                            selectedPlace = nil
-                                        } label: {
-                                            Label("Open in Apple Maps", systemImage: "map")
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                    }
-                                    .padding()
-                                    .presentationCompactAdaptation(.popover)
-                                }
-                        }
-                        .tag(place)
-                    }
+                let allPlaces = PlaceCategory.allCases.flatMap { category in
+                    placesViewModel.placesByCategory[category] ?? []
                 }
-                .frame(height: 220)
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                CityMapView(
+                    latitude: city.latitude,
+                    longitude: city.longitude,
+                    places: allPlaces,
+                    height: 220,
+                    isInteractive: true
                 )
-                
-                // Map controls
-                HStack {
-                    Button(action: {
-                        withAnimation {
-                            mapCameraPosition = .region(MKCoordinateRegion(
-                                center: CLLocationCoordinate2D(latitude: city.latitude, longitude: city.longitude),
-                                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                            ))
-                        }
-                    }) {
-                        Label("Reset View", systemImage: "location.circle")
-                            .font(.caption)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.accentColor.opacity(0.1))
-                            .foregroundColor(.accentColor)
-                            .cornerRadius(16)
-                    }
-                    Spacer()
-                }
             }
         }
         .padding()
@@ -519,13 +464,6 @@ struct CityDetailView: View {
     }
     
     // MARK: - Helper Functions
-
-    private func openInAppleMaps(place: Place) {
-        let encodedName = place.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: "maps://?q=\(encodedName)&ll=\(place.latitude),\(place.longitude)") {
-            UIApplication.shared.open(url)
-        }
-    }
 
     private func loadCityData(showLoading: Bool = true) async {
         if showLoading {
