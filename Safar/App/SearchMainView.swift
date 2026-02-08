@@ -127,7 +127,7 @@ struct SearchMainView: View {
                                     result: result,
                                     onMarkVisited: { cityResultToVisit = $0 }
                                 )
-                                NavigationLink(destination: CityOverviewView(cityId: Int(result.data_id) ?? 0)) {
+                                NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
                                     EmptyView()
                                 }
                                 .opacity(0)

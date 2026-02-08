@@ -203,7 +203,7 @@ struct LeaderboardView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(viewModel.topCities) { city in
-                        NavigationLink(destination: CityOverviewView(cityId: city.id)) {
+                        NavigationLink(destination: CityDetailView(cityId: city.id)) {
                             LeaderboardCityRow(entry: city)
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)

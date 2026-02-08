@@ -245,7 +245,7 @@ struct ExploreView: View {
 
             VStack(spacing: 0) {
                 ForEach(leaderboardViewModel.topCities.prefix(5)) { city in
-                    NavigationLink(destination: CityOverviewView(cityId: city.id)) {
+                    NavigationLink(destination: CityDetailView(cityId: city.id)) {
                         LeaderboardCityRow(entry: city)
                             .padding(.horizontal)
                             .padding(.vertical, 8)

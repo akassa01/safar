@@ -12,6 +12,7 @@ struct CityBannerView: View {
     let country: String
     let population: Int
     let rating: Double?
+    let communityRating: Double?
     let isVisited: Bool?  // nil = not added, true = visited, false = bucket list
     let showActionButtons: Bool
 
@@ -139,11 +140,23 @@ struct CityBannerView: View {
     private var rightContent: some View {
         let buttonSize: CGFloat = 25.0;
         if isVisited == true {
-            // Visited: show rating if available
-            if let rating = rating {
-                RatingCircle(rating: rating, size: 50)
+            // Visited: show personal rating and/or community rating
+            HStack(spacing: 8) {
+                if let rating = rating {
+                    RatingCircle(rating: rating, size: 50)
+                }
+                if let communityRating = communityRating {
+                    CommunityRatingCircle(rating: communityRating, size: 50)
+                }
             }
-        } else if isVisited == false && showActionButtons {
+        } else {
+            // Not visited: show community rating if available
+            if let communityRating = communityRating {
+                CommunityRatingCircle(rating: communityRating, size: 50)
+            }
+        }
+
+        if isVisited == false && showActionButtons {
             // Bucket list: show mark visited + remove buttons
             HStack(spacing: 10) {
                 Button {
@@ -275,6 +288,7 @@ struct PhotoAttributionSheet: View {
             country: "France",
             population: 2_161_000,
             rating: 8.5,
+            communityRating: 7.2,
             isVisited: true,
             showActionButtons: false
         )
@@ -286,6 +300,7 @@ struct PhotoAttributionSheet: View {
             country: "Japan",
             population: 13_960_000,
             rating: nil,
+            communityRating: 8.1,
             isVisited: nil,
             showActionButtons: true
         )

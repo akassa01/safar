@@ -36,6 +36,8 @@ struct CityDetailView: View {
     @State private var showingDeleteConfirmation = false
     @State private var selectedPlace: Place?
     @State private var mapCameraPosition: MapCameraPosition
+    @State private var friendsWhoVisited: [FriendCityVisit] = []
+    @State private var friendsSectionExpanded = true
 
     private var isOffline: Bool { !networkMonitor.isConnected }
 
@@ -66,13 +68,13 @@ struct CityDetailView: View {
                         VStack {
                             headerSection
 
+                            friendsSection(city: city)
+
                             if city.visited == true {
                                 visitedCityContent
                             } else if city.visited == false {
                                 bucketListContent
-                            } else {
-                                unaddedCityContent
-                            }
+                            } 
                         }
                     }
                 }
@@ -96,15 +98,6 @@ struct CityDetailView: View {
         .navigationTitle(city?.displayName ?? "City Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            
-                ToolbarItem(placement: .navigationBarLeading) {
-                    NavigationLink(destination: CityOverviewView(cityId: cityId)) {
-                        Label("Community", systemImage: "person.3")
-                            .labelStyle(.titleAndIcon)
-                            .font(.subheadline)
-                    }
-                }
-            
             if let city = city, !isOffline, !isReadOnly {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
@@ -246,33 +239,40 @@ struct CityDetailView: View {
                     country: city.country,
                     population: city.population,
                     rating: viewModel.visitedCities.count >= 5 ? city.rating : nil,
+                    communityRating: (city.ratingCount ?? 0) > 0 ? city.averageRating : nil,
                     isVisited: city.visited,
                     showActionButtons: !isReadOnly && !isOffline,
                     onAddToVisited: { showingAddCityView = true },
                     onAddToBucketList: { addToBucketList() },
                     onRemoveFromBucketList: { removeFromBucketList() }
                 )
-
-                // Community rating badge (shown for cities with 5+ ratings)
-                if let avgRating = city.averageRating,
-                   let ratingCount = city.ratingCount,
-                   ratingCount >= 5 {
-                    HStack {
-                        Spacer()
-                        CommunityRatingBadge(
-                            averageRating: avgRating,
-                            ratingCount: ratingCount
-                        )
-                        .padding(.top, 8)
-                    }
-                    .padding(.horizontal)
-                }
             }
         } else {
             EmptyView()
         }
     }
     
+    @ViewBuilder
+    private func friendsSection(city: City) -> some View {
+        if !friendsWhoVisited.isEmpty || !isReadOnly {
+            DisclosureGroup(isExpanded: $friendsSectionExpanded) {
+                FriendsWhoVisitedContent(
+                    friends: friendsWhoVisited,
+                    city: city
+                )
+            } label: {
+                SectionHeader(title: "Friends Who Visited", icon: "person.2.fill")
+                    .foregroundColor(.primary)
+            }
+            .tint(.secondary)
+            .padding()
+            .background(Color("Background"))
+            .cornerRadius(12)
+            .padding(.horizontal)
+            .padding(.top, 12)
+        }
+    }
+
     private var visitedCityContent: some View {
         VStack(spacing: 20) {
             mapSection
@@ -581,6 +581,12 @@ struct CityDetailView: View {
         if let userId = viewModel.currentUserId {
             placesViewModel.setUserId(userId)
             await placesViewModel.loadPlaces(for: cityId)
+            // Load friends who visited
+            if let currentUserId = DatabaseManager.shared.getCurrentUserId() {
+                if let friends = try? await DatabaseManager.shared.getFriendsWhoVisitedCity(cityId: cityId, userId: currentUserId) {
+                    self.friendsWhoVisited = friends
+                }
+            }
         }
         
         await MainActor.run {
