@@ -37,13 +37,8 @@ struct CountryBannerView: View {
 
                 Spacer()
 
-                HStack(spacing: 12) {
-                    if let rank = rank {
-                        CountryRankBadge(rank: rank)
-                    }
-                    if rating > 0 {
-                        RatingCircle(rating: rating, size: 50)
-                    }
+                if rating > 0 {
+                    RatingCircle(rating: rating, size: 50)
                 }
             }
             .padding()
@@ -89,10 +84,13 @@ struct CountryBannerView: View {
                     placeholderGradient
                         .overlay(ProgressView().tint(.white))
                 case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    Color.clear
                         .frame(height: bannerHeight)
+                        .overlay(
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        )
                         .clipped()
                 case .failure:
                     placeholderGradient

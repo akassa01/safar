@@ -108,6 +108,7 @@ struct ExploreView: View {
                         LeaderboardCityRow(entry: city)
                             .padding(.horizontal)
                             .padding(.vertical, 8)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
 
@@ -151,6 +152,7 @@ struct ExploreView: View {
                         LeaderboardCountryRow(entry: country)
                             .padding(.horizontal)
                             .padding(.vertical, 8)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
 
