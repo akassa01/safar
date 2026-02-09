@@ -48,7 +48,7 @@ struct HomeView: View {
                              Spacer()
                          }
                          .padding()
-                         .background(Color(.systemGray5))
+                         .background(Color(.systemGray6))
                          .cornerRadius(20)
                      }
                      .buttonStyle(PlainButtonStyle())

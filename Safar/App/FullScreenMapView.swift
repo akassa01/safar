@@ -41,17 +41,20 @@ struct FullScreenMapView: View {
             Map(position: $cameraPosition) {
                 ForEach(mapPins) { city in
                     Annotation(city.displayName, coordinate: CLLocationCoordinate2D(latitude: city.latitude, longitude: city.longitude)) {
-                        Circle()
-                            .fill((city.visited ?? false) ? Color.green : Color.yellow)
-                            .frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                            .onTapGesture {
-                                if let onCityTapped {
-                                    onCityTapped(city)
-                                } else {
-                                    selectedCity = city
-                                }
+                        Button {
+                            if let onCityTapped {
+                                onCityTapped(city)
+                            } else {
+                                selectedCity = city
                             }
+                        } label: {
+                            Circle()
+                                .fill((city.visited ?? false) ? Color.green : Color.yellow)
+                                .frame(width: 16, height: 16)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                        }
+                        .buttonStyle(.plain)
+                        .contentShape(Circle().scale(2.0))
                     }
                 }
             }

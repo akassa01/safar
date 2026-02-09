@@ -109,6 +109,7 @@ struct UserProfileView: View {
                     Text(username)
                         .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundColor(.accentColor)
                 } else {
                     Text("Anonymous")
                         .font(.title2)

@@ -55,8 +55,6 @@ struct FollowListView: View {
             .padding(.horizontal)
             .padding(.top, 8)
 
-            Divider()
-
             // Content
             if isLoading {
                 Spacer()
@@ -99,6 +97,8 @@ struct FollowListView: View {
                             }
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color("Background"))
+                            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                            .alignmentGuide(.listRowSeparatorTrailing) { d in d.width }
                         }
                     }
                     .listStyle(.plain)
@@ -172,11 +172,7 @@ struct FollowUserRow: View {
             }
 
             Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
+}
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }

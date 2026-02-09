@@ -23,7 +23,7 @@ struct FeedView: View {
                 feedList
             }
         }
-        .background(Color(.systemGray6))
+        .background(Color("Background"))
         .navigationTitle("Feed")
         .navigationBarTitleDisplayMode(.inline)
         .task {
