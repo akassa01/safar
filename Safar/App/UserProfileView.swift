@@ -64,7 +64,7 @@ struct UserProfileView: View {
                     Button {
                         showingEditProfile = true
                     } label: {
-                        Image(systemName: "pencil")
+                        Image(systemName: "gearshape.fill")
                             .font(.subheadline)
                             .fontWeight(.medium)
                     }

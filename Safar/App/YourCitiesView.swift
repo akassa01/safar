@@ -39,13 +39,7 @@ struct YourCitiesView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                Spacer(minLength: 24)
-                Text("Your Cities")
-                    .font(.title)
-                    .bold()
-                
+        VStack {
                 TabBarView<CityTab>(
                     selectedCategory: $selectedTab,
                     iconSize: 22,
@@ -150,7 +144,8 @@ struct YourCitiesView: View {
             } message: {
                 Text("Are you sure you want to remove \(cityToDelete?.displayName ?? "this city")? This action cannot be undone.")
             }
-        }
+            .navigationTitle("Your Cities")
+            .navigationBarTitleDisplayMode(.inline)
     }
 
     private var currentCities: [City] {

@@ -7,47 +7,36 @@
 
 import SwiftUI
 
-/// Wrapper to make a user ID navigable
-private struct UserNavigation: Hashable {
-    let userId: String
-}
-
-/// Wrapper to make a city ID navigable
-private struct CityNavigation: Hashable {
-    let cityId: Int
-}
-
 struct FeedView: View {
     @StateObject private var viewModel = FeedViewModel()
     @State private var selectedPost: FeedPost?
-    @State private var navPath = NavigationPath()
+    @State private var selectedUserId: String?
+    @State private var selectedCityId: Int?
 
     var body: some View {
-        NavigationStack(path: $navPath) {
-            Group {
-                if viewModel.isLoading && viewModel.posts.isEmpty {
-                    loadingView
-                } else if viewModel.posts.isEmpty {
-                    emptyFeedView
-                } else {
-                    feedList
-                }
+        Group {
+            if viewModel.isLoading && viewModel.posts.isEmpty {
+                loadingView
+            } else if viewModel.posts.isEmpty {
+                emptyFeedView
+            } else {
+                feedList
             }
-            .background(Color(.systemGray6))
-            .navigationTitle("Feed")
-            .navigationBarTitleDisplayMode(.large)
-            .task {
-                await viewModel.loadFeed(refresh: true)
-            }
-            .navigationDestination(item: $selectedPost) { post in
-                PostDetailView(post: post, feedViewModel: viewModel)
-            }
-            .navigationDestination(for: UserNavigation.self) { nav in
-                UserProfileView(userId: nav.userId)
-            }
-            .navigationDestination(for: CityNavigation.self) { nav in
-                CityDetailView(cityId: nav.cityId, isReadOnly: true)
-            }
+        }
+        .background(Color(.systemGray6))
+        .navigationTitle("Feed")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await viewModel.loadFeed(refresh: true)
+        }
+        .navigationDestination(item: $selectedPost) { post in
+            PostDetailView(post: post, feedViewModel: viewModel)
+        }
+        .navigationDestination(item: $selectedUserId) { userId in
+            UserProfileView(userId: userId)
+        }
+        .navigationDestination(item: $selectedCityId) { cityId in
+            CityDetailView(cityId: cityId, isReadOnly: true)
         }
     }
 
@@ -90,10 +79,10 @@ struct FeedView: View {
                             Task { await viewModel.toggleLike(for: post) }
                         },
                         onUserTapped: {
-                            navPath.append(UserNavigation(userId: post.userId))
+                            selectedUserId = post.userId
                         },
                         onCityTapped: {
-                            navPath.append(CityNavigation(cityId: post.cityId))
+                            selectedCityId = post.cityId
                         },
                         onPostTapped: {
                             selectedPost = post

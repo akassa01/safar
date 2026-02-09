@@ -23,14 +23,6 @@ struct ExploreView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    Text("Explore")
-                        .font(.largeTitle)
-                        .bold()
-                    Spacer()
-                }
-                .padding(.horizontal)
-
                 // recommendationsSection
 
                 leaderboardPreviewSection
@@ -38,6 +30,8 @@ struct ExploreView: View {
             .padding(.vertical)
         }
         .background(Color("Background"))
+        .navigationTitle("Explore")
+        .navigationBarTitleDisplayMode(.inline)
 //        .onAppear {
 //            loadRecommendations()
 //        }
