@@ -741,11 +741,15 @@ extension DatabaseManager {
 
     /// Fetch top-rated cities filtered by continent
     func getTopRatedCitiesByContinent(continent: String, limit: Int = 20) async throws -> [CityLeaderboardEntry] {
+        struct CountryName: Codable {
+            let name: String
+        }
+
         do {
-            // First get country IDs for this continent
-            let countries: [Country] = try await supabase
+            // First get country names for this continent
+            let countries: [CountryName] = try await supabase
                 .from("countries")
-                .select("id, name, country_code, capital, continent, population, average_rating")
+                .select("name")
                 .eq("continent", value: continent)
                 .execute()
                 .value
@@ -774,12 +778,18 @@ extension DatabaseManager {
     }
 
     /// Fetch top-rated countries
-    func getTopRatedCountries(limit: Int = 50, offset: Int = 0) async throws -> [CountryLeaderboardEntry] {
+    func getTopRatedCountries(limit: Int = 50, offset: Int = 0, continent: String? = nil) async throws -> [CountryLeaderboardEntry] {
         do {
-            var entries: [CountryLeaderboardEntry] = try await supabase
+            var query = supabase
                 .from("countries")
                 .select("id, name, continent, average_rating")
                 .not("average_rating", operator: .is, value: "null")
+
+            if let continent = continent {
+                query = query.eq("continent", value: continent)
+            }
+
+            var entries: [CountryLeaderboardEntry] = try await query
                 .order("average_rating", ascending: false)
                 .range(from: offset, to: offset + limit - 1)
                 .execute()

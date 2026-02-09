@@ -21,9 +21,6 @@ struct LeaderboardPersonRow: View {
             // Rank badge
             RankBadge(rank: entry.rank ?? 0)
 
-            // Avatar
-            AvatarImageView(avatarPath: entry.avatarURL, size: 40, placeholderIconSize: 16)
-
             // User info
             VStack(alignment: .leading, spacing: 2) {
                 if let fullName = entry.fullName, !fullName.isEmpty {

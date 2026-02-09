@@ -40,6 +40,7 @@ class LeaderboardViewModel: ObservableObject {
             }
         } catch {
             self.error = error
+            print("Failed to load cities: \(error)")
         }
 
         isLoadingCities = false
@@ -50,9 +51,13 @@ class LeaderboardViewModel: ObservableObject {
         error = nil
 
         do {
-            topCountries = try await databaseManager.getTopRatedCountries(limit: limit)
+            topCountries = try await databaseManager.getTopRatedCountries(
+                limit: limit,
+                continent: selectedContinent
+            )
         } catch {
             self.error = error
+            print("Failed to load countries: \(error)")
         }
 
         isLoadingCountries = false
@@ -65,11 +70,11 @@ class LeaderboardViewModel: ObservableObject {
         await loadTopTravelersByCountries()
     }
 
-    func selectContinent(_ continent: String?) {
+    func selectContinent(_ continent: String?) async {
         selectedContinent = continent
-        Task {
-            await loadTopCities()
-        }
+        async let cities: () = loadTopCities()
+        async let countries: () = loadTopCountries()
+        _ = await (cities, countries)
     }
 
     func loadTopTravelersByCities(limit: Int = 50) async {
