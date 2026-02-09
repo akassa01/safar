@@ -7,12 +7,24 @@
 
 import SwiftUI
 
+private struct PostUserNavItem: Hashable, Identifiable {
+    let userId: String
+    var id: String { userId }
+}
+
+private struct PostCityNavItem: Hashable, Identifiable {
+    let cityId: Int
+    var id: Int { cityId }
+}
+
 struct PostDetailView: View {
     let post: FeedPost
     var feedViewModel: FeedViewModel?
     @StateObject private var viewModel: PostDetailViewModel
     @State private var commentText = ""
     @State private var showLikesSheet = false
+    @State private var selectedUserId: PostUserNavItem?
+    @State private var selectedCityId: PostCityNavItem?
     @Environment(\.dismiss) private var dismiss
 
     init(post: FeedPost, feedViewModel: FeedViewModel? = nil) {
@@ -60,27 +72,44 @@ struct PostDetailView: View {
         .sheet(isPresented: $showLikesSheet) {
             likesSheet
         }
+        .navigationDestination(item: $selectedUserId) { nav in
+            UserProfileView(userId: nav.userId)
+        }
+        .navigationDestination(item: $selectedCityId) { nav in
+            CityDetailView(cityId: nav.cityId, isReadOnly: true)
+        }
     }
 
     // MARK: - Sections
 
     private var headerSection: some View {
         HStack(alignment: .top, spacing: 12) {
-            AvatarImageView(
-                avatarPath: post.avatarURL,
-                size: 50,
-                placeholderIconSize: 20
-            )
+            Button { selectedUserId = PostUserNavItem(userId: post.userId) } label: {
+                AvatarImageView(
+                    avatarPath: post.avatarURL,
+                    size: 50,
+                    placeholderIconSize: 20
+                )
+            }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(post.fullName ?? post.username ?? "Unknown")
-                    .font(.headline)
+                Button { selectedUserId = PostUserNavItem(userId: post.userId) } label: {
+                    Text(post.fullName ?? post.username ?? "Unknown")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(.plain)
 
                 HStack(spacing: 4) {
                     Text("visited")
                         .foregroundColor(.secondary)
-                    Text("\(post.cityName), \(post.cityCountry)")
-                        .fontWeight(.medium)
+                    Button { selectedCityId = PostCityNavItem(cityId: post.cityId) } label: {
+                        Text("\(post.cityName), \(post.cityCountry)")
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .font(.subheadline)
 

@@ -7,11 +7,17 @@
 
 import SwiftUI
 
+private struct CityNavItem: Hashable, Identifiable {
+    let cityId: Int
+    var id: Int { cityId }
+}
+
 struct UserProfileView: View {
     @StateObject private var viewModel: UserProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showingEditProfile = false
     @State private var selectedPost: FeedPost?
+    @State private var selectedCityId: CityNavItem?
 
     init(userId: String) {
         _viewModel = StateObject(wrappedValue: UserProfileViewModel(userId: userId))
@@ -78,6 +84,9 @@ struct UserProfileView: View {
         }
         .navigationDestination(item: $selectedPost) { post in
             PostDetailView(post: post, feedViewModel: nil)
+        }
+        .navigationDestination(item: $selectedCityId) { nav in
+            CityDetailView(cityId: nav.cityId, isReadOnly: true)
         }
         .task {
             await viewModel.loadProfile()
@@ -219,7 +228,7 @@ struct UserProfileView: View {
                                     Task { await viewModel.toggleLike(for: post) }
                                 },
                                 onUserTapped: { },
-                                onCityTapped: { },
+                                onCityTapped: { selectedCityId = CityNavItem(cityId: post.cityId) },
                                 onPostTapped: { selectedPost = post }
                             )
                         }
