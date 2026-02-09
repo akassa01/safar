@@ -235,6 +235,7 @@ struct CityDetailView: View {
                     population: city.population,
                     rating: viewModel.visitedCities.count >= 5 ? city.rating : nil,
                     communityRating: (city.ratingCount ?? 0) > 0 ? city.averageRating : nil,
+                    communityRatingCount: city.ratingCount,
                     isVisited: city.visited,
                     showActionButtons: !isReadOnly && !isOffline,
                     onAddToVisited: { showingAddCityView = true },

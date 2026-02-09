@@ -27,6 +27,7 @@ struct RatingCircle: View {
 
 struct CommunityRatingCircle: View {
     let rating: Double
+    var ratingCount: Int?
     var size: CGFloat = 45
 
     private var fontSize: CGFloat {
@@ -41,6 +42,10 @@ struct CommunityRatingCircle: View {
         size * 0.18
     }
 
+    private var countFontSize: CGFloat {
+        size * 0.2
+    }
+
     var body: some View {
         Text(String(format: "%.1f", rating))
             .font(.system(size: fontSize, weight: .bold))
@@ -48,14 +53,24 @@ struct CommunityRatingCircle: View {
             .frame(width: size, height: size)
             .background(Color.white.opacity(0.25))
             .clipShape(Circle())
-            .overlay(alignment: .bottomTrailing) {
+            .overlay(alignment: .topTrailing) {
                 Image(systemName: "person.3.fill")
                     .font(.system(size: iconSize))
                     .foregroundColor(.white)
                     .frame(width: badgeSize, height: badgeSize)
-                    .background(Color.blue)
                     .clipShape(Circle())
-                    .offset(x: size * 0.08, y: size * 0.08)
+                    .offset(x: size * 0.08, y: -size * 0.08)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if let count = ratingCount {
+                    Text("\(count)")
+                        .font(.system(size: countFontSize, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: badgeSize, height: badgeSize)
+                        .background(Color.accent)
+                        .clipShape(Circle())
+                        .offset(x: size * 0.08, y: size * 0.08)
+                }
             }
     }
 }

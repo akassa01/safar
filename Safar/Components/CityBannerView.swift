@@ -13,6 +13,7 @@ struct CityBannerView: View {
     let population: Int
     let rating: Double?
     let communityRating: Double?
+    let communityRatingCount: Int?
     let isVisited: Bool?  // nil = not added, true = visited, false = bucket list
     let showActionButtons: Bool
 
@@ -146,13 +147,13 @@ struct CityBannerView: View {
                     RatingCircle(rating: rating, size: 50)
                 }
                 if let communityRating = communityRating {
-                    CommunityRatingCircle(rating: communityRating, size: 50)
+                    CommunityRatingCircle(rating: communityRating, ratingCount: communityRatingCount, size: 50)
                 }
             }
         } else {
             // Not visited: show community rating if available
             if let communityRating = communityRating {
-                CommunityRatingCircle(rating: communityRating, size: 50)
+                CommunityRatingCircle(rating: communityRating, ratingCount: communityRatingCount, size: 50)
             }
         }
 
@@ -289,6 +290,7 @@ struct PhotoAttributionSheet: View {
             population: 2_161_000,
             rating: 8.5,
             communityRating: 7.2,
+            communityRatingCount: 42,
             isVisited: true,
             showActionButtons: false
         )
@@ -301,6 +303,7 @@ struct PhotoAttributionSheet: View {
             population: 13_960_000,
             rating: nil,
             communityRating: 8.1,
+            communityRatingCount: 42,
             isVisited: nil,
             showActionButtons: true
         )
