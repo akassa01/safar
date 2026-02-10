@@ -112,7 +112,7 @@ struct ExploreView: View {
                     }
                 }
             }
-            .background(Color(.systemGray6).opacity(0.5))
+            .background(Color("Background"))
             .cornerRadius(12)
             .padding(.horizontal)
         }
@@ -156,7 +156,7 @@ struct ExploreView: View {
                     }
                 }
             }
-            .background(Color(.systemGray6).opacity(0.5))
+            .background(Color("Background"))
             .cornerRadius(12)
             .padding(.horizontal)
         }
@@ -199,7 +199,7 @@ struct ExploreView: View {
                     }
                 }
             }
-            .background(Color(.systemGray6).opacity(0.5))
+            .background(Color("Background"))
             .cornerRadius(12)
             .padding(.horizontal)
         }

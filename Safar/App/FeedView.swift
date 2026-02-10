@@ -36,7 +36,7 @@ struct FeedView: View {
             UserProfileView(userId: userId)
         }
         .navigationDestination(item: $selectedCityId) { cityId in
-            CityDetailView(cityId: cityId, isReadOnly: true)
+            CityDetailView(cityId: cityId)
         }
     }
 

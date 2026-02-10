@@ -86,7 +86,7 @@ struct UserProfileView: View {
             PostDetailView(post: post, feedViewModel: nil)
         }
         .navigationDestination(item: $selectedCityId) { nav in
-            CityDetailView(cityId: nav.cityId, isReadOnly: true)
+            CityDetailView(cityId: nav.cityId)
         }
         .task {
             await viewModel.loadProfile()

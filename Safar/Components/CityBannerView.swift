@@ -59,7 +59,8 @@ struct CityBannerView: View {
                 // Right side: Rating or action buttons
                 rightContent
             }
-            .padding()
+            .padding(.vertical)
+            .padding(.horizontal, 32)
 
             // Attribution info button (top right)
             if photoViewModel.cityPhoto != nil {

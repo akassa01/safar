@@ -47,7 +47,7 @@ struct UserCitiesListView: View {
                         }
                         .opacity(0)
                     } else if selectedTab == .visited {
-                        NavigationLink(destination: CityDetailView(cityId: city.id, isReadOnly: true, city: city, externalUserId: userId)) {
+                        NavigationLink(destination: CityDetailView(cityId: city.id)) {
                             EmptyView()
                         }
                         .opacity(0)

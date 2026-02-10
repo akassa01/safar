@@ -26,6 +26,7 @@ struct PostDetailView: View {
     @State private var selectedUserId: PostUserNavItem?
     @State private var selectedCityId: PostCityNavItem?
     @Environment(\.dismiss) private var dismiss
+    private let currentUserId = DatabaseManager.shared.getCurrentUserId()
 
     init(post: FeedPost, feedViewModel: FeedViewModel? = nil) {
         self.post = post
@@ -76,7 +77,7 @@ struct PostDetailView: View {
             UserProfileView(userId: nav.userId)
         }
         .navigationDestination(item: $selectedCityId) { nav in
-            CityDetailView(cityId: nav.cityId, isReadOnly: true)
+            CityDetailView(cityId: nav.cityId)
         }
     }
 

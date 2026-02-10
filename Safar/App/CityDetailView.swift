@@ -16,9 +16,6 @@ struct CityDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let cityId: Int
-    let isReadOnly: Bool
-    let initialCity: City?
-    let externalUserId: String?
 
     @State private var city: City?
     @State private var isLoading = true
@@ -40,13 +37,10 @@ struct CityDetailView: View {
 
     private var isOffline: Bool { !networkMonitor.isConnected }
 
-    init(cityId: Int, isReadOnly: Bool = false, city: City? = nil, externalUserId: String? = nil) {
+    init(cityId: Int) {
         self.cityId = cityId
-        self.isReadOnly = isReadOnly
-        self.initialCity = city
-        self.externalUserId = externalUserId
         self._mapCameraPosition = State(initialValue: .region(MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: city?.latitude ?? 0, longitude: city?.longitude ?? 0),
+            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
         )))
     }
@@ -93,7 +87,7 @@ struct CityDetailView: View {
             }
         }
         .toolbar {
-            if let city = city, !isOffline, !isReadOnly {
+            if let city = city, !isOffline {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         if city.visited == true || city.visited == false {
@@ -204,24 +198,8 @@ struct CityDetailView: View {
         .background(Color("Background"))
         .task {
             print("[DETAIL] .task fired for cityId: \(cityId)")
-            print("[DETAIL] isReadOnly: \(isReadOnly), initialCity: \(String(describing: initialCity))")
             print("[DETAIL] viewModel.currentUserId: \(String(describing: viewModel.currentUserId))")
-            if isReadOnly, let initialCity = initialCity {
-                // For read-only mode, use the provided city directly
-                self.city = initialCity
-                self.mapCameraPosition = .region(MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: initialCity.latitude, longitude: initialCity.longitude),
-                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                ))
-                // Load places for external user
-                if let externalUserId = externalUserId, let uuid = UUID(uuidString: externalUserId) {
-                    placesViewModel.setUserId(uuid)
-                    await placesViewModel.loadPlaces(for: cityId)
-                }
-                self.isLoading = false
-            } else {
-                await loadCityData()
-            }
+            await loadCityData()
         }
     }
     
@@ -240,7 +218,7 @@ struct CityDetailView: View {
                     communityRating: (city.ratingCount ?? 0) > 0 ? city.averageRating : nil,
                     communityRatingCount: city.ratingCount,
                     isVisited: city.visited,
-                    showActionButtons: !isReadOnly && !isOffline,
+                    showActionButtons: !isOffline,
                     onAddToVisited: { showingAddCityView = true },
                     onAddToBucketList: { addToBucketList() },
                     onRemoveFromBucketList: { removeFromBucketList() }
@@ -253,7 +231,7 @@ struct CityDetailView: View {
     
     @ViewBuilder
     private func friendsSection(city: City) -> some View {
-        if !friendsWhoVisited.isEmpty || !isReadOnly {
+        if !friendsWhoVisited.isEmpty {
             DisclosureGroup(isExpanded: $friendsSectionExpanded) {
                 FriendsWhoVisitedContent(
                     friends: friendsWhoVisited,
@@ -368,7 +346,7 @@ struct CityDetailView: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
                         Spacer()
-                        if !isOffline && !isReadOnly {
+                        if !isOffline {
                             Button {
                                 activePlaceCategory = category
                             } label: {
@@ -388,7 +366,7 @@ struct CityDetailView: View {
                                 Text(place.name)
                                     .font(.subheadline)
                                 Spacer()
-                                if !isOffline && !isReadOnly {
+                                if !isOffline {
                                     HStack(spacing: 8) {
                                         Button {
                                             Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
@@ -426,7 +404,7 @@ struct CityDetailView: View {
             HStack {
                 SectionHeader(title: "Notes", icon: "note.text")
                 Spacer()
-                if !isOffline && !isReadOnly {
+                if !isOffline {
                     Button((city?.notes?.isEmpty ?? true) ? "Add Notes" : "Edit Notes") {
                         showingNotesEditor = true
                     }
@@ -440,11 +418,11 @@ struct CityDetailView: View {
                     .background(Color.accentColor.opacity(0.1))
                     .cornerRadius(8)
                     .onTapGesture {
-                        if !isReadOnly {
+                        if !isOffline {
                             showingNotesEditor = true
                         }
                     }
-            } else if !isOffline && !isReadOnly {
+            } else if !isOffline {
                 Button(action: {
                     showingNotesEditor = true
                 }) {
