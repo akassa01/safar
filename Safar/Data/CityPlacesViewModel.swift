@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import os
 
 @MainActor
 class CityPlacesViewModel: ObservableObject {
@@ -81,15 +82,17 @@ class CityPlacesViewModel: ObservableObject {
             try await databaseManager.insertUserPlaces(userId: userId, cityId: cityId, places: places)
             await loadPlaces(for: cityId)
         } catch {
+            Log.data.error("addPlaces failed for cityId \(cityId): \(error)")
             self.error = error
         }
     }
-    
+
     func updateLiked(for userPlaceId: Int, liked: Bool?, cityId: Int) async {
         do {
             try await databaseManager.updateUserPlaceLiked(userPlaceId: userPlaceId, liked: liked)
             await loadPlaces(for: cityId)
         } catch {
+            Log.data.error("updateLiked failed for userPlaceId \(userPlaceId): \(error)")
             self.error = error
         }
     }
@@ -99,6 +102,7 @@ class CityPlacesViewModel: ObservableObject {
             try await databaseManager.deleteUserPlace(userPlaceId: userPlaceId)
             await loadPlaces(for: cityId)
         } catch {
+            Log.data.error("deletePlace failed for userPlaceId \(userPlaceId): \(error)")
             self.error = error
         }
     }

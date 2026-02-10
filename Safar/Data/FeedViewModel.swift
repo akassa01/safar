@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import os
 
 @MainActor
 class FeedViewModel: ObservableObject {
@@ -57,7 +58,7 @@ class FeedViewModel: ObservableObject {
             return
         } catch {
             self.error = error
-            print("Error loading feed: \(error)")
+            Log.data.error("loadFeed failed: \(error)")
         }
 
         isLoading = false
@@ -99,7 +100,7 @@ class FeedViewModel: ObservableObject {
                 posts[revertIndex].likeCount += wasLiked ? 1 : -1
             }
             self.error = error
-            print("Error toggling like: \(error)")
+            Log.data.error("toggleLike failed for post \(post.id): \(error)")
         }
     }
 
@@ -138,7 +139,7 @@ class PostDetailViewModel: ObservableObject {
             comments = try await databaseManager.getPostComments(userCityId: post.id)
         } catch {
             self.error = error
-            print("Error loading comments: \(error)")
+            Log.data.error("loadComments failed for post \(self.post.id): \(error)")
         }
 
         isLoadingComments = false
@@ -151,7 +152,7 @@ class PostDetailViewModel: ObservableObject {
         do {
             likes = try await databaseManager.getPostLikes(userCityId: post.id)
         } catch {
-            print("Error loading likes: \(error)")
+            Log.data.error("loadLikes failed for post \(self.post.id): \(error)")
         }
 
         isLoadingLikes = false
@@ -192,7 +193,7 @@ class PostDetailViewModel: ObservableObject {
             return true
         } catch {
             self.error = error
-            print("Error adding comment: \(error)")
+            Log.data.error("addComment failed for post \(self.post.id): \(error)")
             isAddingComment = false
             return false
         }
@@ -214,7 +215,7 @@ class PostDetailViewModel: ObservableObject {
             }
         } catch {
             self.error = error
-            print("Error deleting comment: \(error)")
+            Log.data.error("deleteComment failed for comment \(comment.id): \(error)")
         }
     }
 
@@ -235,7 +236,7 @@ class PostDetailViewModel: ObservableObject {
         } catch {
             // Revert on error
             updateCommentLikeState(commentId: comment.id, isLiked: wasLiked, likeDelta: wasLiked ? 1 : -1)
-            print("Error toggling comment like: \(error)")
+            Log.data.error("toggleCommentLike failed for comment \(comment.id): \(error)")
         }
     }
 

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import os
 
 struct SearchResult: Identifiable {
     let id = UUID()
@@ -263,6 +264,7 @@ struct SearchMainView: View {
                     let results = try await DatabaseManager.shared.searchCities(query: currentQuery)
                     self.searchResults = results.map { .city($0) }
                 } catch {
+                    Log.ui.error("City search failed for '\(currentQuery)': \(error)")
                     self.searchResults = []
                 }
                 self.isLoading = false
@@ -282,6 +284,7 @@ struct SearchMainView: View {
                         ))
                     }
                 } catch {
+                    Log.ui.error("Country search failed for '\(currentQuery)': \(error)")
                     self.searchResults = []
                 }
                 self.isLoading = false
@@ -293,6 +296,7 @@ struct SearchMainView: View {
                     let results = try await DatabaseManager.shared.searchPeople(query: currentQuery)
                     self.searchResults = results.map { .person($0) }
                 } catch {
+                    Log.ui.error("People search failed for '\(currentQuery)': \(error)")
                     self.searchResults = []
                 }
                 self.isLoading = false

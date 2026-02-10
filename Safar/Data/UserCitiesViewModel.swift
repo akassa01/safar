@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Supabase
+import os
 
 @MainActor
 class UserCitiesViewModel: ObservableObject {
@@ -40,6 +41,7 @@ class UserCitiesViewModel: ObservableObject {
             // Await data load directly instead of spawning a detached Task
             await loadUserData()
         } catch {
+            Log.auth.error("initializeWithCurrentUser failed: \(error)")
             self.error = error
         }
     }
@@ -149,6 +151,7 @@ class UserCitiesViewModel: ObservableObject {
                     self.visitedContinents = uniqueContinents
                 }
             } catch {
+                Log.data.error("loadCountries failed: \(error)")
                 await MainActor.run {
                     self.error = error
                 }
@@ -204,10 +207,11 @@ class UserCitiesViewModel: ObservableObject {
             )
             await loadUserData() // Refresh data
         } catch {
+            Log.data.error("addCityToBucketList failed for cityId \(cityId): \(error)")
             self.error = error
         }
     }
-    
+
     func markCityAsVisited(cityId: Int, rating: Double? = nil, notes: String? = nil) async {
         guard let userId = _currentUserId else {
             print("🔴 markCityAsVisited failed: no current user ID")
@@ -236,6 +240,7 @@ class UserCitiesViewModel: ObservableObject {
             try await databaseManager.removeUserCity(userId: userId, cityId: cityId)
             await loadUserData() // Refresh data
         } catch {
+            Log.data.error("removeCityFromList failed for cityId \(cityId): \(error)")
             self.error = error
         }
     }
@@ -280,6 +285,7 @@ class UserCitiesViewModel: ObservableObject {
             )
             await loadUserData() // Refresh data
         } catch {
+            Log.data.error("updateCityNotes failed for cityId \(cityId): \(error)")
             self.error = error
         }
     }
@@ -298,6 +304,7 @@ class UserCitiesViewModel: ObservableObject {
             do {
                 return try await databaseManager.getCityWithUserData(cityId: cityId, userId: userId)
             } catch {
+                Log.data.error("getCityById failed for cityId \(cityId): \(error)")
                 self.error = error
                 return getCityFromCache(cityId: cityId, userId: userId)
             }

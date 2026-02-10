@@ -7,6 +7,7 @@
 
 import Foundation
 import FoundationModels
+import os
 
 @MainActor
 class RecommendationService {
@@ -100,9 +101,14 @@ class RecommendationService {
 
         for aiCity in aiCities {
             // Use prefix search on plain_name (same as normal city search)
-            guard let searchResults = try? await databaseManager.searchCities(
-                query: aiCity.cityName
-            ), !searchResults.isEmpty else {
+            let searchResults: [SearchResult]
+            do {
+                searchResults = try await databaseManager.searchCities(query: aiCity.cityName)
+            } catch {
+                Log.data.error("Recommendation city search failed for '\(aiCity.cityName)': \(error)")
+                continue
+            }
+            guard !searchResults.isEmpty else {
                 print("[Recommendations] REJECTED: '\(aiCity.cityName), \(aiCity.country)' - no prefix search results found")
                 continue
             }

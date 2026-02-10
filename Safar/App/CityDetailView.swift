@@ -8,6 +8,7 @@
 import SwiftUI
 import MapKit
 import PhotosUI
+import os
 
 struct CityDetailView: View {
     @EnvironmentObject var viewModel: UserCitiesViewModel
@@ -465,8 +466,11 @@ struct CityDetailView: View {
             await placesViewModel.loadPlaces(for: cityId)
             // Load friends who visited
             if let currentUserId = DatabaseManager.shared.getCurrentUserId() {
-                if let friends = try? await DatabaseManager.shared.getFriendsWhoVisitedCity(cityId: cityId, userId: currentUserId) {
+                do {
+                    let friends = try await DatabaseManager.shared.getFriendsWhoVisitedCity(cityId: cityId, userId: currentUserId)
                     self.friendsWhoVisited = friends
+                } catch {
+                    Log.ui.error("Failed to load friends who visited city \(cityId): \(error)")
                 }
             }
         }
@@ -489,6 +493,9 @@ struct CityDetailView: View {
     private func addToBucketList() {
         Task {
             await viewModel.addCityToBucketList(cityId: cityId)
+            if let error = viewModel.error {
+                Log.ui.error("Failed to add city \(self.cityId) to bucket list: \(error)")
+            }
             await loadCityData(showLoading: false)
         }
     }
@@ -496,6 +503,9 @@ struct CityDetailView: View {
     private func removeFromBucketList() {
         Task {
             await viewModel.removeCityFromList(cityId: cityId)
+            if let error = viewModel.error {
+                Log.ui.error("Failed to remove city \(self.cityId) from list: \(error)")
+            }
             await loadCityData(showLoading: false)
         }
     }
@@ -598,6 +608,9 @@ struct CityDetailView: View {
     private func deleteCity() {
         Task {
             await viewModel.removeCityFromList(cityId: cityId)
+            if let error = viewModel.error {
+                Log.ui.error("Failed to delete city \(self.cityId): \(error)")
+            }
             // Reload data and adjust ratings for remaining cities if needed
             await viewModel.loadUserData()
             let remainingRatedCities = viewModel.visitedCities.filter { ($0.rating ?? 0) > 0 }
@@ -607,7 +620,7 @@ struct CityDetailView: View {
                     do {
                         try await DatabaseManager.shared.updateUserCityRating(userId: userId, cityId: cityId, rating: newRating)
                     } catch {
-                        print("Failed to update adjusted rating for city id \(cityId): \(error)")
+                        Log.ui.error("Failed to update adjusted rating for city id \(cityId): \(error)")
                     }
                 }
                 await viewModel.loadUserData()

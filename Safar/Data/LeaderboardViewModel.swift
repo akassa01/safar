@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import os
 
 @MainActor
 class LeaderboardViewModel: ObservableObject {
@@ -84,6 +85,7 @@ class LeaderboardViewModel: ObservableObject {
         do {
             topTravelersByCities = try await databaseManager.getTopTravelersByCities(limit: limit)
         } catch {
+            Log.data.error("loadTopTravelersByCities failed: \(error)")
             self.error = error
         }
 
@@ -97,6 +99,7 @@ class LeaderboardViewModel: ObservableObject {
         do {
             topTravelersByCountries = try await databaseManager.getTopTravelersByCountries(limit: limit)
         } catch {
+            Log.data.error("loadTopTravelersByCountries failed: \(error)")
             self.error = error
         }
 

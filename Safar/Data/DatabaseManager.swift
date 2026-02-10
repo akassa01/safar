@@ -7,6 +7,7 @@
 
 import Foundation
 import Supabase
+import os
 
 // MARK: - Models
 struct City: Codable, Identifiable, Hashable {
@@ -773,6 +774,7 @@ extension DatabaseManager {
                     .execute()
             }
         } catch {
+            Log.data.error("updateUserPlaceLiked failed: \(error)")
             throw DatabaseError.networkError("Failed to update place like: \(error.localizedDescription)")
         }
     }
@@ -786,6 +788,7 @@ extension DatabaseManager {
                 .eq("id", value: userPlaceId)
                 .execute()
         } catch {
+            Log.data.error("deleteUserPlace failed: \(error)")
             throw DatabaseError.networkError("Failed to delete place: \(error.localizedDescription)")
         }
     }
@@ -808,6 +811,7 @@ extension DatabaseManager {
                 .value
             return response
         } catch {
+            Log.data.error("searchPeople failed: \(error)")
             throw DatabaseError.networkError("Failed to search people: \(error.localizedDescription)")
         }
     }
@@ -837,6 +841,7 @@ extension DatabaseManager {
             }
             return entries
         } catch {
+            Log.data.error("getTopRatedCities failed: \(error)")
             throw DatabaseError.networkError("Failed to fetch city leaderboard: \(error.localizedDescription)")
         }
     }
@@ -875,6 +880,7 @@ extension DatabaseManager {
             }
             return entries
         } catch {
+            Log.data.error("getTopRatedCitiesByContinent failed: \(error)")
             throw DatabaseError.networkError("Failed to fetch continent leaderboard: \(error.localizedDescription)")
         }
     }
@@ -902,6 +908,7 @@ extension DatabaseManager {
             }
             return entries
         } catch {
+            Log.data.error("getTopRatedCountries failed: \(error)")
             throw DatabaseError.networkError("Failed to fetch country leaderboard: \(error.localizedDescription)")
         }
     }
@@ -923,6 +930,7 @@ extension DatabaseManager {
             }
             return entries
         } catch {
+            Log.data.error("getTopTravelersByCities failed: \(error)")
             throw DatabaseError.networkError("Failed to fetch people leaderboard by cities: \(error.localizedDescription)")
         }
     }
@@ -944,6 +952,7 @@ extension DatabaseManager {
             }
             return entries
         } catch {
+            Log.data.error("getTopTravelersByCountries failed: \(error)")
             throw DatabaseError.networkError("Failed to fetch people leaderboard by countries: \(error.localizedDescription)")
         }
     }
@@ -968,6 +977,7 @@ extension DatabaseManager {
             }
             return entries
         } catch {
+            Log.data.error("getTopCitiesForCountry failed: \(error)")
             throw DatabaseError.networkError("Failed to fetch top cities for country: \(error.localizedDescription)")
         }
     }
@@ -1004,6 +1014,7 @@ extension DatabaseManager {
                 .insert(payload)
                 .execute()
         } catch {
+            Log.data.error("followUser failed: \(error)")
             throw DatabaseError.networkError("Failed to follow user: \(error.localizedDescription)")
         }
     }
@@ -1019,6 +1030,7 @@ extension DatabaseManager {
                 .eq("following_id", value: followingId)
                 .execute()
         } catch {
+            Log.data.error("unfollowUser failed: \(error)")
             throw DatabaseError.networkError("Failed to unfollow user: \(error.localizedDescription)")
         }
     }
@@ -1040,6 +1052,7 @@ extension DatabaseManager {
                 .value
             return !response.isEmpty
         } catch {
+            Log.data.error("isFollowing failed: \(error)")
             throw DatabaseError.networkError("Failed to check follow status: \(error.localizedDescription)")
         }
     }
@@ -1075,6 +1088,7 @@ extension DatabaseManager {
 
             return profiles
         } catch {
+            Log.data.error("getFollowers failed: \(error)")
             throw DatabaseError.networkError("Failed to get followers: \(error.localizedDescription)")
         }
     }
@@ -1110,6 +1124,7 @@ extension DatabaseManager {
 
             return profiles
         } catch {
+            Log.data.error("getFollowing failed: \(error)")
             throw DatabaseError.networkError("Failed to get following: \(error.localizedDescription)")
         }
     }
@@ -1133,7 +1148,7 @@ extension DatabaseManager {
 
             return (followers: followersResponse.count ?? 0, following: followingResponse.count ?? 0)
         } catch {
-            // If counts fail, return 0s - we can still show the profile
+            Log.data.error("getFollowCounts failed, returning 0s: \(error)")
             return (followers: 0, following: 0)
         }
     }
@@ -1153,6 +1168,7 @@ extension DatabaseManager {
                 .value
             return response
         } catch {
+            Log.data.error("getUserProfile failed: \(error)")
             throw DatabaseError.networkError("Failed to get user profile: \(error.localizedDescription)")
         }
     }
@@ -1170,6 +1186,7 @@ extension DatabaseManager {
 
             return response.map { $0.toCity() }
         } catch {
+            Log.data.error("getVisitedCitiesForUser failed: \(error)")
             throw DatabaseError.networkError("Failed to get user's visited cities: \(error.localizedDescription)")
         }
     }
@@ -1187,6 +1204,7 @@ extension DatabaseManager {
 
             return response.map { $0.toCity() }
         } catch {
+            Log.data.error("getBucketListCitiesForUser failed: \(error)")
             throw DatabaseError.networkError("Failed to get user's bucket list cities: \(error.localizedDescription)")
         }
     }
@@ -1202,6 +1220,7 @@ extension DatabaseManager {
             let continents = Set(countries.map { $0.continent })
             return continents.count
         } catch {
+            Log.data.error("getContinentsCountForUser failed, returning 0: \(error)")
             return 0
         }
     }
@@ -1460,6 +1479,7 @@ extension DatabaseManager {
                 .insert(LikeInsert(userCityId: userCityId, userId: currentUser.id.uuidString))
                 .execute()
         } catch {
+            Log.data.error("likePost failed: \(error)")
             throw DatabaseError.networkError("Failed to like post: \(error.localizedDescription)")
         }
     }
@@ -1476,6 +1496,7 @@ extension DatabaseManager {
                 .eq("user_id", value: currentUser.id.uuidString)
                 .execute()
         } catch {
+            Log.data.error("unlikePost failed: \(error)")
             throw DatabaseError.networkError("Failed to unlike post: \(error.localizedDescription)")
         }
     }
@@ -1569,7 +1590,7 @@ extension DatabaseManager {
         let userCommentLikes = try await getUserCommentLikeStatus(for: commentIds, userId: currentUserId)
 
         // Build all PostComment objects
-        var allComments = comments.map { comment in
+        let allComments = comments.map { comment in
             var postComment = PostComment(
                 id: comment.id,
                 userCityId: comment.userCityId,
@@ -1676,6 +1697,7 @@ extension DatabaseManager {
                 .eq("user_id", value: currentUser.id.uuidString)
                 .execute()
         } catch {
+            Log.data.error("deleteComment failed: \(error)")
             throw DatabaseError.networkError("Failed to delete comment: \(error.localizedDescription)")
         }
     }
@@ -1749,6 +1771,7 @@ extension DatabaseManager {
                 .insert(CommentLikeInsert(commentId: commentId, userId: currentUser.id.uuidString))
                 .execute()
         } catch {
+            Log.data.error("likeComment failed: \(error)")
             throw DatabaseError.networkError("Failed to like comment: \(error.localizedDescription)")
         }
     }
@@ -1765,6 +1788,7 @@ extension DatabaseManager {
                 .eq("user_id", value: currentUser.id.uuidString)
                 .execute()
         } catch {
+            Log.data.error("unlikeComment failed: \(error)")
             throw DatabaseError.networkError("Failed to unlike comment: \(error.localizedDescription)")
         }
     }

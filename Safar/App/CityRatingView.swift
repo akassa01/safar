@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import os
 
 struct CityRatingView: View {
     @Binding var isPresented: Bool

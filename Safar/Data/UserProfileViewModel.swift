@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import os
 
 @MainActor
 class UserProfileViewModel: ObservableObject {
@@ -62,6 +63,7 @@ class UserProfileViewModel: ObservableObject {
             self.followingCount = counts.following
             self.isFollowing = following
         } catch {
+            Log.data.error("loadProfile failed for userId \(self.userId): \(error)")
             self.error = error
         }
 
@@ -77,7 +79,7 @@ class UserProfileViewModel: ObservableObject {
         do {
             recentPosts = try await databaseManager.getUserFeedPosts(userId: userId, limit: 10)
         } catch {
-            print("Error loading recent posts: \(error)")
+            Log.data.error("loadRecentPosts failed for userId \(self.userId): \(error)")
         }
         isLoadingPosts = false
     }
@@ -99,6 +101,7 @@ class UserProfileViewModel: ObservableObject {
                 followerCount += 1
             }
         } catch {
+            Log.data.error("toggleFollow failed for userId \(self.userId): \(error)")
             self.error = error
         }
 
@@ -131,6 +134,7 @@ class UserProfileViewModel: ObservableObject {
                 recentPosts[revertIndex].isLikedByCurrentUser = wasLiked
                 recentPosts[revertIndex].likeCount += wasLiked ? 1 : -1
             }
+            Log.data.error("toggleLike failed for post \(post.id): \(error)")
             self.error = error
         }
     }

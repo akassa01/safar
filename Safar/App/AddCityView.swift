@@ -8,6 +8,7 @@
 import SwiftUI
 import MapKit
 import PhotosUI
+import os
 
 
 struct AddCityView: View {
@@ -136,9 +137,13 @@ struct AddCityView: View {
         Task {
             var newImages: [UIImage] = []
             for item in items {
-                if let data = try? await item.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    newImages.append(image)
+                do {
+                    if let data = try await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        newImages.append(image)
+                    }
+                } catch {
+                    Log.ui.error("Failed to load photo: \(error)")
                 }
             }
             
@@ -171,7 +176,7 @@ struct AddCityView: View {
                 do {
                     try await DatabaseManager.shared.insertUserPlaces(userId: userId, cityId: cityId, places: allPlaces)
                 } catch {
-                    print("Failed to insert places: \(error)")
+                    Log.data.error("Failed to insert places for city \(cityId): \(error)")
                 }
             }
             
