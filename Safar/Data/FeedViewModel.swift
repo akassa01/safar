@@ -49,6 +49,12 @@ class FeedViewModel: ObservableObject {
 
             hasMorePosts = newPosts.count == pageSize
             currentOffset += newPosts.count
+        } catch is CancellationError {
+            // Task was cancelled (e.g. view disappeared) — ignore
+            return
+        } catch let error as NSError where error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled {
+            // URLSession request cancelled — ignore
+            return
         } catch {
             self.error = error
             print("Error loading feed: \(error)")

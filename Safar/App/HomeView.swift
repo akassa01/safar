@@ -30,6 +30,7 @@ struct HomeView: View {
 
             TabView(selection: $selectedTab) {
             NavigationStack(path: $homeNavigationPath) {
+                GeometryReader { geometry in
                 VStack {
                      TopBar()
                      Button(action: {
@@ -54,35 +55,35 @@ struct HomeView: View {
                      .buttonStyle(PlainButtonStyle())
                      .padding(.horizontal)
                      .background(Color("Background"))
-                     .padding(.bottom)
+                     .padding(.bottom, 6)
                      
                     // Stat Cards
                     HStack(spacing: 12) {
-                        StatCard(title: String(viewModel.visitedCitiesCount), subtitle: "Cities")
-                        StatCard(title: String(viewModel.visitedCountriesCount), subtitle: "Countries")
-                        StatCard(title: String(viewModel.visitedContinents.count), subtitle: "Continents")
+                        StatCard(title: String(viewModel.visitedCitiesCount), subtitle: "Cities", screenHeight: geometry.size.height)
+                        StatCard(title: String(viewModel.visitedCountriesCount), subtitle: "Countries", screenHeight: geometry.size.height)
+                        StatCard(title: String(viewModel.visitedContinents.count), subtitle: "Continents", screenHeight: geometry.size.height)
                     }
                     .padding(.horizontal)
-                    .padding(.bottom)
+                    .padding(.bottom, 6)
 
                     // Action Buttons
-                    HStack {
-                        ActionButton(title: "Add a new city", systemImage: "plus") {
+                    HStack() {
+                        ActionButton(title: "Add a new city", systemImage: "plus", screenHeight: geometry.size.height) {
                             if networkMonitor.isConnected {
                                 showSearchScreen = true
                             } else {
                                 showOfflineToast = true
                             }
                         }
-                        Spacer()
+			Spacer()
                         ShareLink(item: "Download Safar on the App Store") {
                                 HStack {
                                     Image(systemName: "paperplane")
                                     Text("Invite friends")
                                         .font(.subheadline)
                                 }
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 25)
+                                .padding(.vertical, geometry.size.height * 0.012)
+                                .padding(.horizontal, geometry.size.height * 0.037)
                                 .background(Color.accentColor)
                                 .cornerRadius(20)
                                 .bold(true)
@@ -91,15 +92,16 @@ struct HomeView: View {
                         
                     }
                     .padding(.horizontal)
-                    .padding(.bottom)
+                    .padding(.bottom, 6)
 
                     if !showSearchScreen {
                         FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel) { city in
                                 homeNavigationPath.append(city)
                             }
-                            .frame(height: 400)
+                            .frame(maxHeight: .infinity)
                             .cornerRadius(20)
                             .padding(.horizontal)
+                            .padding(.bottom)
                             .overlay(alignment: .topTrailing) {
                                 Button(action: {
                                     withAnimation(.spring()) {
@@ -130,11 +132,11 @@ struct HomeView: View {
                                         .foregroundColor(.primary)
                                 }
                                 .opacity(0.8)
-                                .padding(.bottom, 16)
+                                .padding(.bottom, 20)
                             }
                     }
-                    Spacer()
-                
+
+                }
                 }
                 .background(Color("Background"))
                 .fullScreenCover(isPresented: $showSearchScreen) {

@@ -9,30 +9,18 @@ import SwiftUI
 
 struct LoadingView: View {
     var body: some View {
-        ZStack {
-            Color("Background")
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            ZStack {
+                Color("Background")
 
-            VStack(spacing: 0) {
-                Spacer()
-
-                // App Logo (matching launch screen)
+                // App Logo (centered relative to full screen, matching launch screen)
                 Image("safar_logo")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 280)
-                    .padding(.horizontal, 24)
-
-                Spacer()
-
-                // Loading indicator
-                VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                        .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
-                }
-                .padding(.bottom, 100)
+                    .frame(maxWidth: 840, maxHeight: 330)
             }
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .ignoresSafeArea()
     }
 }

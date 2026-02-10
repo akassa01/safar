@@ -10,6 +10,7 @@ import SwiftUI
 struct StatCard: View {
     let title: String
     let subtitle: String
+    var screenHeight: CGFloat = 800
 
     var body: some View {
         VStack {
@@ -20,9 +21,9 @@ struct StatCard: View {
                 .font(.subheadline)
         }
         .foregroundColor(.white)
-        .frame(maxWidth: .infinity,)
-        .frame(height: 65)
-        .padding()
+        .frame(maxWidth: .infinity)
+        .frame(height: screenHeight * 0.12)
+        .padding(.vertical, 4)
         .background(Color.accentColor)
         .cornerRadius(20)
     }

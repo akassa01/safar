@@ -11,6 +11,7 @@ import SwiftUI
 struct ActionButton: View {
     let title: String
     let systemImage: String
+    var screenHeight: CGFloat = 800
     var action: () -> Void?
 
     var body: some View {
@@ -22,8 +23,8 @@ struct ActionButton: View {
                 Text(title)
                     .font(.subheadline)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 25)
+            .padding(.vertical, screenHeight * 0.012)
+            .padding(.horizontal, screenHeight * 0.037)
             .background(Color.accentColor)
             .cornerRadius(20)
             .bold(true)
