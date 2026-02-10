@@ -30,7 +30,7 @@ struct LeaderboardCityRow: View {
             // Rating display
             VStack(alignment: .trailing, spacing: 2) {
                 RatingCircle(rating: entry.averageRating, size: 35)
-                Text("\(entry.ratingCount) ratings")
+                Text("^[\(entry.ratingCount) rating](inflect: true)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }

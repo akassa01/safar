@@ -120,7 +120,7 @@ struct UserProfileView: View {
                 if let username = profile.username, profile.fullName != nil && !profile.fullName!.isEmpty {
                     Text("@\(username)")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.accentColor)
                 }
             }
 

@@ -55,6 +55,7 @@ struct FeedPostCard: View {
             .padding(16)
             .background(Color("Background"))
             .cornerRadius(16)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
             .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
         }
         .buttonStyle(.plain)
