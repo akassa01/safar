@@ -23,25 +23,33 @@ class CityPlacesViewModel: ObservableObject {
     }
 
     func loadPlaces(for cityId: Int) async {
-        guard let userId = currentUserId else { return }
+        guard let userId = currentUserId else {
+            print("🔴 loadPlaces: no currentUserId set, returning early")
+            return
+        }
+        print("🔍 loadPlaces: cityId=\(cityId), userId=\(userId)")
         isLoading = true
         error = nil
         isOfflineData = false
 
         let isOnline = NetworkMonitor.shared.isConnected
+        print("🔍 loadPlaces: isOnline=\(isOnline)")
 
         if isOnline {
             do {
                 let places = try await databaseManager.getUserPlaces(userId: userId, cityId: cityId)
+                print("🔍 loadPlaces: got \(places.count) places from DB")
                 var grouped: [PlaceCategory: [Place]] = [:]
                 for place in places {
                     grouped[place.category, default: []].append(place)
                 }
                 placesByCategory = grouped
+                print("🔍 loadPlaces: grouped into \(grouped.count) categories: \(grouped.map { "\($0.key.rawValue): \($0.value.count)" })")
 
                 // Cache places for offline use
                 CityCacheManager.shared.savePlaces(places, for: cityId, userId: userId)
             } catch {
+                print("🔴 loadPlaces error: \(error)")
                 self.error = error
                 // Fallback to cache on error
                 loadFromCache(cityId: cityId, userId: userId)
@@ -77,18 +85,18 @@ class CityPlacesViewModel: ObservableObject {
         }
     }
     
-    func updateLiked(for placeId: Int, liked: Bool?, cityId: Int) async {
+    func updateLiked(for userPlaceId: Int, liked: Bool?, cityId: Int) async {
         do {
-            try await databaseManager.updateUserPlaceLiked(placeId: placeId, liked: liked)
+            try await databaseManager.updateUserPlaceLiked(userPlaceId: userPlaceId, liked: liked)
             await loadPlaces(for: cityId)
         } catch {
             self.error = error
         }
     }
-    
-    func deletePlace(placeId: Int, cityId: Int) async {
+
+    func deletePlace(userPlaceId: Int, cityId: Int) async {
         do {
-            try await databaseManager.deleteUserPlace(placeId: placeId)
+            try await databaseManager.deleteUserPlace(userPlaceId: userPlaceId)
             await loadPlaces(for: cityId)
         } catch {
             self.error = error

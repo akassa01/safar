@@ -388,19 +388,19 @@ struct CityDetailView: View {
                                 if !isOffline && !isReadOnly {
                                     HStack(spacing: 8) {
                                         Button {
-                                            Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
+                                            Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
                                         } label: {
                                             Image(systemName: place.liked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
                                                 .foregroundColor(place.liked == true ? .green : .gray)
                                         }
                                         Button {
-                                            Task { await placesViewModel.updateLiked(for: place.id ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
+                                            Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
                                         } label: {
                                             Image(systemName: place.liked == false ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                                                 .foregroundColor(place.liked == false ? .red : .gray)
                                         }
                                         Button(role: .destructive) {
-                                            Task { await placesViewModel.deletePlace(placeId: place.id ?? 0, cityId: cityId) }
+                                            Task { await placesViewModel.deletePlace(userPlaceId: place.userPlaceId ?? 0, cityId: cityId) }
                                         } label: {
                                             Image(systemName: "xmark")
                                                 .foregroundColor(.red)

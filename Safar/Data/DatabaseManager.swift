@@ -116,6 +116,14 @@ let userCitySelectQuery = """
     )
 """
 
+/// Shared select query for user_place with nested place data
+let userPlaceSelectQuery = """
+    id, user_id, liked,
+    place_id (
+        id, name, latitude, longitude, category, city_id, likes, map_kit_id
+    )
+"""
+
 struct Country: Codable, Identifiable, Hashable {
     let id: Int64
     let name: String
@@ -590,84 +598,178 @@ extension DatabaseManager {
     }
 }
 
-// MARK: - Places (user_place) CRUD
+// MARK: - Places CRUD (places + user_place junction)
 extension DatabaseManager {
-    struct UserPlaceInsert: Codable {
+
+    struct PlaceInsert: Codable {
         let name: String
         let latitude: Double
         let longitude: Double
         let category: String
         let cityId: Int
-        let userId: String
-        let liked: Bool?
-        
+        let mapKitId: String
+
         enum CodingKeys: String, CodingKey {
-            case name
-            case latitude
-            case longitude
-            case category
+            case name, latitude, longitude, category
             case cityId = "city_id"
+            case mapKitId = "map_kit_id"
+        }
+    }
+
+    struct UserPlaceInsert: Codable {
+        let userId: String
+        let placeId: Int
+        let liked: Bool?
+
+        enum CodingKeys: String, CodingKey {
             case userId = "user_id"
+            case placeId = "place_id"
             case liked
         }
     }
 
-    /// Fetch all places created by a user for a given city
+    /// Fetch all places for a user in a city (joined from user_place → places)
     func getUserPlaces(userId: UUID, cityId: Int) async throws -> [Place] {
+        // Use !inner join so only user_place rows with a matching place are returned
+        let query = """
+            id, user_id, liked,
+            place_id!inner (
+                id, name, latitude, longitude, category, city_id, likes, map_kit_id
+            )
+        """
+        print("🔍 getUserPlaces: userId=\(userId.uuidString), cityId=\(cityId)")
+        print("🔍 getUserPlaces query: \(query)")
         do {
-            let response: [Place] = try await supabase
+            let rawResponse = try await supabase
                 .from("user_place")
-                .select("id, created_at, name, latitude, longitude, category, city_id, user_id, liked")
+                .select(query)
                 .eq("user_id", value: userId.uuidString)
-                .eq("city_id", value: cityId)
+                .eq("place_id.city_id", value: cityId)
                 .execute()
-                .value
-            return response
+
+            let rawJSON = String(data: rawResponse.data, encoding: .utf8) ?? "unable to decode raw JSON"
+            print("🔍 getUserPlaces raw JSON: \(rawJSON)")
+
+            let decoded = try JSONDecoder().decode([UserPlaceResponse].self, from: rawResponse.data)
+            print("🔍 getUserPlaces decoded \(decoded.count) UserPlaceResponse items")
+
+            let places = decoded.map { Place(from: $0) }
+            print("🔍 getUserPlaces returning \(places.count) places")
+            return places
         } catch {
+            print("🔴 getUserPlaces error: \(error)")
             throw DatabaseError.networkError("Failed to get user places: \(error.localizedDescription)")
         }
     }
 
-    /// Insert multiple places for a user and city
+    /// Insert places: upsert into `places` table, then link via `user_place`
     func insertUserPlaces(userId: UUID, cityId: Int, places: [Place]) async throws {
-        guard !places.isEmpty else { return }
-        let payload: [UserPlaceInsert] = places.map { place in
-            UserPlaceInsert(
-                name: place.name,
-                latitude: place.latitude,
-                longitude: place.longitude,
-                category: place.category.rawValue,
-                cityId: cityId,
-                userId: userId.uuidString,
-                liked: place.liked
-            )
+        guard !places.isEmpty else {
+            print("🟡 insertUserPlaces: empty places array, returning early")
+            return
         }
+        print("🟡 insertUserPlaces: starting with \(places.count) places for cityId=\(cityId), userId=\(userId)")
+
         do {
+            var placeIds: [(placeId: Int, liked: Bool?)] = []
+
+            for (index, place) in places.enumerated() {
+                print("🟡 [\(index)] Upserting place: '\(place.name)' lat=\(place.latitude) lng=\(place.longitude) category=\(place.category.rawValue)")
+
+                let payload = PlaceInsert(
+                    name: place.name,
+                    latitude: place.latitude,
+                    longitude: place.longitude,
+                    category: place.category.rawValue,
+                    cityId: cityId,
+                    mapKitId: place.mapKitId
+                )
+
+                let upserted: [PlaceData] = try await supabase
+                    .from("places")
+                    .upsert(payload, onConflict: "map_kit_id")
+                    .select("id, name, latitude, longitude, category, city_id, likes, map_kit_id")
+                    .execute()
+                    .value
+
+                print("🟡 [\(index)] Upsert returned \(upserted.count) rows: \(upserted.map { "id=\($0.id)" })")
+
+                if let placeData = upserted.first {
+                    placeIds.append((placeId: placeData.id, liked: place.liked))
+                } else {
+                    print("🟡 [\(index)] Upsert returned empty — fetching existing place")
+                    let existing: [PlaceData]
+                    if !place.mapKitId.isEmpty {
+                        existing = try await supabase
+                            .from("places")
+                            .select("id, name, latitude, longitude, category, city_id, likes, map_kit_id")
+                            .eq("map_kit_id", value: place.mapKitId)
+                            .limit(1)
+                            .execute()
+                            .value
+                    } else {
+                        existing = try await supabase
+                            .from("places")
+                            .select("id, name, latitude, longitude, category, city_id, likes, map_kit_id")
+                            .eq("name", value: place.name)
+                            .eq("latitude", value: place.latitude)
+                            .eq("longitude", value: place.longitude)
+                            .eq("category", value: place.category.rawValue)
+                            .eq("city_id", value: cityId)
+                            .limit(1)
+                            .execute()
+                            .value
+                    }
+                    print("🟡 [\(index)] Fallback fetch returned \(existing.count) rows: \(existing.map { "id=\($0.id)" })")
+                    if let placeData = existing.first {
+                        placeIds.append((placeId: placeData.id, liked: place.liked))
+                    } else {
+                        print("🔴 [\(index)] Could not find or create place '\(place.name)' — skipping")
+                    }
+                }
+            }
+
+            print("🟡 Resolved \(placeIds.count) place IDs: \(placeIds.map { "placeId=\($0.placeId)" })")
+            guard !placeIds.isEmpty else {
+                print("🔴 No place IDs resolved — skipping user_place insert")
+                return
+            }
+
+            let userPlacePayload = placeIds.map { item in
+                UserPlaceInsert(
+                    userId: userId.uuidString,
+                    placeId: item.placeId,
+                    liked: item.liked
+                )
+            }
+            print("🟡 Inserting \(userPlacePayload.count) user_place records: \(userPlacePayload.map { "placeId=\($0.placeId), liked=\(String(describing: $0.liked))" })")
+
             try await supabase
                 .from("user_place")
-                .insert(payload)
+                .insert(userPlacePayload)
                 .execute()
+            print("🟢 user_place insert completed successfully")
         } catch {
+            print("🔴 insertUserPlaces error: \(error)")
             throw DatabaseError.networkError("Failed to insert user places: \(error.localizedDescription)")
         }
     }
 
-    /// Update liked status for a place
-    func updateUserPlaceLiked(placeId: Int, liked: Bool?) async throws {
+    /// Update liked status for a user_place record (trigger updates places.likes)
+    func updateUserPlaceLiked(userPlaceId: Int, liked: Bool?) async throws {
         do {
             if let liked = liked {
                 try await supabase
                     .from("user_place")
                     .update(["liked": liked])
-                    .eq("id", value: placeId)
+                    .eq("id", value: userPlaceId)
                     .execute()
             } else {
-                // Encode JSON null by using an Optional value inside a dictionary
                 let payload: [String: Bool?] = ["liked": nil]
                 try await supabase
                     .from("user_place")
                     .update(payload)
-                    .eq("id", value: placeId)
+                    .eq("id", value: userPlaceId)
                     .execute()
             }
         } catch {
@@ -675,13 +777,13 @@ extension DatabaseManager {
         }
     }
 
-    /// Delete a place by id (only the user's own place should be removed in UI)
-    func deleteUserPlace(placeId: Int) async throws {
+    /// Delete a user_place association (trigger updates places.likes)
+    func deleteUserPlace(userPlaceId: Int) async throws {
         do {
             try await supabase
                 .from("user_place")
                 .delete()
-                .eq("id", value: placeId)
+                .eq("id", value: userPlaceId)
                 .execute()
         } catch {
             throw DatabaseError.networkError("Failed to delete place: \(error.localizedDescription)")

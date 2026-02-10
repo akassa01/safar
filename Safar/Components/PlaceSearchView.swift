@@ -50,17 +50,17 @@ struct PlaceSearchView: View {
                     )
                 } else {
                     List(searchResults, id: \.self) { mapItem in
-                        let placeId = createPlaceId(from: mapItem)
+                        let mapKitId = mapItem.identifier?.stringValue ?? ""
                         PlaceRowView(
                             mapItem: mapItem,
                             category: category,
-                            isSelected: selectedPlaces.contains(placeId),
-                            rating: placeRatings[placeId],
+                            isSelected: selectedPlaces.contains(mapKitId),
+                            rating: placeRatings[mapKitId],
                             onTap: {
                                 togglePlaceSelection(mapItem)
                             },
                             onRatingChanged: { newRating in
-                                placeRatings[placeId] = newRating
+                                placeRatings[mapKitId] = newRating
                             }
                         )
                         .listRowBackground(Color("Background"))
@@ -93,31 +93,25 @@ struct PlaceSearchView: View {
     }
     
     private func togglePlaceSelection(_ mapItem: MKMapItem) {
-        let placeId = createPlaceId(from: mapItem)
-        if selectedPlaces.contains(placeId) {
-            selectedPlaces.remove(placeId)
-            allSelectedPlaces.removeValue(forKey: placeId)
+        let mapKitId = mapItem.identifier?.stringValue ?? ""
+        if selectedPlaces.contains(mapKitId) {
+            selectedPlaces.remove(mapKitId)
+            allSelectedPlaces.removeValue(forKey: mapKitId)
         } else {
-            selectedPlaces.insert(placeId)
-            allSelectedPlaces[placeId] = mapItem
+            selectedPlaces.insert(mapKitId)
+            allSelectedPlaces[mapKitId] = mapItem
         }
     }
-    
-    private func createPlaceId(from mapItem: MKMapItem) -> String {
-        let coordinate = mapItem.placemark.coordinate
-        let name = mapItem.name ?? "Unknown"
-        return "\(name)_\(coordinate.latitude)_\(coordinate.longitude)"
-    }
-    
+
     private func saveSelectedPlaces() {
-        let places = allSelectedPlaces.values.map { mapItem -> Place in
-            let placeId = createPlaceId(from: mapItem)
-            return Place(
+        let places = allSelectedPlaces.map { (mapKitId, mapItem) -> Place in
+            Place(
                 name: mapItem.name ?? "Unknown",
                 latitude: mapItem.placemark.coordinate.latitude,
                 longitude: mapItem.placemark.coordinate.longitude,
                 category: category,
-                liked: placeRatings[placeId]
+                liked: placeRatings[mapKitId],
+                mapKitId: mapKitId
             )
         }
         onPlacesSelected(places)
@@ -170,9 +164,9 @@ struct PlaceSearchView: View {
     private func updateSelectedPlacesForCurrentResults() {
         selectedPlaces.removeAll()
         for mapItem in searchResults {
-            let placeId = createPlaceId(from: mapItem)
-            if allSelectedPlaces.keys.contains(placeId) {
-                selectedPlaces.insert(placeId)
+            let mapKitId = mapItem.identifier?.stringValue ?? ""
+            if allSelectedPlaces.keys.contains(mapKitId) {
+                selectedPlaces.insert(mapKitId)
             }
         }
     }
@@ -248,6 +242,12 @@ extension CLPlacemark {
             return [thoroughfare, locality].compactMap { $0 }.joined(separator: ", ")
         }
         return "\(subThoroughfare) \(thoroughfare), \(locality)"
+    }
+}
+
+extension MKMapItem.Identifier {
+    var stringValue: String {
+        (self as any RawRepresentable).rawValue as! String
     }
 }
 

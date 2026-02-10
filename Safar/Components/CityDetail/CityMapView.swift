@@ -98,10 +98,27 @@ struct CityMapView: View {
     }
 
     private func openInAppleMaps(place: Place) {
-        let encodedName = place.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: "maps://?q=\(encodedName)&ll=\(place.latitude),\(place.longitude)") {
-            UIApplication.shared.open(url)
+        if !place.mapKitId.isEmpty && place.mapKitId != "",
+           let identifier = MKMapItem.Identifier(rawValue: place.mapKitId) {
+            let request = MKMapItemRequest(mapItemIdentifier: identifier)
+            Task {
+                if let mapItem = try? await request.mapItem {
+                    mapItem.openInMaps()
+                    return
+                }
+                openInAppleMapsFallback(place: place)
+            }
+        } else {
+            openInAppleMapsFallback(place: place)
         }
+    }
+
+    private func openInAppleMapsFallback(place: Place) {
+        let coordinate = CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = place.name
+        mapItem.openInMaps()
     }
 }
 
