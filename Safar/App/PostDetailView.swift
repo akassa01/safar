@@ -229,7 +229,7 @@ struct PostDetailView: View {
             // Comment count
             HStack(spacing: 6) {
                 Image(systemName: "bubble.right")
-                Text("\(viewModel.comments.count)")
+                Text("\(viewModel.totalCommentCount)")
             }
             .font(.subheadline)
             .foregroundColor(.secondary)
@@ -263,6 +263,24 @@ struct PostDetailView: View {
                                 await viewModel.deleteComment(comment)
                                 feedViewModel?.updateCommentCount(for: post.id, delta: -1)
                             }
+                        },
+                        onReply: {
+                            viewModel.replyingTo = comment
+                        },
+                        onToggleLike: {
+                            Task { await viewModel.toggleCommentLike(for: comment) }
+                        },
+                        onDeleteReply: { reply in
+                            Task {
+                                await viewModel.deleteComment(reply)
+                                feedViewModel?.updateCommentCount(for: post.id, delta: -1)
+                            }
+                        },
+                        onToggleLikeReply: { reply in
+                            Task { await viewModel.toggleCommentLike(for: reply) }
+                        },
+                        canDeleteReply: { reply in
+                            viewModel.canDeleteComment(reply)
                         }
                     )
 
@@ -288,6 +306,10 @@ struct PostDetailView: View {
                             feedViewModel?.updateCommentCount(for: post.id, delta: 1)
                         }
                     }
+                },
+                replyingToUsername: viewModel.replyingTo?.username ?? viewModel.replyingTo?.fullName,
+                onCancelReply: {
+                    viewModel.replyingTo = nil
                 }
             )
             .padding()

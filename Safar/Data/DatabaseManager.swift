@@ -1527,7 +1527,7 @@ extension DatabaseManager {
 
     // MARK: - Comment Operations
 
-    /// Get all comments for a post
+    /// Get all comments for a post (with replies threaded under parents)
     func getPostComments(userCityId: Int64) async throws -> [PostComment] {
         struct CommentResponse: Codable {
             let id: Int64
@@ -1535,6 +1535,7 @@ extension DatabaseManager {
             let userId: String
             let content: String
             let createdAt: Date
+            let parentCommentId: Int64?
 
             enum CodingKeys: String, CodingKey {
                 case id
@@ -1542,12 +1543,13 @@ extension DatabaseManager {
                 case userId = "user_id"
                 case content
                 case createdAt = "created_at"
+                case parentCommentId = "parent_comment_id"
             }
         }
 
         let comments: [CommentResponse] = try await supabase
             .from("post_comments")
-            .select("id, user_city_id, user_id, content, created_at")
+            .select("id, user_city_id, user_id, content, created_at, parent_comment_id")
             .eq("user_city_id", value: Int(userCityId))
             .order("created_at", ascending: true)
             .execute()
@@ -1560,34 +1562,56 @@ extension DatabaseManager {
         let profiles = try await getProfilesByIds(userIds)
         let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
 
-        return comments.map { comment in
+        // Fetch comment like data
+        let commentIds = comments.map { $0.id }
+        let commentLikeCounts = try await getCommentLikeCounts(for: commentIds)
+        let currentUserId = getCurrentUserId() ?? ""
+        let userCommentLikes = try await getUserCommentLikeStatus(for: commentIds, userId: currentUserId)
+
+        // Build all PostComment objects
+        var allComments = comments.map { comment in
             var postComment = PostComment(
                 id: comment.id,
                 userCityId: comment.userCityId,
                 userId: comment.userId,
                 content: comment.content,
-                createdAt: comment.createdAt
+                createdAt: comment.createdAt,
+                parentCommentId: comment.parentCommentId
             )
             postComment.username = profileMap[comment.userId]?.username
             postComment.fullName = profileMap[comment.userId]?.fullName
             postComment.avatarURL = profileMap[comment.userId]?.avatarURL
+            postComment.likeCount = commentLikeCounts[comment.id] ?? 0
+            postComment.isLikedByCurrentUser = userCommentLikes.contains(comment.id)
             return postComment
         }
+
+        // Thread replies under parents
+        let replies = allComments.filter { $0.parentCommentId != nil }
+        var topLevel = allComments.filter { $0.parentCommentId == nil }
+
+        for i in 0..<topLevel.count {
+            topLevel[i].replies = replies.filter { $0.parentCommentId == topLevel[i].id }
+        }
+
+        return topLevel
     }
 
-    /// Add a comment to a post
-    func addComment(userCityId: Int64, content: String) async throws -> PostComment {
+    /// Add a comment to a post (optionally as a reply)
+    func addComment(userCityId: Int64, content: String, parentCommentId: Int64? = nil) async throws -> PostComment {
         let currentUser = try await getCurrentUser()
 
         struct CommentInsert: Codable {
             let userCityId: Int64
             let userId: String
             let content: String
+            let parentCommentId: Int64?
 
             enum CodingKeys: String, CodingKey {
                 case userCityId = "user_city_id"
                 case userId = "user_id"
                 case content
+                case parentCommentId = "parent_comment_id"
             }
         }
 
@@ -1597,6 +1621,7 @@ extension DatabaseManager {
             let userId: String
             let content: String
             let createdAt: Date
+            let parentCommentId: Int64?
 
             enum CodingKeys: String, CodingKey {
                 case id
@@ -1604,12 +1629,18 @@ extension DatabaseManager {
                 case userId = "user_id"
                 case content
                 case createdAt = "created_at"
+                case parentCommentId = "parent_comment_id"
             }
         }
 
         let response: CommentResponse = try await supabase
             .from("post_comments")
-            .insert(CommentInsert(userCityId: userCityId, userId: currentUser.id.uuidString, content: content))
+            .insert(CommentInsert(
+                userCityId: userCityId,
+                userId: currentUser.id.uuidString,
+                content: content,
+                parentCommentId: parentCommentId
+            ))
             .select()
             .single()
             .execute()
@@ -1623,7 +1654,8 @@ extension DatabaseManager {
             userCityId: response.userCityId,
             userId: response.userId,
             content: response.content,
-            createdAt: response.createdAt
+            createdAt: response.createdAt,
+            parentCommentId: response.parentCommentId
         )
         comment.username = profile.username
         comment.fullName = profile.fullName
@@ -1645,6 +1677,95 @@ extension DatabaseManager {
                 .execute()
         } catch {
             throw DatabaseError.networkError("Failed to delete comment: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Comment Like Operations
+
+    /// Get like counts for multiple comments
+    private func getCommentLikeCounts(for commentIds: [Int64]) async throws -> [Int64: Int] {
+        guard !commentIds.isEmpty else { return [:] }
+
+        struct CommentLikeRecord: Codable {
+            let commentId: Int64
+            enum CodingKeys: String, CodingKey {
+                case commentId = "comment_id"
+            }
+        }
+
+        let likes: [CommentLikeRecord] = try await supabase
+            .from("comment_likes")
+            .select("comment_id")
+            .in("comment_id", values: commentIds.map { Int($0) })
+            .execute()
+            .value
+
+        var counts: [Int64: Int] = [:]
+        for like in likes {
+            counts[like.commentId, default: 0] += 1
+        }
+        return counts
+    }
+
+    /// Check which comments the current user has liked
+    private func getUserCommentLikeStatus(for commentIds: [Int64], userId: String) async throws -> Set<Int64> {
+        guard !commentIds.isEmpty, !userId.isEmpty else { return [] }
+
+        struct UserCommentLike: Codable {
+            let commentId: Int64
+            enum CodingKeys: String, CodingKey {
+                case commentId = "comment_id"
+            }
+        }
+
+        let likes: [UserCommentLike] = try await supabase
+            .from("comment_likes")
+            .select("comment_id")
+            .eq("user_id", value: userId)
+            .in("comment_id", values: commentIds.map { Int($0) })
+            .execute()
+            .value
+
+        return Set(likes.map { $0.commentId })
+    }
+
+    /// Like a comment
+    func likeComment(commentId: Int64) async throws {
+        let currentUser = try await getCurrentUser()
+
+        struct CommentLikeInsert: Codable {
+            let commentId: Int64
+            let userId: String
+
+            enum CodingKeys: String, CodingKey {
+                case commentId = "comment_id"
+                case userId = "user_id"
+            }
+        }
+
+        do {
+            try await supabase
+                .from("comment_likes")
+                .insert(CommentLikeInsert(commentId: commentId, userId: currentUser.id.uuidString))
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to like comment: \(error.localizedDescription)")
+        }
+    }
+
+    /// Unlike a comment
+    func unlikeComment(commentId: Int64) async throws {
+        let currentUser = try await getCurrentUser()
+
+        do {
+            try await supabase
+                .from("comment_likes")
+                .delete()
+                .eq("comment_id", value: Int(commentId))
+                .eq("user_id", value: currentUser.id.uuidString)
+                .execute()
+        } catch {
+            throw DatabaseError.networkError("Failed to unlike comment: \(error.localizedDescription)")
         }
     }
 }

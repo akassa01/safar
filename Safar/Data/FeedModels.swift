@@ -51,11 +51,19 @@ struct PostComment: Codable, Identifiable {
     let userId: String
     let content: String
     let createdAt: Date
+    let parentCommentId: Int64?
 
     // User profile data (set after fetch)
     var username: String?
     var fullName: String?
     var avatarURL: String?
+
+    // Reply threading (populated client-side)
+    var replies: [PostComment]?
+
+    // Comment like data (populated after fetch)
+    var likeCount: Int = 0
+    var isLikedByCurrentUser: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -63,6 +71,7 @@ struct PostComment: Codable, Identifiable {
         case userId = "user_id"
         case content
         case createdAt = "created_at"
+        case parentCommentId = "parent_comment_id"
     }
 }
 

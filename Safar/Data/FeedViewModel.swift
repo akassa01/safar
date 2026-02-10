@@ -119,6 +119,7 @@ class PostDetailViewModel: ObservableObject {
     @Published var isLoadingComments = false
     @Published var isLoadingLikes = false
     @Published var isAddingComment = false
+    @Published var replyingTo: PostComment?
     @Published var error: Error?
 
     private let databaseManager = DatabaseManager.shared
@@ -128,7 +129,7 @@ class PostDetailViewModel: ObservableObject {
         self.post = post
     }
 
-    /// Load comments for the post
+    /// Load comments for the post (returns threaded top-level comments with replies nested)
     func loadComments() async {
         isLoadingComments = true
         error = nil
@@ -156,7 +157,7 @@ class PostDetailViewModel: ObservableObject {
         isLoadingLikes = false
     }
 
-    /// Add a comment
+    /// Add a comment (or reply if replyingTo is set)
     func addComment(content: String) async -> Bool {
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedContent.isEmpty else { return false }
@@ -164,12 +165,29 @@ class PostDetailViewModel: ObservableObject {
         isAddingComment = true
         error = nil
 
+        let parentId = replyingTo?.id
+
         do {
             let newComment = try await databaseManager.addComment(
                 userCityId: post.id,
-                content: trimmedContent
+                content: trimmedContent,
+                parentCommentId: parentId
             )
-            comments.append(newComment)
+
+            if let parentId = parentId {
+                // Append reply under the parent comment
+                if let parentIndex = comments.firstIndex(where: { $0.id == parentId }) {
+                    if comments[parentIndex].replies == nil {
+                        comments[parentIndex].replies = []
+                    }
+                    comments[parentIndex].replies?.append(newComment)
+                }
+            } else {
+                // Append as a new top-level comment
+                comments.append(newComment)
+            }
+
+            replyingTo = nil
             isAddingComment = false
             return true
         } catch {
@@ -180,14 +198,64 @@ class PostDetailViewModel: ObservableObject {
         }
     }
 
-    /// Delete a comment
+    /// Delete a comment (handles both top-level and replies)
     func deleteComment(_ comment: PostComment) async {
         do {
             try await databaseManager.deleteComment(commentId: comment.id)
-            comments.removeAll { $0.id == comment.id }
+
+            if let parentId = comment.parentCommentId {
+                // Remove from parent's replies
+                if let parentIndex = comments.firstIndex(where: { $0.id == parentId }) {
+                    comments[parentIndex].replies?.removeAll { $0.id == comment.id }
+                }
+            } else {
+                // Remove top-level comment (and its replies cascade on the DB side)
+                comments.removeAll { $0.id == comment.id }
+            }
         } catch {
             self.error = error
             print("Error deleting comment: \(error)")
+        }
+    }
+
+    /// Toggle like on a comment with optimistic update
+    func toggleCommentLike(for comment: PostComment) async {
+        // Find the comment in top-level or replies
+        let wasLiked = comment.isLikedByCurrentUser
+
+        // Optimistic update
+        updateCommentLikeState(commentId: comment.id, isLiked: !wasLiked, likeDelta: wasLiked ? -1 : 1)
+
+        do {
+            if wasLiked {
+                try await databaseManager.unlikeComment(commentId: comment.id)
+            } else {
+                try await databaseManager.likeComment(commentId: comment.id)
+            }
+        } catch {
+            // Revert on error
+            updateCommentLikeState(commentId: comment.id, isLiked: wasLiked, likeDelta: wasLiked ? 1 : -1)
+            print("Error toggling comment like: \(error)")
+        }
+    }
+
+    /// Helper to update like state in the nested comment structure
+    private func updateCommentLikeState(commentId: Int64, isLiked: Bool, likeDelta: Int) {
+        for i in 0..<comments.count {
+            if comments[i].id == commentId {
+                comments[i].isLikedByCurrentUser = isLiked
+                comments[i].likeCount = max(0, comments[i].likeCount + likeDelta)
+                return
+            }
+            if let replies = comments[i].replies {
+                for j in 0..<replies.count {
+                    if replies[j].id == commentId {
+                        comments[i].replies?[j].isLikedByCurrentUser = isLiked
+                        comments[i].replies?[j].likeCount = max(0, replies[j].likeCount + likeDelta)
+                        return
+                    }
+                }
+            }
         }
     }
 
@@ -195,5 +263,10 @@ class PostDetailViewModel: ObservableObject {
     func canDeleteComment(_ comment: PostComment) -> Bool {
         guard let currentUserId = databaseManager.getCurrentUserId() else { return false }
         return comment.userId == currentUserId
+    }
+
+    /// Total comment count (top-level + all replies)
+    var totalCommentCount: Int {
+        comments.reduce(0) { $0 + 1 + ($1.replies?.count ?? 0) }
     }
 }
