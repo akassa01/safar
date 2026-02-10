@@ -21,6 +21,7 @@ struct PlaceSearchView: View {
     @State private var selectedPlaces: Set<String> = []
     @State private var allSelectedPlaces: [String: MKMapItem] = [:]
     @State private var isSearching = false
+    @State private var searchError: String?
     @State private var region: MKCoordinateRegion
     
     init(cityCoordinate: CLLocationCoordinate2D, category: PlaceCategory, onPlacesSelected: @escaping ([Place]) -> Void) {
@@ -42,11 +43,17 @@ struct PlaceSearchView: View {
                 if isSearching {
                     ProgressView("Searching...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if searchResults.isEmpty && !searchText.isEmpty {
+                } else if let searchError = searchError {
+                    ContentUnavailableView(
+                        "Search Failed",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(searchError)
+                    )
+                } else if searchResults.isEmpty {
                     ContentUnavailableView(
                         "No Results",
                         systemImage: "magnifyingglass",
-                        description: Text("Try searching for \(category.rawValue)s in this area")
+                        description: Text("Try searching for places in this area")
                     )
                 } else {
                     List(searchResults, id: \.self) { mapItem in
@@ -121,11 +128,12 @@ struct PlaceSearchView: View {
     private func performSearch() {
         guard !searchText.isEmpty else { return }
         isSearching = true
+        searchError = nil
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = searchText
         request.region = region
         let search = MKLocalSearch(request: request)
-        search.start { response, _ in
+        search.start { response, error in
             DispatchQueue.main.async {
                 isSearching = false
                 if let response = response {
@@ -134,6 +142,10 @@ struct PlaceSearchView: View {
                     }
                 } else {
                     searchResults = []
+                    if let error = error {
+                        searchError = error.localizedDescription
+                        print("[PlaceSearch] Search error: \(error.localizedDescription)")
+                    }
                 }
                 updateSelectedPlacesForCurrentResults()
             }
@@ -141,20 +153,28 @@ struct PlaceSearchView: View {
     }
     
     private func performCategorySearch() {
+        guard category != .other else { return }
         isSearching = true
+        searchError = nil
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = getCategorySearchTerm()
         request.region = region
+        request.resultTypes = .pointOfInterest
+        if let filter = getCategoryPOIFilter() {
+            request.pointOfInterestFilter = filter
+        }
         let search = MKLocalSearch(request: request)
-        search.start { response, _ in
+        search.start { response, error in
             DispatchQueue.main.async {
                 isSearching = false
                 if let response = response {
-                    searchResults = response.mapItems.filter { mapItem in
-                        filterByCategory(mapItem)
-                    }
+                    searchResults = response.mapItems
                 } else {
                     searchResults = []
+                    if let error = error {
+                        searchError = error.localizedDescription
+                        print("[PlaceSearch] Category search error: \(error.localizedDescription)")
+                    }
                 }
                 updateSelectedPlacesForCurrentResults()
             }
@@ -187,20 +207,38 @@ struct PlaceSearchView: View {
             return "points of interest"
         }
     }
+
+    private func getCategoryPOIFilter() -> MKPointOfInterestFilter? {
+        switch category {
+        case .restaurant:
+            return MKPointOfInterestFilter(including: [.restaurant, .cafe, .bakery, .brewery, .winery, .foodMarket, .distillery])
+        case .hotel:
+            return MKPointOfInterestFilter(including: [.hotel, .campground, .rvPark])
+        case .activity:
+            return MKPointOfInterestFilter(excluding: [.hotel, .store, .gasStation, .pharmacy, .atm, .bank, .restaurant, .cafe])
+        case .shop:
+            return MKPointOfInterestFilter(including: [.store, .gasStation, .bakery, .pharmacy, .bank, .atm, .foodMarket])
+        case .nightlife:
+            return MKPointOfInterestFilter(including: [.nightlife, .brewery, .winery, .distillery, .musicVenue])
+        case .other:
+            return nil
+        }
+    }
     
     private func filterByCategory(_ mapItem: MKMapItem) -> Bool {
         guard let pointOfInterestCategory = mapItem.pointOfInterestCategory else { return true }
         switch category {
         case .restaurant:
-            return [.restaurant, .cafe, .bakery, .brewery, .winery, .foodMarket, .distillery].contains(pointOfInterestCategory)
+            return [.restaurant, .cafe, .bakery, .brewery, .winery, .foodMarket, .distillery, .nightlife].contains(pointOfInterestCategory)
         case .hotel:
-            return [.hotel].contains(pointOfInterestCategory)
+            return [.hotel, .campground, .rvPark].contains(pointOfInterestCategory)
         case .activity:
-            return [.museum, .park, .zoo, .amusementPark, .theater, .movieTheater, .stadium, .nightlife, .musicVenue, .library, .castle, .fortress, .landmark, .nationalMonument, .beauty, .spa, .aquarium, .fairground, .beach, .campground, .marina, .nationalPark, .rvPark, .fishing, .kayaking, .surfing, .swimming, .baseball, .basketball, .bowling, .goKart, .golf, .hiking, .miniGolf, .rockClimbing, .skatePark, .skiing, .soccer, .tennis, .volleyball, .fireStation, .planetarium, .bank, .school, .university].contains(pointOfInterestCategory)
+            let excluded: Set<MKPointOfInterestCategory> = [.hotel, .store, .gasStation, .pharmacy, .atm, .bank, .restaurant, .cafe]
+            return !excluded.contains(pointOfInterestCategory)
         case .shop:
-            return [.store, .gasStation, .bakery, .pharmacy, .bank, .atm].contains(pointOfInterestCategory)
+            return [.store, .gasStation, .bakery, .pharmacy, .bank, .atm, .foodMarket].contains(pointOfInterestCategory)
         case .nightlife:
-            return [.nightlife, .brewery, .winery, .distillery].contains(pointOfInterestCategory)
+            return [.nightlife, .brewery, .winery, .distillery, .musicVenue].contains(pointOfInterestCategory)
         case .other:
             return true
         }
