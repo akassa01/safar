@@ -96,7 +96,11 @@ struct HomeView: View {
 
                     if !showSearchScreen {
                         FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel) { city in
+                                print("[NAV] City tapped on map: \(city.displayName) (id: \(city.id))")
+                                print("[NAV] viewModel.currentUserId: \(String(describing: viewModel.currentUserId))")
+                                print("[NAV] viewModel.allUserCities count: \(viewModel.allUserCities.count)")
                                 homeNavigationPath.append(city)
+                                print("[NAV] Appended to homeNavigationPath, count: \(homeNavigationPath.count)")
                             }
                             .frame(maxHeight: .infinity)
                             .cornerRadius(20)

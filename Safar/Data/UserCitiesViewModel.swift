@@ -287,6 +287,11 @@ class UserCitiesViewModel: ObservableObject {
     func getCityById(cityId: Int) async -> City? {
         guard let userId = _currentUserId else { return nil }
 
+        // Check in-memory data first (already loaded by loadUserData)
+        if let city = allUserCities.first(where: { $0.id == cityId }) {
+            return city
+        }
+
         let isOnline = NetworkMonitor.shared.isConnected
 
         if isOnline {
@@ -294,11 +299,9 @@ class UserCitiesViewModel: ObservableObject {
                 return try await databaseManager.getCityWithUserData(cityId: cityId, userId: userId)
             } catch {
                 self.error = error
-                // Fallback to cache on error
                 return getCityFromCache(cityId: cityId, userId: userId)
             }
         } else {
-            // Offline: return from cache
             return getCityFromCache(cityId: cityId, userId: userId)
         }
     }

@@ -17,13 +17,16 @@ struct safarApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if authManager.isLoading || (authManager.isAuthenticated && !isDataPreloaded) {
-                    LoadingView()
-                } else if authManager.isAuthenticated {
+            ZStack {
+                if authManager.isAuthenticated {
                     HomeView()
                         .environmentObject(userCitiesViewModel)
-                } else {
+                        .opacity(isDataPreloaded ? 1 : 0)
+                }
+
+                if authManager.isLoading || (authManager.isAuthenticated && !isDataPreloaded) {
+                    LoadingView()
+                } else if !authManager.isAuthenticated {
                     AuthView()
                 }
             }

@@ -203,6 +203,9 @@ struct CityDetailView: View {
         }
         .background(Color("Background"))
         .task {
+            print("[DETAIL] .task fired for cityId: \(cityId)")
+            print("[DETAIL] isReadOnly: \(isReadOnly), initialCity: \(String(describing: initialCity))")
+            print("[DETAIL] viewModel.currentUserId: \(String(describing: viewModel.currentUserId))")
             if isReadOnly, let initialCity = initialCity {
                 // For read-only mode, use the provided city directly
                 self.city = initialCity
@@ -467,15 +470,18 @@ struct CityDetailView: View {
     // MARK: - Helper Functions
 
     private func loadCityData(showLoading: Bool = true) async {
+        print("[DETAIL] loadCityData called for cityId: \(cityId), showLoading: \(showLoading)")
         if showLoading {
             isLoading = true
         }
         errorMessage = nil
 
         if viewModel.currentUserId == nil {
+            print("[DETAIL] currentUserId is nil, calling initializeWithCurrentUser")
             await viewModel.initializeWithCurrentUser()
         }
         let loadedCity = await viewModel.getCityById(cityId: cityId)
+        print("[DETAIL] getCityById returned: \(loadedCity?.displayName ?? "nil")")
         if let userId = viewModel.currentUserId {
             placesViewModel.setUserId(userId)
             await placesViewModel.loadPlaces(for: cityId)
