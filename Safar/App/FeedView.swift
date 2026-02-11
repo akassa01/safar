@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct FeedView: View {
-    @StateObject private var viewModel = FeedViewModel()
+    @EnvironmentObject var viewModel: FeedViewModel
     @State private var selectedPost: FeedPost?
     @State private var selectedUserId: String?
     @State private var selectedCityId: Int?
@@ -27,7 +27,9 @@ struct FeedView: View {
         .navigationTitle("Feed")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await viewModel.loadFeed(refresh: true)
+            if viewModel.posts.isEmpty {
+                await viewModel.loadFeed(refresh: true)
+            }
         }
         .navigationDestination(item: $selectedPost) { post in
             PostDetailView(post: post, feedViewModel: viewModel)
@@ -112,4 +114,5 @@ struct FeedView: View {
 
 #Preview {
     FeedView()
+        .environmentObject(FeedViewModel())
 }

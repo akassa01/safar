@@ -10,7 +10,7 @@ import SwiftUI
 struct ExploreView: View {
     @EnvironmentObject var userCitiesViewModel: UserCitiesViewModel
     // @StateObject private var recommendationsViewModel = RecommendationsViewModel()
-    @StateObject private var leaderboardViewModel = LeaderboardViewModel()
+    @EnvironmentObject var leaderboardViewModel: LeaderboardViewModel
 
 //    private var visitedCount: Int {
 //        userCitiesViewModel.visitedCities.count
@@ -36,9 +36,11 @@ struct ExploreView: View {
 //            loadRecommendations()
 //        }
         .task {
-            await leaderboardViewModel.loadTopCities(limit: 5)
-            await leaderboardViewModel.loadTopCountries(limit: 5)
-            await leaderboardViewModel.loadTopTravelersByCities(limit: 5)
+            if leaderboardViewModel.topCities.isEmpty {
+                await leaderboardViewModel.loadTopCities(limit: 5)
+                await leaderboardViewModel.loadTopCountries(limit: 5)
+                await leaderboardViewModel.loadTopTravelersByCities(limit: 5)
+            }
         }
     }
 
@@ -132,7 +134,7 @@ struct ExploreView: View {
 
                 Spacer()
 
-                NavigationLink(destination: LeaderboardView()) {
+                NavigationLink(destination: LeaderboardView(initialTab: .countries)) {
                     Text("See All")
                         .font(.subheadline)
                         .foregroundColor(.accentColor)
@@ -208,4 +210,5 @@ struct ExploreView: View {
 
 #Preview {
     ExploreView()
+        .environmentObject(LeaderboardViewModel())
 }

@@ -11,6 +11,8 @@ import SwiftUI
 struct safarApp: App {
     @StateObject private var authManager = AuthManager()
     @StateObject private var userCitiesViewModel = UserCitiesViewModel()
+    @StateObject private var feedViewModel = FeedViewModel()
+    @StateObject private var leaderboardViewModel = LeaderboardViewModel()
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showOfflineView = false
     @State private var isDataPreloaded = false
@@ -21,6 +23,8 @@ struct safarApp: App {
                 if authManager.isAuthenticated {
                     HomeView()
                         .environmentObject(userCitiesViewModel)
+                        .environmentObject(feedViewModel)
+                        .environmentObject(leaderboardViewModel)
                         .opacity(isDataPreloaded ? 1 : 0)
                 }
 
@@ -35,7 +39,12 @@ struct safarApp: App {
                 // When auth check completes and user is authenticated, preload data
                 if !isLoading && authManager.isAuthenticated && !isDataPreloaded {
                     Task {
-                        await userCitiesViewModel.initializeWithCurrentUser()
+                        async let cities: () = userCitiesViewModel.initializeWithCurrentUser()
+                        async let feed: () = feedViewModel.loadFeed(refresh: true)
+                        async let leaderboard: () = leaderboardViewModel.refresh()
+                        await cities
+                        await feed
+                        await leaderboard
                         isDataPreloaded = true
                     }
                 }
@@ -44,12 +53,22 @@ struct safarApp: App {
                 if isAuthenticated {
                     // User just signed in - preload their data
                     Task {
-                        await userCitiesViewModel.initializeWithCurrentUser()
+                        async let cities: () = userCitiesViewModel.initializeWithCurrentUser()
+                        async let feed: () = feedViewModel.loadFeed(refresh: true)
+                        async let leaderboard: () = leaderboardViewModel.refresh()
+                        await cities
+                        await feed
+                        await leaderboard
                         isDataPreloaded = true
                     }
                 } else {
                     // User signed out - clear all data and cache
                     userCitiesViewModel.clearUserData(clearCache: true)
+                    feedViewModel.posts = []
+                    leaderboardViewModel.topCities = []
+                    leaderboardViewModel.topCountries = []
+                    leaderboardViewModel.topTravelersByCities = []
+                    leaderboardViewModel.topTravelersByCountries = []
                     isDataPreloaded = false
                 }
             }

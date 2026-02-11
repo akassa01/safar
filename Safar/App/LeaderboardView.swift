@@ -22,8 +22,12 @@ enum LeaderboardTab: String, CaseIterable, Identifiable, IconRepresentable {
 }
 
 struct LeaderboardView: View {
-    @StateObject private var viewModel = LeaderboardViewModel()
-    @State private var selectedTab: LeaderboardTab = .cities
+    @EnvironmentObject var viewModel: LeaderboardViewModel
+    @State private var selectedTab: LeaderboardTab
+
+    init(initialTab: LeaderboardTab = .cities) {
+        _selectedTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         ScrollView {
@@ -51,8 +55,10 @@ struct LeaderboardView: View {
         .navigationTitle("Top Rated")
         .navigationBarTitleDisplayMode(.large)
         .task {
-            await viewModel.loadTopCities()
-            await viewModel.loadTopCountries()
+            if viewModel.topCities.isEmpty {
+                await viewModel.loadTopCities()
+                await viewModel.loadTopCountries()
+            }
         }
     }
 
@@ -162,5 +168,6 @@ struct LeaderboardView: View {
 #Preview {
     NavigationStack {
         LeaderboardView()
+            .environmentObject(LeaderboardViewModel())
     }
 }

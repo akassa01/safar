@@ -22,7 +22,7 @@ enum TravelerTab: String, CaseIterable, Identifiable, IconRepresentable {
 }
 
 struct TopTravelersView: View {
-    @StateObject private var viewModel = LeaderboardViewModel()
+    @EnvironmentObject var viewModel: LeaderboardViewModel
     @State private var selectedTab: TravelerTab = .cities
 
     var body: some View {
@@ -47,8 +47,10 @@ struct TopTravelersView: View {
         .navigationTitle("Top Travelers")
         .navigationBarTitleDisplayMode(.large)
         .task {
-            await viewModel.loadTopTravelersByCities()
-            await viewModel.loadTopTravelersByCountries()
+            if viewModel.topTravelersByCities.isEmpty {
+                await viewModel.loadTopTravelersByCities()
+                await viewModel.loadTopTravelersByCountries()
+            }
         }
     }
 
