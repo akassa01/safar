@@ -638,8 +638,6 @@ extension DatabaseManager {
                 id, name, latitude, longitude, category, city_id, likes, map_kit_id
             )
         """
-        print("🔍 getUserPlaces: userId=\(userId.uuidString), cityId=\(cityId)")
-        print("🔍 getUserPlaces query: \(query)")
         do {
             let rawResponse = try await supabase
                 .from("user_place")
@@ -648,12 +646,7 @@ extension DatabaseManager {
                 .eq("place_id.city_id", value: cityId)
                 .execute()
 
-            let rawJSON = String(data: rawResponse.data, encoding: .utf8) ?? "unable to decode raw JSON"
-            print("🔍 getUserPlaces raw JSON: \(rawJSON)")
-
             let decoded = try JSONDecoder().decode([UserPlaceResponse].self, from: rawResponse.data)
-            print("🔍 getUserPlaces decoded \(decoded.count) UserPlaceResponse items")
-
             let places = decoded.map { Place(from: $0) }
             print("🔍 getUserPlaces returning \(places.count) places")
             return places
