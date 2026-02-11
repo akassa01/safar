@@ -232,6 +232,18 @@ struct UserProfileView: View {
                                 onCityTapped: { selectedCityId = CityNavItem(cityId: post.cityId) },
                                 onPostTapped: { selectedPost = post }
                             )
+                            .onAppear {
+                                Task { await viewModel.loadMorePostsIfNeeded(currentPost: post) }
+                            }
+                        }
+
+                        if viewModel.isLoadingMorePosts {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                            .padding()
                         }
                     }
                     .padding(.horizontal)

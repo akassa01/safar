@@ -21,9 +21,13 @@ class UserProfileViewModel: ObservableObject {
     @Published var isFollowLoading = false
     @Published var recentPosts: [FeedPost] = []
     @Published var isLoadingPosts = false
+    @Published var isLoadingMorePosts = false
+    @Published var hasMorePosts = true
     @Published var error: Error?
 
     private let databaseManager = DatabaseManager.shared
+    private let postsPageSize = 5
+    private var postsOffset = 0
     let userId: String
 
     /// Whether the current user is viewing their own profile
@@ -74,14 +78,50 @@ class UserProfileViewModel: ObservableObject {
         isLoading = false
     }
 
-    func loadRecentPosts() async {
-        isLoadingPosts = true
+    func loadRecentPosts(refresh: Bool = false) async {
+        if refresh {
+            postsOffset = 0
+            hasMorePosts = true
+        }
+
+        if refresh || recentPosts.isEmpty {
+            isLoadingPosts = true
+        }
+
         do {
-            recentPosts = try await databaseManager.getUserFeedPosts(userId: userId, limit: 10)
+            let newPosts = try await databaseManager.getUserFeedPosts(
+                userId: userId,
+                limit: postsPageSize,
+                offset: postsOffset
+            )
+
+            if refresh {
+                recentPosts = newPosts
+            } else if postsOffset == 0 {
+                recentPosts = newPosts
+            } else {
+                recentPosts.append(contentsOf: newPosts)
+            }
+
+            hasMorePosts = newPosts.count == postsPageSize
+            postsOffset += newPosts.count
         } catch {
             Log.data.error("loadRecentPosts failed for userId \(self.userId): \(error)")
         }
+
         isLoadingPosts = false
+    }
+
+    func loadMorePostsIfNeeded(currentPost: FeedPost) async {
+        guard let lastPost = recentPosts.last,
+              currentPost.id == lastPost.id,
+              hasMorePosts,
+              !isLoadingMorePosts,
+              !isLoadingPosts else { return }
+
+        isLoadingMorePosts = true
+        await loadRecentPosts()
+        isLoadingMorePosts = false
     }
 
     func toggleFollow() async {
@@ -109,9 +149,11 @@ class UserProfileViewModel: ObservableObject {
 
         // Load or clear recent posts based on follow state
         if isFollowing {
-            await loadRecentPosts()
+            await loadRecentPosts(refresh: true)
         } else {
             recentPosts = []
+            postsOffset = 0
+            hasMorePosts = true
         }
     }
 
