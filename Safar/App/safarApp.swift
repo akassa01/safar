@@ -20,7 +20,7 @@ struct safarApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if authManager.isAuthenticated {
+                if authManager.isAuthenticated && !authManager.needsOnboarding {
                     HomeView()
                         .environmentObject(userCitiesViewModel)
                         .environmentObject(feedViewModel)
@@ -28,40 +28,34 @@ struct safarApp: App {
                         .opacity(isDataPreloaded ? 1 : 0)
                 }
 
-                if authManager.isLoading || (authManager.isAuthenticated && !isDataPreloaded) {
+                if authManager.isLoading || (authManager.isAuthenticated && !authManager.needsOnboarding && !isDataPreloaded) {
                     LoadingView()
+                } else if authManager.isAuthenticated && authManager.needsOnboarding {
+                    OnboardingContainerView(onComplete: {
+                        authManager.completeOnboarding()
+                    })
                 } else if !authManager.isAuthenticated {
                     AuthView()
                 }
             }
             .environmentObject(authManager)
             .onChange(of: authManager.isLoading) { _, isLoading in
-                // When auth check completes and user is authenticated, preload data
-                if !isLoading && authManager.isAuthenticated && !isDataPreloaded {
-                    Task {
-                        async let cities: () = userCitiesViewModel.initializeWithCurrentUser()
-                        async let feed: () = feedViewModel.loadFeed(refresh: true)
-                        async let leaderboard: () = leaderboardViewModel.refresh()
-                        await cities
-                        await feed
-                        await leaderboard
-                        isDataPreloaded = true
-                    }
+                // When auth check completes and user is authenticated (and done onboarding), preload data
+                if !isLoading && authManager.isAuthenticated && !authManager.needsOnboarding && !isDataPreloaded {
+                    preloadData()
+                }
+            }
+            .onChange(of: authManager.needsOnboarding) { _, needsOnboarding in
+                // When onboarding completes, preload data
+                if !needsOnboarding && authManager.isAuthenticated && !isDataPreloaded {
+                    preloadData()
                 }
             }
             .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
-                if isAuthenticated {
-                    // User just signed in - preload their data
-                    Task {
-                        async let cities: () = userCitiesViewModel.initializeWithCurrentUser()
-                        async let feed: () = feedViewModel.loadFeed(refresh: true)
-                        async let leaderboard: () = leaderboardViewModel.refresh()
-                        await cities
-                        await feed
-                        await leaderboard
-                        isDataPreloaded = true
-                    }
-                } else {
+                if isAuthenticated && !authManager.needsOnboarding {
+                    // User just signed in (returning user) - preload their data
+                    preloadData()
+                } else if !isAuthenticated {
                     // User signed out - clear all data and cache
                     userCitiesViewModel.clearUserData(clearCache: true)
                     feedViewModel.posts = []
@@ -88,6 +82,19 @@ struct safarApp: App {
                     showOfflineView = false
                 }
             }
+        }
+    }
+
+    private func preloadData() {
+        guard !isDataPreloaded else { return }
+        Task {
+            async let cities: () = userCitiesViewModel.initializeWithCurrentUser()
+            async let feed: () = feedViewModel.loadFeed(refresh: true)
+            async let leaderboard: () = leaderboardViewModel.refresh()
+            await cities
+            await feed
+            await leaderboard
+            isDataPreloaded = true
         }
     }
 }

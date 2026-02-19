@@ -1393,6 +1393,7 @@ extension DatabaseManager {
             post.username = profile?.username
             post.fullName = profile?.fullName
             post.avatarURL = profile?.avatarURL
+            post.authorVisitedCitiesCount = profile?.visitedCitiesCount
             post.likeCount = likeCounts[item.id] ?? 0
             post.commentCount = commentCounts[item.id] ?? 0
             post.isLikedByCurrentUser = userLikes.contains(item.id)
@@ -1442,6 +1443,7 @@ extension DatabaseManager {
             post.username = profile?.username
             post.fullName = profile?.fullName
             post.avatarURL = profile?.avatarURL
+            post.authorVisitedCitiesCount = profile?.visitedCitiesCount
             post.likeCount = likeCounts[item.id] ?? 0
             post.commentCount = commentCounts[item.id] ?? 0
             post.isLikedByCurrentUser = userLikes.contains(item.id)
@@ -1860,9 +1862,39 @@ extension DatabaseManager {
                 avatarURL: profile?.avatarURL,
                 rating: record.rating,
                 visitedAt: record.visitedAt,
-                notes: record.notes
+                notes: record.notes,
+                visitedCitiesCount: profile?.visitedCitiesCount
             )
         }
+    }
+
+    // MARK: - Onboarding
+
+    func checkOnboardingCompleted(userId: String) async throws -> Bool {
+        struct OnboardingResult: Codable {
+            let onboardingCompleted: Bool?
+            enum CodingKeys: String, CodingKey {
+                case onboardingCompleted = "onboarding_completed"
+            }
+        }
+
+        let result: OnboardingResult = try await supabase
+            .from("profiles")
+            .select("onboarding_completed")
+            .eq("id", value: userId)
+            .single()
+            .execute()
+            .value
+
+        return result.onboardingCompleted ?? false
+    }
+
+    func markOnboardingCompleted(userId: String) async throws {
+        try await supabase
+            .from("profiles")
+            .update(["onboarding_completed": true])
+            .eq("id", value: userId)
+            .execute()
     }
 
 }
