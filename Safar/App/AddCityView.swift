@@ -180,9 +180,6 @@ struct AddCityView: View {
                 }
             }
             
-            // Reload user data to get the updated city with rating
-            await viewModel.loadUserData()
-
             // Get the updated city data to pass to onSave
             if let updatedCity = viewModel.allUserCities.first(where: { $0.id == cityId }) {
                 await MainActor.run {

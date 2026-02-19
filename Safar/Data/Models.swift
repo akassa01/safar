@@ -10,6 +10,9 @@ struct Profile: Codable {
     let fullName: String?
     let avatarURL: String?
     let bio: String?
+    let phone: String?
+    let phoneHash: String?
+    let onboardingCompleted: Bool?
     let visitedCitiesCount: Int?
     let visitedCountriesCount: Int?
 
@@ -18,6 +21,9 @@ struct Profile: Codable {
       case fullName = "full_name"
       case avatarURL = "avatar_url"
       case bio
+      case phone
+      case phoneHash = "phone_hash"
+      case onboardingCompleted = "onboarding_completed"
       case visitedCitiesCount = "visited_cities_count"
       case visitedCountriesCount = "visited_countries_count"
     }
@@ -65,6 +71,9 @@ struct UserProfile: Codable, Identifiable {
     let fullName: String?
     let avatarURL: String?
     let bio: String?
+    let phone: String?
+    let phoneHash: String?
+    let onboardingCompleted: Bool?
     let visitedCitiesCount: Int?
     let visitedCountriesCount: Int?
 
@@ -74,6 +83,9 @@ struct UserProfile: Codable, Identifiable {
         case fullName = "full_name"
         case avatarURL = "avatar_url"
         case bio
+        case phone
+        case phoneHash = "phone_hash"
+        case onboardingCompleted = "onboarding_completed"
         case visitedCitiesCount = "visited_cities_count"
         case visitedCountriesCount = "visited_countries_count"
     }

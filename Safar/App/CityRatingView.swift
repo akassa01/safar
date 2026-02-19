@@ -464,6 +464,14 @@ struct CityRatingView: View {
         // Ensure unique ratings for first 5 cities
         ensureUniqueRatingsForFirstCities()
 
+        // Enforce comparison ordering: if new city beat opponents whose ratings were
+        // scaled above the formula result, bump selectedRating up to match so that
+        // adjustRatingsAroundNewCity() places the new city above the beaten city.
+        let beatenMax = comparisonResults.filter { $0.newCityWins }.compactMap { $0.comparedCity.rating }.max()
+        if let beatenMax = beatenMax, (selectedRating ?? 0) < beatenMax {
+            selectedRating = min(10.0, beatenMax)
+        }
+
         // If this will be the 5th city, prepare for rating revelation
         let shouldRevealRatings = ratedCities.count + 1 == minimumCitiesForRating
 
