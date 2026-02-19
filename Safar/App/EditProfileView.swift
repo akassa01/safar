@@ -58,7 +58,7 @@ struct EditProfileView: View {
                             .clipShape(Circle())
 
                             // Edit Button Overlay
-                            PhotosPicker(selection: $imageSelection, maxSelectionCount: 1, matching: .images) {
+                            PhotosPicker(selection: $imageSelection, matching: .images) {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.white)
