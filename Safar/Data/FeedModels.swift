@@ -25,6 +25,7 @@ struct FeedPost: Identifiable, Hashable {
     var username: String?
     var fullName: String?
     var avatarURL: String?
+    var authorVisitedCitiesCount: Int?
 
     // Aggregated counts (set after fetch)
     var likeCount: Int = 0
@@ -167,5 +168,6 @@ extension FeedPost {
         self.username = friendVisit.username
         self.fullName = friendVisit.fullName
         self.avatarURL = friendVisit.avatarURL
+        self.authorVisitedCitiesCount = friendVisit.visitedCitiesCount
     }
 }

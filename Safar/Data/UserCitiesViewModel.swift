@@ -119,6 +119,7 @@ class UserCitiesViewModel: ObservableObject {
             self.allUserCities = cachedCities
             self.visitedCities = cachedCities.filter { $0.visited == true }
             self.bucketListCities = cachedCities.filter { $0.visited == false }
+            self.visitedCitiesCount = self.visitedCities.count
             self.isOfflineData = true
             print("Loaded \(cachedCities.count) cities from cache")
 
@@ -172,6 +173,7 @@ class UserCitiesViewModel: ObservableObject {
             let uniqueContinents = Array(Set(cachedCountries.map { $0.continent })).sorted()
 
             self.visitedCountries = uniqueCountryNames
+            self.visitedCountriesCount = uniqueCountryNames.count
             self.visitedContinents = uniqueContinents
             print("Loaded \(cachedCountries.count) countries from cache")
         }

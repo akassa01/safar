@@ -18,6 +18,7 @@ struct FriendCityVisit: Identifiable {
     let rating: Double?
     let visitedAt: Date?
     let notes: String?
+    let visitedCitiesCount: Int?
 }
 
 // MARK: - Friends Who Visited Content
@@ -91,7 +92,13 @@ struct FriendsWhoVisitedContent: View {
                     }
                 }
                 Spacer()
-                if let rating = friend.rating {
+                if (friend.visitedCitiesCount ?? 0) < 5 {
+                    Image(systemName: "lock.circle.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundColor(.accent)
+                        .frame(width: 35, height: 35)
+                } else if let rating = friend.rating {
                     RatingCircle(rating: rating, size: 35)
                 }
                 Image(systemName: "chevron.right")
@@ -180,7 +187,13 @@ struct FriendsWhoVisitedListView: View {
 
                         Spacer()
 
-                        if let rating = friend.rating {
+                        if (friend.visitedCitiesCount ?? 0) < 5 {
+                            Image(systemName: "lock.circle.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .foregroundColor(.accent)
+                                .frame(width: 35, height: 35)
+                        } else if let rating = friend.rating {
                             RatingCircle(rating: rating, size: 35)
                         }
                     }
@@ -201,10 +214,10 @@ struct FriendsWhoVisitedListView: View {
         ScrollView {
             FriendsWhoVisitedContent(
                 friends: [
-                    FriendCityVisit(id: "1", userId: "u1", username: "sarah", fullName: "Sarah", avatarURL: nil, rating: 9.2, visitedAt: Date(), notes: nil),
-                    FriendCityVisit(id: "2", userId: "u2", username: "mike", fullName: "Mike", avatarURL: nil, rating: 8.1, visitedAt: Date(), notes: nil),
-                    FriendCityVisit(id: "3", userId: "u3", username: "alex", fullName: "Alex", avatarURL: nil, rating: 7.5, visitedAt: Date(), notes: nil),
-                    FriendCityVisit(id: "4", userId: "u4", username: "emma", fullName: "Emma", avatarURL: nil, rating: 8.8, visitedAt: Date(), notes: nil),
+                    FriendCityVisit(id: "1", userId: "u1", username: "sarah", fullName: "Sarah", avatarURL: nil, rating: 9.2, visitedAt: Date(), notes: nil, visitedCitiesCount: 8),
+                    FriendCityVisit(id: "2", userId: "u2", username: "mike", fullName: "Mike", avatarURL: nil, rating: 8.1, visitedAt: Date(), notes: nil, visitedCitiesCount: 3),
+                    FriendCityVisit(id: "3", userId: "u3", username: "alex", fullName: "Alex", avatarURL: nil, rating: 7.5, visitedAt: Date(), notes: nil, visitedCitiesCount: 5),
+                    FriendCityVisit(id: "4", userId: "u4", username: "emma", fullName: "Emma", avatarURL: nil, rating: 8.8, visitedAt: Date(), notes: nil, visitedCitiesCount: 2),
                 ],
                 city: City(
                     id: 1,

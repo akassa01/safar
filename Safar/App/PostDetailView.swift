@@ -123,7 +123,7 @@ struct PostDetailView: View {
 
             Spacer()
 
-            if let rating = post.rating {
+            if let rating = post.rating, (post.authorVisitedCitiesCount ?? 0) >= 5 {
                 RatingCircle(rating: rating, size: 50)
             }
         }

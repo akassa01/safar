@@ -34,9 +34,11 @@ struct CityListMember: View {
             
             if (!bucketList) {
                 if (locked) {
-                    Image(systemName: "lock.circle")
+                    Image(systemName: "lock.circle.fill")
+                        .resizable()
+                        .scaledToFit()
                         .foregroundColor(.accent)
-                        .frame(width: 30)
+                        .frame(width: 25, height: 25)
                 } else {
                     RatingCircle(rating: city.rating!, size: 50)
                 }
