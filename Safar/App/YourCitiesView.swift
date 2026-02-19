@@ -90,6 +90,20 @@ struct YourCitiesView: View {
                 .listStyle(.plain)
                 .background(Color("Background"))
                 .toast(isPresented: $showOfflineToast, message: "City details unavailable offline")
+
+                if selectedTab == .visited && viewModel.visitedCities.count < 5 {
+                    VStack(spacing: 12) {
+                        Image(systemName: "lock.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(.accent)
+                        Text("Rank \(5 - viewModel.visitedCities.count) more \(5 - viewModel.visitedCities.count == 1 ? "city" : "cities") to unlock ratings!")
+                            .font(.headline)
+                            .foregroundStyle(.accent)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .background(Color("Background"))
             .sheet(isPresented: $showingRatingSheet) {
