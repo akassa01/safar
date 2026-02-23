@@ -1,153 +1,196 @@
 # Safar (iOS)
 
-Safar is an iOS app for discovering, tracking, and ranking cities you’ve visited, maintaining a bucket list of places you want to go, and saving interesting places (restaurants, hotels, activities, shops) per city. It uses Supabase for authentication and data persistence.
+Safar is a social iOS travel app for discovering, tracking, and ranking cities you've visited. Users maintain a bucket list, save memorable places per city, rate destinations through an intelligent comparison engine, and connect with fellow travelers via a social feed.
 
 ## Features
 
-- **Cities**
-  - Search global cities via Supabase `cities`
-  - Add to your list as Visited or Bucket List (`user_city`)
-  - Rank visited cities (0.0–10.0) and add notes
-  - Smart rating adjustments when deleting cities (keeps scale intact)
-- **Places**
-  - Add user places per city (`user_place`) via Apple Maps search
-  - Store name, coords, category, liked (thumbs up/down/neutral)
-  - View grouped by category and manage like/unlike/delete
-- **Maps**
-  - Full-screen map of your cities with colored circle markers
-  - City detail map with city center and place markers (circles)
-- **Media**
-  - Add photos when adding a city (local-only for now)
+### City Tracking
+- Search a global city database and add cities as Visited or Bucket List (`user_city`)
+- View stats: cities, countries, and continents visited
+- Interactive world map shows all your cities with color-coded markers
+- Toggle map between Visited and Bucket List view
+
+### Smart City Ratings
+- Rating unlocks after visiting 5 cities (0.0–10.0 scale)
+- Pairwise comparison flow: pick a category (Exceptional → Meh), then compare head-to-head with existing cities using binary search to land a precise rating
+- All ratings auto-adjust when cities are added or removed to maintain consistent relative order
+- Community average rating shown once a city has 5+ user ratings
+
+### Places & Notes
+- Save places per city via Apple Maps search (`user_place`): restaurants, hotels, activities, shops, nightlife, and other
+- Rate each place: thumbs up / thumbs down / neutral
+- Add trip notes per city
+- City detail map shows city center and all saved places with category-colored markers
+
+### Explore & Leaderboards
+- Top-rated cities and countries by community average (min 5 ratings to appear)
+- Top travelers ranked by cities or countries visited
+- Leaderboard rows link to city/country/profile detail views
+
+### Social Feed
+- Visiting a city creates a trip post visible to your followers
+- Feed shows posts from followed users: city map, places, rating, notes, timestamp
+- Like posts and write comments (with reply threading)
+- Like individual comments
+- "Friends who visited" section in city detail shows which people you follow have been there
+- Post detail view (`PostDetailView`) with full comments section
+
+### User Profiles
+- Sign up with email/password or Sign in with Apple
+- Multi-step onboarding: full name → username → avatar
+- Profile: avatar (Supabase Storage), bio, username (30-day change cooldown)
+- Follow / unfollow users
+- View any user's visited cities and bucket list; recent trips visible to followers only
+- Followers and following lists
+
+### Offline Support
+- City list cached locally via SQLite (`CityCacheManager`)
+- Offline banner + last sync date shown in app
+- Editing and social features disabled offline; read-only browsing available
+- Auto-sync on reconnection (via `NetworkMonitor`)
 
 ## Tech Stack
 
-- SwiftUI + MapKit
-- Supabase (Auth + PostgREST)
-- iOS 17+ (MapKit Annotation API; earlier may need tweaks)
+- SwiftUI + MapKit (iOS 18.5+)
+- Supabase (Auth, PostgREST, Storage)
+- Sign in with Apple
+- SQLite (offline cache)
 
 ## Project Structure
 
-- `Safar/App/*` — Screens and main navigation
-  - `HomeView.swift`, `SearchMainView.swift`, `CityDetailView.swift`, `AddCityView.swift`, `FullScreenMapView.swift`, etc.
-- `Safar/Components/*` — Reusable UI
-  - Add City sections, Place search/list rows, City detail components
-- `Safar/Data/*` — Data layer and models
-  - `Supabase.swift` — Supabase client
-  - `DatabaseManager.swift` — All Supabase queries/mutations
-  - `UserCitiesViewModel.swift` — Cities data lifecycle for current user
-  - `CityPlacesViewModel.swift` — Places per city for current user
-  - `Place.swift`, `Models.swift` — Codable models
+```
+Safar/
+├── App/                        # Screens and main navigation
+│   ├── safarApp.swift         # App entry point (@main)
+│   ├── AppView.swift          # Root routing
+│   ├── LoadingView.swift      # Auth check / splash
+│   ├── AuthView.swift         # Login / signup
+│   ├── HomeView.swift         # Tab container + dashboard
+│   ├── YourCitiesView.swift   # Personal city list
+│   ├── ExploreView.swift      # Leaderboards & discovery
+│   ├── FeedView.swift         # Social feed
+│   ├── PostDetailView.swift   # Trip post + comments
+│   ├── SearchMainView.swift   # Global search (cities / countries / people)
+│   ├── CityDetailView.swift   # City detail: map, places, notes
+│   ├── AddCityView.swift      # Add city workflow
+│   ├── UserProfileView.swift  # User profile
+│   ├── EditProfileView.swift  # Edit avatar, username, bio
+│   ├── FullScreenMapView.swift # Expandable world map
+│   └── ...                    # Onboarding, leaderboard, follow list views
+├── Components/                 # Reusable UI
+│   ├── Home/                  # Dashboard components
+│   ├── AddCity/               # Add city sections + PlaceSearchView
+│   ├── CityDetail/            # CityBannerView, CityMapView, place rows
+│   ├── CityRanking/           # CityRatingView (pairwise comparison)
+│   ├── Feed/                  # FeedPostCard, comment rows
+│   └── Explore/               # Leaderboard rows
+└── Data/                       # Data layer and models
+    ├── Supabase.swift          # Supabase client
+    ├── DatabaseManager.swift   # All Supabase queries / mutations
+    ├── UserCitiesViewModel.swift
+    ├── CityPlacesViewModel.swift
+    ├── FeedViewModel.swift
+    ├── LeaderboardViewModel.swift
+    ├── UserProfileViewModel.swift
+    ├── PostDetailViewModel.swift
+    ├── CityCacheManager.swift  # SQLite offline cache
+    ├── NetworkMonitor.swift    # Connectivity detection
+    └── Place.swift, Models.swift, ...
+```
 
 ## Data Model (Supabase)
 
-The app expects these tables (simplified):
-
-- `cities(id, display_name, plain_name, admin, country, country_id, population, latitude, longitude, created_at)`
-- `countries(id, name, country_code, capital, continent, population)`
-- `user_city(id, user_id, city_id, visited, rating, notes, created_at)`
-- `user_place(id, user_id, city_id, name, latitude, longitude, category, liked, created_at)`
+```
+cities(id, display_name, plain_name, admin, country, country_id, population, latitude, longitude)
+countries(id, name, country_code, capital, continent, population)
+user_city(id, user_id, city_id, visited, rating, notes, created_at)
+user_place(id, user_id, city_id, name, latitude, longitude, category, liked, created_at)
+profiles(id, username, full_name, avatar_url, bio, onboarding_completed)
+follows(follower_id, following_id, created_at)
+post_comments(id, user_city_id, user_id, content, parent_comment_id, created_at)
+post_likes(user_id, user_city_id)
+comment_likes(user_id, comment_id)
+```
 
 Notes:
-- `rating` is `real` (0–10). The UI commonly shows 1.0–10.0 for visited.
-- `liked` for places is nullable boolean: `true`, `false`, or `null` (no rating).
+- `rating` is `real` (0–10). UI shows 1.0–10.0 for visited cities.
+- `liked` for places is nullable boolean: `true`, `false`, or `null`.
+- `category` for places: `restaurant`, `hotel`, `activity`, `shop`, `nightlife`, `other`.
+- Social posts are derived from `user_city` rows (visited = true).
 
 ## Supabase Setup
 
-1. Open `Safar/Data/Supabase.swift` and set your project URL and anon API key:
+1. Open `Safar/Data/Supabase.swift` and set your project URL and anon key:
 ```swift
 let supabase = SupabaseClient(
   supabaseURL: URL(string: "https://YOUR-PROJECT.supabase.co")!,
   supabaseKey: "YOUR_ANON_PUBLIC_KEY"
 )
 ```
-2. Ensure Row Level Security (RLS) allows the current user to read and write:
-   - `user_city`: user can insert/select/update/delete rows where `user_id = auth.uid()`
-   - `user_place`: same as above
-   - `cities` / `countries`: readable for all (or as you prefer)
-3. Optional: Seed `cities`/`countries` as needed.
+2. Enable Row Level Security (RLS):
+   - `user_city`, `user_place`: user can read/write rows where `user_id = auth.uid()`
+   - `profiles`: public read, own-row write
+   - `follows`, `post_comments`, `post_likes`, `comment_likes`: auth-based policies
+   - `cities`, `countries`: readable by all
+3. Configure Supabase Storage bucket for avatar uploads.
 
 Security reminder: never embed service role keys in the app.
 
 ## Building & Running
 
-1. Requirements
-   - Xcode 15+/16+
-   - iOS 17+ simulator or device
-2. Open `Safar.xcodeproj` in Xcode.
-3. Select the `safar` scheme and run (⌘R).
-
-If authentication is required in parts of the app, make sure you are logged in via Supabase Auth before testing user operations.
+1. Xcode 15+ and an iOS 18.5+ simulator or device
+2. Open `Safar.xcodeproj`
+3. Select the `safar` scheme and run (Cmd+R)
 
 ## How Things Work
 
 ### DatabaseManager
 
-Centralized API for Supabase queries/mutations:
-- **Cities**
-  - `searchCities(query:)`, `searchCountries(query:)`
-  - `getCountriesByIds(_:)`
-  - `getCityById(cityId:)`, `getCityWithUserData(cityId:userId:)`
-- **User Cities**
-  - `getUserCities(userId:)`
-  - `addUserCity(...)`, `updateUserCity(...)`, `removeUserCity(...)`
-  - Helpers: `addCityToBucketList(...)`, `markCityAsVisited(...)`, `userHasCity(...)`, `updateUserCityNotes(...)`, `updateUserCityRating(...)`
-- **User Places**
-  - `getUserPlaces(userId:cityId:)`
-  - `insertUserPlaces(userId:cityId:places:)`
-  - `updateUserPlaceLiked(placeId:liked:)` (accepts true/false/nil)
-  - `deleteUserPlace(placeId:)`
+Centralized Supabase API layer:
+- **Cities**: `searchCities`, `searchCountries`, `getCityById`, `getCityWithUserData`
+- **User Cities**: `getUserCities`, `addUserCity`, `updateUserCity`, `removeUserCity`, `markCityAsVisited`, `addCityToBucketList`, `updateUserCityRating`, `updateUserCityNotes`
+- **User Places**: `getUserPlaces`, `insertUserPlaces`, `updateUserPlaceLiked`, `deleteUserPlace`
+- **Feed**: fetch posts from followed users, paginated
+- **Comments**: fetch, insert, delete comments and replies; like/unlike
+- **Leaderboards**: top cities, countries, travelers
+- **Profiles**: fetch profile, update username/bio/avatar, follow/unfollow, search users
 
-### View Models
+### City Rating Logic (`CityRatingView`)
 
-- `UserCitiesViewModel`
-  - Holds visited/bucket/all user cities
-  - Handles add/remove/mark visited, rating updates, and user initialization
-- `CityPlacesViewModel`
-  - Loads and groups places by `PlaceCategory` per city
-  - Insert/like/unlike/delete places, reloading after changes
+- **First 5 cities**: simple category selection (Exceptional/Great/Good/Okay/Meh) + pairwise comparisons within the category range to determine unique ordering
+- **5+ cities**: category selection → binary search comparisons → precise rating using lower/upper bounds
+- After rating, all existing ratings are rescaled so the highest is 10.0 and a minimum gap of 0.2 is maintained between adjacent ratings
+- "Can't Choose" option handles ties gracefully
 
 ### Key Screens
 
-- `AddCityView`
-  - Search result prefilled; add notes, photos, and places via `PlaceSearchView`
-  - Saves the city (visited/bucket) then inserts selected places
-- `CityDetailView`
-  - Loads city (with user data) and user places
-  - Map with circle markers for city and categorized places
-  - Sections for places (like/unlike/delete) and notes
-  - On deleting a city, adjusts remaining city ratings to keep a clean scale
-- `FullScreenMapView`
-  - Shows all visited/bucket/all cities with color-coded circles
+- `AddCityView` — Search-prefilled; add notes and places via `PlaceSearchView` (MapKit); saves city then inserts places
+- `CityDetailView` — City banner (name, rating, community stats), interactive map, categorized places (like/unlike/add/delete), notes, friends who visited
+- `FeedView` — Paginated feed of trip posts from followed users; pull-to-refresh and infinite scroll
+- `PostDetailView` — Full trip post with map, places, notes, rating; threaded comments with likes
+- `ExploreView` — Top 5 preview sections linking to full leaderboard views
+- `UserProfileView` — Profile header, follow button, recent trips (followers only); navigates to `EditProfileView`
+- `FullScreenMapView` — Expandable world map from home; toggles visited/bucket list; tapping a marker opens city detail
 
-### Places
+### Offline Cache
 
-- `PlaceSearchView` uses MapKit to search around the city and allows selecting items with an optional liked state.
-- Selected places are inserted into `user_place` after the city save in `AddCityView`.
+`CityCacheManager` stores user cities in SQLite. `NetworkMonitor` publishes connectivity changes. When offline, the app shows a banner, disables editing and social actions, and resumes syncing on reconnect.
 
 ## Maps & Markers
 
-- All map markers are circular annotations:
-  - Full-screen: visited = green, bucket list = yellow
-  - City detail: city center = accent color; places = category color
+- World map: visited = green, bucket list = yellow circle markers
+- City detail map: city center = accent color; places = per-category color
 
-## Testing (not yet implemented)
+## Testing
 
-- Targets: `safarTests`, `safarUITests`
-- Open Test navigator (⌘6) and run tests (⌘U)
+Targets exist (`safarTests`, `safarUITests`) but are currently templates.
+Run tests with Cmd+U in Xcode.
 
 ## Troubleshooting
 
-- “Socket is not connected”: ensure the simulator has network access and your Supabase URL/API key are correct.
-- Permission/RLS errors: verify policies allow the authed user to read/write their `user_city` and `user_place` rows.
-- Missing data: confirm IDs match your schema types (e.g., `city_id` is bigint in Postgres; encoded/decoded as Int in the app).
-
-## Roadmap Ideas
-
-- Place clustering on maps
-- Place callouts and richer details
-- Photo integration with Supabase storage
-- Offline caching
-- Onboarding, tutorial, and better sign up flow
+- "Socket is not connected": check simulator network and your Supabase URL/key.
+- RLS errors: verify policies allow the authed user to read/write their rows.
+- Missing data: confirm ID types match (e.g., `city_id` is bigint in Postgres; decoded as `Int` in Swift).
 
 ## License
 
