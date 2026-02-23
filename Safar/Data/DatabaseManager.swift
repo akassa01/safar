@@ -389,12 +389,29 @@ class DatabaseManager {
             // Update each field separately to ensure they're saved correctly
             if let visited = visited {
                 print("🟡 Updating visited to \(visited)")
-                try await supabase
-                    .from("user_city")
-                    .update(["visited": visited])
-                    .eq("user_id", value: userId.uuidString)
-                    .eq("city_id", value: cityId)
-                    .execute()
+                if visited {
+                    struct VisitedAtUpdate: Encodable {
+                        let visited: Bool
+                        let visitedAt: String
+                        enum CodingKeys: String, CodingKey {
+                            case visited
+                            case visitedAt = "visited_at"
+                        }
+                    }
+                    try await supabase
+                        .from("user_city")
+                        .update(VisitedAtUpdate(visited: true, visitedAt: ISO8601DateFormatter().string(from: Date())))
+                        .eq("user_id", value: userId.uuidString)
+                        .eq("city_id", value: cityId)
+                        .execute()
+                } else {
+                    try await supabase
+                        .from("user_city")
+                        .update(["visited": visited])
+                        .eq("user_id", value: userId.uuidString)
+                        .eq("city_id", value: cityId)
+                        .execute()
+                }
             }
             if let rating = rating {
                 print("🟡 Updating rating to \(rating)")
