@@ -369,7 +369,7 @@ struct CityRatingView: View {
 
         let categoryRange = category.ratingRange
         ratingBounds.lowerBound = categoryRange.lowerBound
-        ratingBounds.upperBound = categoryRange.upperBound
+        ratingBounds.upperBound = categoryRange.upperBound + 0.001
 
         // Find seed city: closest to category midpoint, within category range
         let seedRating = category.baseRating
