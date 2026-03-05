@@ -76,7 +76,10 @@ struct HomeView: View {
                             }
                         }
 			Spacer()
-                        ShareLink(item: "Download Safar on the App Store") {
+                        ShareLink(
+                            item: URL(string: "https://apps.apple.com/app/id6759003685")!,
+                            message: Text("Check out Safar – track and rank every city you visit!")
+                        ) {
                                 HStack {
                                     Image(systemName: "paperplane")
                                     Text("Invite friends")

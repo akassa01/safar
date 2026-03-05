@@ -87,13 +87,10 @@ struct safarApp: App {
 
     private func preloadData() {
         guard !isDataPreloaded else { return }
+        Task { await feedViewModel.loadFeed(refresh: true) }
+        Task { await leaderboardViewModel.refresh() }
         Task {
-            async let cities: () = userCitiesViewModel.initializeWithCurrentUser()
-            async let feed: () = feedViewModel.loadFeed(refresh: true)
-            async let leaderboard: () = leaderboardViewModel.refresh()
-            await cities
-            await feed
-            await leaderboard
+            await userCitiesViewModel.initializeWithCurrentUser()
             isDataPreloaded = true
         }
     }
