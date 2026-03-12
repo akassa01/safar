@@ -18,7 +18,17 @@ enum OnboardingStep: Int, CaseIterable {
 
 @MainActor
 class OnboardingViewModel: ObservableObject {
-    @Published var currentStep: OnboardingStep = .fullName
+    @Published var currentStep: OnboardingStep
+
+    init() {
+        // Apple provides the user's name during sign-in, so skip the full name step
+        if case .string(let provider) = supabase.auth.currentSession?.user.appMetadata["provider"],
+           provider == "apple" {
+            currentStep = .username
+        } else {
+            currentStep = .fullName
+        }
+    }
     @Published var isLoading = false
     @Published var errorMessage: String?
 
