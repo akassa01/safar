@@ -665,7 +665,6 @@ extension DatabaseManager {
 
             let decoded = try JSONDecoder().decode([UserPlaceResponse].self, from: rawResponse.data)
             let places = decoded.map { Place(from: $0) }
-            print("🔍 getUserPlaces returning \(places.count) places")
             return places
         } catch {
             print("🔴 getUserPlaces error: \(error)")

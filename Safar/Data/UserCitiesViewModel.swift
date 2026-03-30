@@ -76,18 +76,11 @@ class UserCitiesViewModel: ObservableObject {
         if isOnline {
             do {
                 let cities = try await getUserCitiesWithDetails(userId: userId)
-                print(cities.count)
-                for city in cities {
-                    print("user city: \(city.displayName)")
-                }
-
+                
                 self.allUserCities = cities
-
                 // Filter cities based on visited status
                 self.visitedCities = cities.filter { $0.visited == true }
-                print("Visited cities count: \(self.visitedCities.count)")
                 self.bucketListCities = cities.filter { $0.visited == false }
-                print("Bucket list cities count: \(self.bucketListCities.count)")
 
                 // Cache cities for offline use
                 CityCacheManager.shared.saveCities(cities, for: userId)

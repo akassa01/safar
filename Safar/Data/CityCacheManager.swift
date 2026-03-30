@@ -127,7 +127,6 @@ class CityCacheManager {
 
             try context.save()
             lastSyncDate = Date()
-            print("Cached \(cities.count) cities for offline use")
         } catch {
             print("Failed to save cities to cache: \(error)")
         }
@@ -164,7 +163,6 @@ class CityCacheManager {
                 context.delete(city)
             }
             try context.save()
-            print("Cleared city cache for user")
         } catch {
             print("Failed to clear city cache: \(error)")
         }
@@ -194,7 +192,6 @@ class CityCacheManager {
             }
 
             try context.save()
-            print("Cached \(places.count) places for city \(cityId)")
         } catch {
             print("Failed to save places to cache: \(error)")
         }
@@ -250,7 +247,6 @@ class CityCacheManager {
                 context.delete(place)
             }
             try context.save()
-            print("Cleared place cache for user")
         } catch {
             print("Failed to clear place cache: \(error)")
         }
@@ -289,7 +285,6 @@ class CityCacheManager {
             }
 
             try context.save()
-            print("Cached \(countries.count) countries for offline use")
         } catch {
             print("Failed to save countries to cache: \(error)")
         }
@@ -326,7 +321,6 @@ class CityCacheManager {
                 context.delete(country)
             }
             try context.save()
-            print("Cleared country cache for user")
         } catch {
             print("Failed to clear country cache: \(error)")
         }
