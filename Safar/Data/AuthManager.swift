@@ -111,6 +111,15 @@ class AuthManager: ObservableObject {
         // State will be updated by the auth listener
     }
 
+    func deleteAccount() async throws {
+        if let userId = currentUserId {
+            CityCacheManager.shared.clearCache(for: userId)
+            UserDefaults.standard.removeObject(forKey: "onboarding_completed_\(userId.uuidString)")
+        }
+        try await supabase.functions.invoke("delete-account", options: .init())
+        try await supabase.auth.signOut()
+    }
+
     deinit {
         authTask?.cancel()
     }

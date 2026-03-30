@@ -16,6 +16,10 @@ struct EditProfileView: View {
     @State var signOutError: String?
     @State var showingSignOutError = false
 
+    @State private var showingDeleteAccountAlert = false
+    @State private var deleteAccountError: String?
+    @State private var showingDeleteAccountError = false
+
     @State var imageSelection: PhotosPickerItem?
     @State var avatarImage: AvatarImage?
 
@@ -239,6 +243,24 @@ struct EditProfileView: View {
                             .background(Color(.systemGray6))
                             .cornerRadius(12)
                         }
+
+                        Button(action: {
+                            showingDeleteAccountAlert = true
+                        }) {
+                            HStack {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.red)
+                                Text("Delete Account")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.red)
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(12)
+                        }
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 24)
@@ -285,6 +307,26 @@ struct EditProfileView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(profileError ?? "An unknown error occurred")
+            }
+            .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    Task {
+                        do {
+                            try await authManager.deleteAccount()
+                        } catch {
+                            deleteAccountError = error.localizedDescription
+                            showingDeleteAccountError = true
+                        }
+                    }
+                }
+            } message: {
+                Text("This will permanently delete your account and all your data. This cannot be undone.")
+            }
+            .alert("Delete Account Failed", isPresented: $showingDeleteAccountError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(deleteAccountError ?? "An unknown error occurred")
             }
             .onChange(of: imageSelection) { _, newValue in
                 guard let newValue else { return }
