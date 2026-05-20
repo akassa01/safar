@@ -261,16 +261,6 @@ struct AuthView: View {
             .padding(.bottom, 50)
         }
         .background(Color("Background").ignoresSafeArea())
-        .onOpenURL(perform: { url in
-            Task {
-                do {
-                    try await supabase.auth.session(from: url)
-                    result = .success(())
-                } catch {
-                    result = .failure(error)
-                }
-            }
-        })
     }
     
     func signInButtonTapped() {

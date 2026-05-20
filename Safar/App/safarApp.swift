@@ -89,6 +89,14 @@ struct safarApp: App {
                     showOfflineView = false
                 }
             }
+            .onOpenURL { url in
+                Task {
+                    // Exchange the deep-link URL (email confirmation, magic link, OAuth) for a
+                    // session. Placed at scene level so it fires regardless of which view is
+                    // currently active. AuthManager's auth listener handles navigation on success.
+                    try? await supabase.auth.session(from: url)
+                }
+            }
         }
     }
 
