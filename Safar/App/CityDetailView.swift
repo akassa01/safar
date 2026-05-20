@@ -373,10 +373,10 @@ struct CityDetailView: View {
                     } else {
                         ForEach(categoryPlaces, id: \.localKey) { place in
                             HStack {
-                                Text(place.name)
-                                    .font(.subheadline)
-                                Spacer()
                                 if isEditingPlaces && !isOffline {
+                                    Text(place.name)
+                                        .font(.subheadline)
+                                    Spacer()
                                     HStack(spacing: 8) {
                                         Button {
                                             Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
@@ -397,14 +397,30 @@ struct CityDetailView: View {
                                                 .foregroundColor(.red)
                                         }
                                     }
-                                } else if place.liked == true {
-                                    Image(systemName: "hand.thumbsup.fill")
-                                        .foregroundColor(.green)
-                                        .font(.caption)
-                                } else if place.liked == false {
-                                    Image(systemName: "hand.thumbsdown.fill")
-                                        .foregroundColor(.red)
-                                        .font(.caption)
+                                } else {
+                                    Button {
+                                        openInMaps(place)
+                                    } label: {
+                                        HStack {
+                                            Text(place.name)
+                                                .font(.subheadline)
+                                                .foregroundColor(.primary)
+                                            Image(systemName: "arrow.up.right.square")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            if place.liked == true {
+                                                Image(systemName: "hand.thumbsup.fill")
+                                                    .foregroundColor(.green)
+                                                    .font(.caption)
+                                            } else if place.liked == false {
+                                                Image(systemName: "hand.thumbsdown.fill")
+                                                    .foregroundColor(.red)
+                                                    .font(.caption)
+                                            }
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .padding(.leading, 24)
@@ -623,6 +639,29 @@ struct CityDetailView: View {
     //     updateMapRegion()
     // }
     
+    private func openInMaps(_ place: Place) {
+        if !place.mapKitId.isEmpty,
+           let identifier = MKMapItem.Identifier(rawValue: place.mapKitId) {
+            let request = MKMapItemRequest(mapItemIdentifier: identifier)
+            Task {
+                if let mapItem = try? await request.mapItem {
+                    mapItem.openInMaps()
+                    return
+                }
+                openInMapsFallback(place)
+            }
+        } else {
+            openInMapsFallback(place)
+        }
+    }
+
+    private func openInMapsFallback(_ place: Place) {
+        let placemark = MKPlacemark(coordinate: place.coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = place.name
+        mapItem.openInMaps()
+    }
+
     private func deleteCity() {
         Task {
             await viewModel.removeCityFromList(cityId: cityId)
