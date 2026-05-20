@@ -31,6 +31,7 @@ struct CityDetailView: View {
     @State private var showingPlaceSearch = false
     @State private var activePlaceCategory: PlaceCategory? = nil
     @State private var selectedPlaceCategory: PlaceCategory = .restaurant
+    @State private var isEditingPlaces = false
     @State private var showingDeleteConfirmation = false
     @State private var mapCameraPosition: MapCameraPosition
     @State private var friendsWhoVisited: [FriendCityVisit] = []
@@ -336,6 +337,14 @@ struct CityDetailView: View {
             HStack {
                 SectionHeader(title: "Places", icon: "mappin.and.ellipse")
                 Spacer()
+                if !isOffline {
+                    Button {
+                        withAnimation { isEditingPlaces.toggle() }
+                    } label: {
+                        Image(systemName: isEditingPlaces ? "pencil.circle.fill" : "pencil.circle")
+                            .foregroundColor(isEditingPlaces ? .accentColor : .secondary)
+                    }
+                }
             }
             ForEach(PlaceCategory.allCases, id: \.self) { category in
                 let categoryPlaces = placesViewModel.placesByCategory[category] ?? []
@@ -367,7 +376,7 @@ struct CityDetailView: View {
                                 Text(place.name)
                                     .font(.subheadline)
                                 Spacer()
-                                if !isOffline {
+                                if isEditingPlaces && !isOffline {
                                     HStack(spacing: 8) {
                                         Button {
                                             Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
@@ -388,8 +397,17 @@ struct CityDetailView: View {
                                                 .foregroundColor(.red)
                                         }
                                     }
+                                } else if place.liked == true {
+                                    Image(systemName: "hand.thumbsup.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                } else if place.liked == false {
+                                    Image(systemName: "hand.thumbsdown.fill")
+                                        .foregroundColor(.red)
+                                        .font(.caption)
                                 }
                             }
+                            .padding(.leading, 24)
                         }
                     }
                 }
