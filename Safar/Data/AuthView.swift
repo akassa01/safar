@@ -362,7 +362,11 @@ struct AuthView: View {
                 }
             }
         case .failure(let error):
-            result = .failure(error)
+            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                result = nil
+            } else {
+                result = .failure(AuthError.appleSignInFailed)
+            }
         }
     }
     
