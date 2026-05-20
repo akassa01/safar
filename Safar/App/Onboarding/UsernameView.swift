@@ -33,41 +33,29 @@ struct UsernameView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
 
-                    HStack(spacing: 8) {
-                        HStack {
-                            Text("@")
-                                .foregroundColor(.secondary)
-                            TextField("username", text: $viewModel.username)
-                                .textContentType(.username)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .onChange(of: viewModel.username) { _, _ in
-                                    viewModel.checkUsernameAvailability()
-                                }
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(
-                                    viewModel.usernameValidator.isValid == false
-                                        ? Color.red.opacity(0.6)
-                                        : Color.clear,
-                                    lineWidth: 1
-                                )
-                        )
-
-                        // Availability indicator
-                        if viewModel.usernameValidator.isChecking {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else if let isValid = viewModel.usernameValidator.isValid {
-                            Image(systemName: isValid ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(isValid ? .accentColor : .red)
-                                .font(.title3)
-                        }
+                    HStack {
+                        Text("@")
+                            .foregroundColor(.secondary)
+                        TextField("username", text: $viewModel.username)
+                            .textContentType(.username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .onChange(of: viewModel.username) { _, _ in
+                                viewModel.clearUsernameValidation()
+                            }
                     }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                viewModel.usernameValidator.validationMessage != nil
+                                    ? Color.red.opacity(0.6)
+                                    : Color.clear,
+                                lineWidth: 1
+                            )
+                    )
 
                     // Validation message
                     if let message = viewModel.usernameValidator.validationMessage {
@@ -77,32 +65,29 @@ struct UsernameView: View {
                     }
                 }
 
-                if let error = viewModel.errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                }
-
                 Button(action: {
-                    Task { await viewModel.saveUsername() }
+                    Task { await viewModel.checkAndSaveUsername() }
                 }) {
-                    HStack {
-                        if viewModel.isLoading {
+                    Group {
+                        if viewModel.usernameCheckState == .checking {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(0.8)
+                        } else if viewModel.usernameCheckState == .available {
+                            Image(systemName: "checkmark")
+                                .fontWeight(.semibold)
+                        } else {
+                            Text("Continue")
+                                .fontWeight(.semibold)
                         }
-                        Text("Continue")
-                            .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(viewModel.usernameValidator.isValid == true ? Color.accentColor : Color(.systemGray4))
+                    .background(viewModel.isUsernameLocallyValid ? Color.accentColor : Color(.systemGray4))
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }
-                .disabled(viewModel.usernameValidator.isValid != true || viewModel.isLoading)
+                .disabled(!viewModel.isUsernameLocallyValid || viewModel.usernameCheckState == .checking || viewModel.usernameCheckState == .available)
             }
             .padding(.horizontal, 30)
             .padding(.bottom, 50)

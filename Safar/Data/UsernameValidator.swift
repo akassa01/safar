@@ -156,7 +156,7 @@ class UsernameValidator: ObservableObject {
 
     // MARK: - Remote API Calls
 
-    private func checkUsernameAvailabilityRemote(_ username: String) async throws -> UsernameAvailabilityResponse {
+    func checkUsernameAvailabilityRemote(_ username: String) async throws -> UsernameAvailabilityResponse {
         let response: UsernameAvailabilityResponse = try await supabase
             .rpc("check_username_availability", params: ["check_username": username])
             .execute()

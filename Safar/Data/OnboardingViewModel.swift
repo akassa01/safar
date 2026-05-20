@@ -16,6 +16,10 @@ enum OnboardingStep: Int, CaseIterable {
     case welcome
 }
 
+enum UsernameCheckState {
+    case idle, checking, available, taken
+}
+
 @MainActor
 class OnboardingViewModel: ObservableObject {
     @Published var currentStep: OnboardingStep
@@ -37,7 +41,12 @@ class OnboardingViewModel: ObservableObject {
 
     // Username step
     @Published var username = ""
+    @Published var usernameCheckState: UsernameCheckState = .idle
     let usernameValidator = UsernameValidator()
+
+    var isUsernameLocallyValid: Bool {
+        usernameValidator.validateFormat(username.trimmingCharacters(in: .whitespaces)) == nil
+    }
 
     // Profile step
     @Published var bio = ""
@@ -82,34 +91,48 @@ class OnboardingViewModel: ObservableObject {
 
     // MARK: - Username
 
-    func checkUsernameAvailability() {
-        usernameValidator.checkAvailability(username, currentUsername: "")
+    func clearUsernameValidation() {
+        usernameValidator.validationMessage = nil
+        usernameCheckState = .idle
     }
 
-    func saveUsername() async {
+    func checkAndSaveUsername() async {
         let trimmed = username.trimmingCharacters(in: .whitespaces)
-        guard usernameValidator.isValid == true else {
-            errorMessage = usernameValidator.validationMessage ?? "Please choose a valid username."
+
+        if let formatError = usernameValidator.validateFormat(trimmed) {
+            usernameValidator.validationMessage = formatError.localizedDescription
             return
         }
 
-        isLoading = true
-        errorMessage = nil
+        usernameCheckState = .checking
+        usernameValidator.validationMessage = nil
 
         do {
-            let response = try await usernameValidator.updateUsername(trimmed)
-            if response.success {
+            let availability = try await usernameValidator.checkUsernameAvailabilityRemote(trimmed)
+
+            if !availability.available {
+                usernameCheckState = .taken
+                usernameValidator.validationMessage = availability.message
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                usernameCheckState = .idle
+                return
+            }
+
+            let update = try await usernameValidator.updateUsername(trimmed)
+            if update.success {
+                usernameCheckState = .available
                 AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "username"])
+                try? await Task.sleep(nanoseconds: 600_000_000)
                 currentStep = .profile
             } else {
-                errorMessage = response.message
+                usernameCheckState = .idle
+                usernameValidator.validationMessage = update.message
             }
         } catch {
-            Log.data.error("saveUsername failed: \(error)")
-            errorMessage = error.localizedDescription
+            Log.data.error("checkAndSaveUsername failed: \(error)")
+            usernameCheckState = .idle
+            usernameValidator.validationMessage = error.localizedDescription
         }
-
-        isLoading = false
     }
 
     // MARK: - Profile (avatar + bio)
