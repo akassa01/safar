@@ -17,6 +17,7 @@
 		648A2B1B2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */; };
 		648A2B1C2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */; };
 		648A2B1D2F35DEE8009EAED0 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 648A2B1A2F35DEE8009EAED0 /* Secrets.xcconfig */; };
+		64C1632B2FBD48CF00A29BFB /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = AA00BBCC00000001AA000002 /* PostHog */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,6 +80,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				64C1632B2FBD48CF00A29BFB /* PostHog in Frameworks */,
 				6462E2622E395D64005B4AAA /* Supabase in Frameworks */,
 				6462E2602E395D64005B4AAA /* Storage in Frameworks */,
 				6462E25C2E395D64005B4AAA /* PostgREST in Frameworks */,
@@ -154,6 +156,7 @@
 				6462E25D2E395D64005B4AAA /* Realtime */,
 				6462E25F2E395D64005B4AAA /* Storage */,
 				6462E2612E395D64005B4AAA /* Supabase */,
+				AA00BBCC00000001AA000002 /* PostHog */,
 			);
 			productName = safar;
 			productReference = 64C360952E13632A00CA5CE5 /* Safar.app */;
@@ -240,6 +243,7 @@
 			packageReferences = (
 				647E801A2E161DF100E36B1F /* XCRemoteSwiftPackageReference "SQLite" */,
 				6462E2562E395D64005B4AAA /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				AA00BBCC00000001AA000001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 64C360962E13632A00CA5CE5 /* Products */;
@@ -637,6 +641,14 @@
 				minimumVersion = 0.15.4;
 			};
 		};
+		AA00BBCC00000001AA000001 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -674,6 +686,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 647E801A2E161DF100E36B1F /* XCRemoteSwiftPackageReference "SQLite" */;
 			productName = SQLite;
+		};
+		AA00BBCC00000001AA000002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA00BBCC00000001AA000001 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

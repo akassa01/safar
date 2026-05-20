@@ -307,6 +307,7 @@ struct AuthView: View {
                     redirectTo: URL(string: "safar://auth-callback")
                 )
                 try? await DatabaseManager.shared.acceptTerms()
+                AnalyticsManager.shared.capture("user_signed_up", properties: ["method": "email"])
                 result = .success(())
             } catch {
                 result = .failure(error)
@@ -341,6 +342,7 @@ struct AuthView: View {
                         // Apple only provides full name on first sign-in, so save it to profiles table
                         if let fullName = appleIDCredential.fullName,
                            let givenName = fullName.givenName {
+                            AnalyticsManager.shared.capture("user_signed_up", properties: ["method": "apple"])
                             let familyName = fullName.familyName ?? ""
                             let displayName = familyName.isEmpty ? givenName : "\(givenName) \(familyName)"
                             let currentUser = try await supabase.auth.session.user

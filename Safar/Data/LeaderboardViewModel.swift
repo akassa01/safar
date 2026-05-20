@@ -39,6 +39,10 @@ class LeaderboardViewModel: ObservableObject {
             } else {
                 topCities = try await databaseManager.getTopRatedCities(limit: limit)
             }
+            AnalyticsManager.shared.capture("leaderboard_viewed", properties: [
+                "tab": "cities",
+                "continent_filter": selectedContinent as Any
+            ])
         } catch {
             self.error = error
             print("Failed to load cities: \(error)")
@@ -56,6 +60,10 @@ class LeaderboardViewModel: ObservableObject {
                 limit: limit,
                 continent: selectedContinent
             )
+            AnalyticsManager.shared.capture("leaderboard_viewed", properties: [
+                "tab": "countries",
+                "continent_filter": selectedContinent as Any
+            ])
         } catch {
             self.error = error
             print("Failed to load countries: \(error)")

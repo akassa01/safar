@@ -193,21 +193,32 @@ class UserCitiesViewModel: ObservableObject {
     
     func addCityToBucketList(cityId: Int) async {
         guard let userId = _currentUserId else { return }
-        
+
         do {
             try await databaseManager.addCityToBucketList(
                 userId: userId,
                 cityId: cityId,
                 notes: ""
             )
-            await loadUserData() // Refresh data
+            await loadUserData()
+            if let city = allUserCities.first(where: { $0.id == cityId }) {
+                AnalyticsManager.shared.capture("city_added", properties: [
+                    "city_id": cityId,
+                    "city_name": city.displayName,
+                    "country": city.country,
+                    "visited": false,
+                    "has_notes": false,
+                    "places_count": 0,
+                    "has_rating": false
+                ])
+            }
         } catch {
             Log.data.error("addCityToBucketList failed for cityId \(cityId): \(error)")
             self.error = error
         }
     }
 
-    func markCityAsVisited(cityId: Int, rating: Double? = nil, notes: String? = nil) async {
+    func markCityAsVisited(cityId: Int, rating: Double? = nil, notes: String? = nil, placesCount: Int = 0) async {
         guard let userId = _currentUserId else {
             print("🔴 markCityAsVisited failed: no current user ID")
             return
@@ -221,7 +232,18 @@ class UserCitiesViewModel: ObservableObject {
                 notes: notes
             )
             print("🟢 ViewModel markCityAsVisited succeeded for cityId: \(cityId)")
-            await loadUserData() // Refresh data
+            await loadUserData()
+            if let city = allUserCities.first(where: { $0.id == cityId }) {
+                AnalyticsManager.shared.capture("city_added", properties: [
+                    "city_id": cityId,
+                    "city_name": city.displayName,
+                    "country": city.country,
+                    "visited": true,
+                    "has_notes": !(notes ?? "").isEmpty,
+                    "places_count": placesCount,
+                    "has_rating": rating != nil
+                ])
+            }
         } catch {
             print("🔴 ViewModel markCityAsVisited error for cityId \(cityId): \(error)")
             self.error = error
@@ -230,10 +252,18 @@ class UserCitiesViewModel: ObservableObject {
     
     func removeCityFromList(cityId: Int) async {
         guard let userId = _currentUserId else { return }
-        
+
+        let city = allUserCities.first(where: { $0.id == cityId })
         do {
             try await databaseManager.removeUserCity(userId: userId, cityId: cityId)
-            await loadUserData() // Refresh data
+            if let city = city {
+                AnalyticsManager.shared.capture("city_removed", properties: [
+                    "city_id": cityId,
+                    "city_name": city.displayName,
+                    "was_visited": city.visited ?? false
+                ])
+            }
+            await loadUserData()
         } catch {
             Log.data.error("removeCityFromList failed for cityId \(cityId): \(error)")
             self.error = error
@@ -250,6 +280,11 @@ class UserCitiesViewModel: ObservableObject {
     func updateCityRating(cityId: Int, rating: Double) async {
         await updateCityRatingWithoutRefresh(cityId: cityId, rating: rating)
         await loadUserData()
+        AnalyticsManager.shared.capture("city_rating_set", properties: [
+            "city_id": cityId,
+            "rating": rating,
+            "cities_count": visitedCitiesCount
+        ])
     }
 
     /// Updates city rating without refreshing data - use this for batch updates

@@ -30,6 +30,7 @@ class BlockManager: ObservableObject {
     func blockUser(userId: String) async throws {
         try await DatabaseManager.shared.blockUser(blockedId: userId)
         blockedUserIds.insert(userId)
+        AnalyticsManager.shared.capture("user_blocked")
     }
 
     func unblockUser(userId: String) async throws {

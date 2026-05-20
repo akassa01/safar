@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PostHog
 
 @main
 struct safarApp: App {
@@ -16,6 +17,10 @@ struct safarApp: App {
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showOfflineView = false
     @State private var isDataPreloaded = false
+
+    init() {
+        AnalyticsManager.shared.configure()
+    }
 
     var body: some Scene {
         WindowGroup {

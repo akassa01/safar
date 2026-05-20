@@ -268,6 +268,11 @@ struct SearchMainView: View {
                     self.searchResults = []
                 }
                 self.isLoading = false
+                AnalyticsManager.shared.capture("search_performed", properties: [
+                    "category": "cities",
+                    "query_length": currentQuery.count,
+                    "results_count": self.searchResults.count
+                ])
             }
 
         case .countries:
@@ -288,6 +293,11 @@ struct SearchMainView: View {
                     self.searchResults = []
                 }
                 self.isLoading = false
+                AnalyticsManager.shared.capture("search_performed", properties: [
+                    "category": "countries",
+                    "query_length": currentQuery.count,
+                    "results_count": self.searchResults.count
+                ])
             }
 
         case .people:
@@ -301,6 +311,11 @@ struct SearchMainView: View {
                     self.searchResults = []
                 }
                 self.isLoading = false
+                AnalyticsManager.shared.capture("search_performed", properties: [
+                    "category": "people",
+                    "query_length": currentQuery.count,
+                    "results_count": self.searchResults.count
+                ])
             }
         }
     }

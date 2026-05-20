@@ -70,6 +70,7 @@ class OnboardingViewModel: ObservableObject {
                 ])
                 .execute()
 
+            AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "full_name"])
             currentStep = .username
         } catch {
             Log.data.error("saveFullName failed: \(error)")
@@ -98,6 +99,7 @@ class OnboardingViewModel: ObservableObject {
         do {
             let response = try await usernameValidator.updateUsername(trimmed)
             if response.success {
+                AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "username"])
                 currentStep = .profile
             } else {
                 errorMessage = response.message
@@ -141,6 +143,7 @@ class OnboardingViewModel: ObservableObject {
                     .execute()
             }
 
+            AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "profile"])
             currentStep = .welcome
         } catch {
             Log.data.error("saveProfile failed: \(error)")
@@ -160,6 +163,8 @@ class OnboardingViewModel: ObservableObject {
                 .update(["onboarding_completed": true])
                 .eq("id", value: user.id)
                 .execute()
+            AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "welcome"])
+            AnalyticsManager.shared.capture("onboarding_completed")
         } catch {
             Log.data.error("completeOnboarding failed: \(error)")
         }

@@ -45,6 +45,14 @@ class AuthManager: ObservableObject {
                     self.isAuthenticated = state.session != nil
                     self.currentUserId = state.session?.user.id
 
+                    if let user = state.session?.user {
+                        AnalyticsManager.shared.identify(userId: user.id.uuidString, username: nil)
+                        if state.event == .signedIn {
+                            let method = (user.appMetadata["provider"] as? String == "apple") ? "apple" : "email"
+                            AnalyticsManager.shared.capture("user_signed_in", properties: ["method": method])
+                        }
+                    }
+
                     // Check onboarding status
                     if let userId = state.session?.user.id {
                         await self.checkOnboardingStatus(userId: userId)
@@ -52,6 +60,8 @@ class AuthManager: ObservableObject {
                     self.isLoading = false
 
                 case .signedOut:
+                    AnalyticsManager.shared.capture("user_signed_out")
+                    AnalyticsManager.shared.reset()
                     self.isAuthenticated = false
                     self.currentUserId = nil
                     self.needsOnboarding = false
@@ -117,6 +127,8 @@ class AuthManager: ObservableObject {
             CityCacheManager.shared.clearCache(for: userId)
             UserDefaults.standard.removeObject(forKey: "onboarding_completed_\(userId.uuidString)")
         }
+        AnalyticsManager.shared.capture("account_deleted")
+        AnalyticsManager.shared.reset()
         BlockManager.shared.reset()
         try await supabase.functions.invoke("delete-account", options: .init())
         try await supabase.auth.signOut()

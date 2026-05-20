@@ -190,6 +190,11 @@ struct HomeView: View {
             .tag(3)
         }
         .onChange(of: selectedTab) { oldValue, newValue in
+            if oldValue != newValue {
+                let tabNames = ["home", "cities", "explore", "feed"]
+                let tabName = newValue < tabNames.count ? tabNames[newValue] : "\(newValue)"
+                AnalyticsManager.shared.capture("tab_selected", properties: ["tab": tabName])
+            }
             // If the same tab is selected again, pop to root
             if oldValue == newValue {
                 switch newValue {

@@ -135,10 +135,12 @@ class UserProfileViewModel: ObservableObject {
                 try await databaseManager.unfollowUser(followingId: userId)
                 isFollowing = false
                 followerCount = max(0, followerCount - 1)
+                AnalyticsManager.shared.capture("user_unfollowed", properties: ["unfollowed_user_id": userId])
             } else {
                 try await databaseManager.followUser(followingId: userId)
                 isFollowing = true
                 followerCount += 1
+                AnalyticsManager.shared.capture("user_followed", properties: ["followed_user_id": userId])
             }
         } catch {
             Log.data.error("toggleFollow failed for userId \(self.userId): \(error)")
@@ -168,8 +170,13 @@ class UserProfileViewModel: ObservableObject {
         do {
             if wasLiked {
                 try await databaseManager.unlikePost(userCityId: post.id)
+                AnalyticsManager.shared.capture("post_unliked", properties: ["post_id": post.id])
             } else {
                 try await databaseManager.likePost(userCityId: post.id)
+                AnalyticsManager.shared.capture("post_liked", properties: [
+                    "post_id": post.id,
+                    "author_id": post.userId
+                ])
             }
         } catch {
             if let revertIndex = recentPosts.firstIndex(where: { $0.id == post.id }) {

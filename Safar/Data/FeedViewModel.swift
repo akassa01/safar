@@ -45,8 +45,14 @@ class FeedViewModel: ObservableObject {
 
             if refresh {
                 posts = newPosts
+                AnalyticsManager.shared.capture("feed_refreshed")
             } else {
                 posts.append(contentsOf: newPosts)
+                let page = currentOffset / pageSize + 1
+                AnalyticsManager.shared.capture("feed_page_loaded", properties: [
+                    "page": page,
+                    "posts_count": newPosts.count
+                ])
             }
 
             // Advance offset by raw fetch count to keep server-side pagination consistent
@@ -94,8 +100,13 @@ class FeedViewModel: ObservableObject {
         do {
             if wasLiked {
                 try await databaseManager.unlikePost(userCityId: post.id)
+                AnalyticsManager.shared.capture("post_unliked", properties: ["post_id": post.id])
             } else {
                 try await databaseManager.likePost(userCityId: post.id)
+                AnalyticsManager.shared.capture("post_liked", properties: [
+                    "post_id": post.id,
+                    "author_id": post.userId
+                ])
             }
         } catch {
             // Revert optimistic update on error
@@ -198,6 +209,10 @@ class PostDetailViewModel: ObservableObject {
                 comments.append(newComment)
             }
 
+            AnalyticsManager.shared.capture("comment_added", properties: [
+                "post_id": post.id,
+                "is_reply": parentId != nil
+            ])
             replyingTo = nil
             isAddingComment = false
             return true
@@ -213,6 +228,7 @@ class PostDetailViewModel: ObservableObject {
     func deleteComment(_ comment: PostComment) async {
         do {
             try await databaseManager.deleteComment(commentId: comment.id)
+            AnalyticsManager.shared.capture("comment_deleted", properties: ["post_id": post.id])
 
             if let parentId = comment.parentCommentId {
                 // Remove from parent's replies
@@ -242,6 +258,7 @@ class PostDetailViewModel: ObservableObject {
                 try await databaseManager.unlikeComment(commentId: comment.id)
             } else {
                 try await databaseManager.likeComment(commentId: comment.id)
+                AnalyticsManager.shared.capture("comment_liked", properties: ["comment_id": comment.id])
             }
         } catch {
             // Revert on error

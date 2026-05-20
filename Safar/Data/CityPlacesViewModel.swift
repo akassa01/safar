@@ -81,6 +81,13 @@ class CityPlacesViewModel: ObservableObject {
         do {
             try await databaseManager.insertUserPlaces(userId: userId, cityId: cityId, places: places)
             await loadPlaces(for: cityId)
+            for place in places {
+                AnalyticsManager.shared.capture("place_added", properties: [
+                    "category": place.category.rawValue,
+                    "city_id": cityId,
+                    "places_added_count": places.count
+                ])
+            }
         } catch {
             Log.data.error("addPlaces failed for cityId \(cityId): \(error)")
             self.error = error
@@ -88,9 +95,17 @@ class CityPlacesViewModel: ObservableObject {
     }
 
     func updateLiked(for userPlaceId: Int, liked: Bool?, cityId: Int) async {
+        let place = placesByCategory.values.flatMap { $0 }.first(where: { $0.userPlaceId == userPlaceId })
         do {
             try await databaseManager.updateUserPlaceLiked(userPlaceId: userPlaceId, liked: liked)
             await loadPlaces(for: cityId)
+            if let liked = liked, let place = place {
+                AnalyticsManager.shared.capture("place_liked", properties: [
+                    "category": place.category.rawValue,
+                    "city_id": cityId,
+                    "liked": liked
+                ])
+            }
         } catch {
             Log.data.error("updateLiked failed for userPlaceId \(userPlaceId): \(error)")
             self.error = error
@@ -98,9 +113,16 @@ class CityPlacesViewModel: ObservableObject {
     }
 
     func deletePlace(userPlaceId: Int, cityId: Int) async {
+        let place = placesByCategory.values.flatMap { $0 }.first(where: { $0.userPlaceId == userPlaceId })
         do {
             try await databaseManager.deleteUserPlace(userPlaceId: userPlaceId)
             await loadPlaces(for: cityId)
+            if let place = place {
+                AnalyticsManager.shared.capture("place_removed", properties: [
+                    "category": place.category.rawValue,
+                    "city_id": cityId
+                ])
+            }
         } catch {
             Log.data.error("deletePlace failed for userPlaceId \(userPlaceId): \(error)")
             self.error = error
