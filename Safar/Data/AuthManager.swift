@@ -14,6 +14,7 @@ class AuthManager: ObservableObject {
     @Published var isLoading = true
     @Published var currentUserId: UUID?
     @Published var needsOnboarding = false
+    @Published var needsPasswordReset = false
 
     private var authTask: Task<Void, Never>?
 
@@ -53,10 +54,16 @@ class AuthManager: ObservableObject {
                         }
                     }
 
-                    // Check onboarding status
-                    if let userId = state.session?.user.id {
+                    // Check onboarding status (skip if mid-password-reset)
+                    if !self.needsPasswordReset, let userId = state.session?.user.id {
                         await self.checkOnboardingStatus(userId: userId)
                     }
+                    self.isLoading = false
+
+                case .passwordRecovery:
+                    self.isAuthenticated = true
+                    self.currentUserId = state.session?.user.id
+                    self.needsPasswordReset = true
                     self.isLoading = false
 
                 case .signedOut:
@@ -65,6 +72,7 @@ class AuthManager: ObservableObject {
                     self.isAuthenticated = false
                     self.currentUserId = nil
                     self.needsOnboarding = false
+                    self.needsPasswordReset = false
                     self.isLoading = false
 
                 case .tokenRefreshed, .userUpdated:

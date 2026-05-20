@@ -25,7 +25,7 @@ struct safarApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if authManager.isAuthenticated && !authManager.needsOnboarding {
+                if authManager.isAuthenticated && !authManager.needsOnboarding && !authManager.needsPasswordReset {
                     HomeView()
                         .environmentObject(userCitiesViewModel)
                         .environmentObject(feedViewModel)
@@ -33,8 +33,10 @@ struct safarApp: App {
                         .opacity(isDataPreloaded ? 1 : 0)
                 }
 
-                if authManager.isLoading || (authManager.isAuthenticated && !authManager.needsOnboarding && !isDataPreloaded) {
+                if authManager.isLoading || (authManager.isAuthenticated && !authManager.needsOnboarding && !authManager.needsPasswordReset && !isDataPreloaded) {
                     LoadingView()
+                } else if authManager.isAuthenticated && authManager.needsPasswordReset {
+                    ResetPasswordView()
                 } else if authManager.isAuthenticated && authManager.needsOnboarding {
                     OnboardingContainerView(onComplete: {
                         authManager.completeOnboarding()
@@ -46,18 +48,18 @@ struct safarApp: App {
             .environmentObject(authManager)
             .onChange(of: authManager.isLoading) { _, isLoading in
                 // When auth check completes and user is authenticated (and done onboarding), preload data
-                if !isLoading && authManager.isAuthenticated && !authManager.needsOnboarding && !isDataPreloaded {
+                if !isLoading && authManager.isAuthenticated && !authManager.needsOnboarding && !authManager.needsPasswordReset && !isDataPreloaded {
                     preloadData()
                 }
             }
             .onChange(of: authManager.needsOnboarding) { _, needsOnboarding in
                 // When onboarding completes, preload data
-                if !needsOnboarding && authManager.isAuthenticated && !isDataPreloaded {
+                if !needsOnboarding && authManager.isAuthenticated && !authManager.needsPasswordReset && !isDataPreloaded {
                     preloadData()
                 }
             }
             .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
-                if isAuthenticated && !authManager.needsOnboarding {
+                if isAuthenticated && !authManager.needsOnboarding && !authManager.needsPasswordReset {
                     // User just signed in (returning user) - preload their data
                     preloadData()
                 } else if !isAuthenticated {
