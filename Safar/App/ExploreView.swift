@@ -32,9 +32,9 @@ struct ExploreView: View {
         .background(Color("Background"))
         .navigationTitle("Explore")
         .navigationBarTitleDisplayMode(.inline)
-//        .onAppear {
-//            loadRecommendations()
-//        }
+        .refreshable {
+            await leaderboardViewModel.refresh()
+        }
         .task {
             if leaderboardViewModel.topCities.isEmpty {
                 await leaderboardViewModel.loadTopCities(limit: 5)
