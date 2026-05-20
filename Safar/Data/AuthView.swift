@@ -13,7 +13,7 @@ struct AuthView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    @State private var isSignUp = false
+    @State private var isSignUp = true
     @State private var isLoading = false
     @State private var result: Result<Void, Error>?
     @State private var showPassword = false
