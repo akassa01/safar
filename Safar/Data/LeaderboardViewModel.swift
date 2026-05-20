@@ -83,7 +83,8 @@ class LeaderboardViewModel: ObservableObject {
         error = nil
 
         do {
-            topTravelersByCities = try await databaseManager.getTopTravelersByCities(limit: limit)
+            let fetched = try await databaseManager.getTopTravelersByCities(limit: limit)
+            topTravelersByCities = BlockManager.shared.filter(fetched, keyPath: \.id)
         } catch {
             Log.data.error("loadTopTravelersByCities failed: \(error)")
             self.error = error
@@ -97,7 +98,8 @@ class LeaderboardViewModel: ObservableObject {
         error = nil
 
         do {
-            topTravelersByCountries = try await databaseManager.getTopTravelersByCountries(limit: limit)
+            let fetched = try await databaseManager.getTopTravelersByCountries(limit: limit)
+            topTravelersByCountries = BlockManager.shared.filter(fetched, keyPath: \.id)
         } catch {
             Log.data.error("loadTopTravelersByCountries failed: \(error)")
             self.error = error

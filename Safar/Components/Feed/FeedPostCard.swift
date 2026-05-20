@@ -2,7 +2,8 @@
 //  FeedPostCard.swift
 //  Safar
 //
-//  Main feed post card composing header, map, places, and interactions
+//  Main feed post card composing header, map, places, and interactions.
+//  Pass onReportPostTapped / onBlockUserTapped to show the ... overflow menu.
 //
 
 import SwiftUI
@@ -13,6 +14,8 @@ struct FeedPostCard: View {
     let onUserTapped: () -> Void
     let onCityTapped: () -> Void
     let onPostTapped: () -> Void
+    var onReportPostTapped: (() -> Void)? = nil
+    var onBlockUserTapped: (() -> Void)? = nil
 
     var body: some View {
         Button(action: onPostTapped) {
@@ -44,12 +47,14 @@ struct FeedPostCard: View {
                 // Places disclosure groups
                 FeedPlacesSection(places: post.places)
 
-                // Interaction bar (likes, comments)
+                // Interaction bar (likes, comments, optional ... menu)
                 FeedInteractionBar(
                     likeCount: post.likeCount,
                     commentCount: post.commentCount,
                     isLiked: post.isLikedByCurrentUser,
-                    onLikeTapped: onLikeTapped
+                    onLikeTapped: onLikeTapped,
+                    onReportTapped: onReportPostTapped,
+                    onBlockTapped: onBlockUserTapped
                 )
             }
             .padding(16)
@@ -81,7 +86,9 @@ struct FeedPostCard: View {
             onLikeTapped: {},
             onUserTapped: {},
             onCityTapped: {},
-            onPostTapped: {}
+            onPostTapped: {},
+            onReportPostTapped: {},
+            onBlockUserTapped: {}
         )
         .padding()
     }

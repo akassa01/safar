@@ -1913,4 +1913,80 @@ extension DatabaseManager {
             .execute()
     }
 
+    // MARK: - Block Operations
+
+    func getBlockedUserIds() async throws -> [String] {
+        struct BlockRecord: Codable {
+            let blockedId: String
+            enum CodingKeys: String, CodingKey {
+                case blockedId = "blocked_id"
+            }
+        }
+        let currentUser = try await getCurrentUser()
+        let records: [BlockRecord] = try await supabase
+            .from("user_blocks")
+            .select("blocked_id")
+            .eq("blocker_id", value: currentUser.id.uuidString)
+            .execute()
+            .value
+        return records.map { $0.blockedId }
+    }
+
+    func blockUser(blockedId: String) async throws {
+        let currentUser = try await getCurrentUser()
+        struct BlockInsert: Encodable {
+            let blocker_id: String
+            let blocked_id: String
+        }
+        try await supabase
+            .from("user_blocks")
+            .upsert(BlockInsert(blocker_id: currentUser.id.uuidString, blocked_id: blockedId))
+            .execute()
+    }
+
+    func unblockUser(blockedId: String) async throws {
+        let currentUser = try await getCurrentUser()
+        try await supabase
+            .from("user_blocks")
+            .delete()
+            .eq("blocker_id", value: currentUser.id.uuidString)
+            .eq("blocked_id", value: blockedId)
+            .execute()
+    }
+
+    // MARK: - Report Operations
+
+    func submitReport(type: ReportType, targetId: String, reason: ReportReason, details: String?) async throws {
+        let currentUser = try await getCurrentUser()
+        struct ReportInsert: Encodable {
+            let reporter_id: String
+            let report_type: String
+            let target_id: String
+            let reason: String
+            let details: String?
+        }
+        try await supabase
+            .from("content_reports")
+            .insert(ReportInsert(
+                reporter_id: currentUser.id.uuidString,
+                report_type: type.rawValue,
+                target_id: targetId,
+                reason: reason.rawValue,
+                details: details
+            ))
+            .execute()
+    }
+
+    // MARK: - Terms Operations
+
+    func acceptTerms() async throws {
+        let currentUser = try await getCurrentUser()
+        let now = ISO8601DateFormatter().string(from: Date())
+        try await supabase
+            .from("profiles")
+            .update(["terms_accepted_at": now])
+            .eq("id", value: currentUser.id.uuidString)
+            .execute()
+    }
+
 }

@@ -18,6 +18,8 @@ struct UserProfileView: View {
     @State private var showingEditProfile = false
     @State private var selectedPost: FeedPost?
     @State private var selectedCityId: CityNavItem?
+    @State private var showReportUser = false
+    @State private var showBlockConfirmation = false
 
     init(userId: String) {
         _viewModel = StateObject(wrappedValue: UserProfileViewModel(userId: userId))
@@ -72,7 +74,24 @@ struct UserProfileView: View {
             }
             if !viewModel.isOwnProfile {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    followButton
+                    HStack(spacing: 8) {
+                        followButton
+                        Menu {
+                            Button {
+                                showReportUser = true
+                            } label: {
+                                Label("Report User", systemImage: "exclamationmark.bubble")
+                            }
+                            Button(role: .destructive) {
+                                showBlockConfirmation = true
+                            } label: {
+                                Label("Block User", systemImage: "hand.raised")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.subheadline)
+                        }
+                    }
                 }
             }
         }
@@ -81,6 +100,24 @@ struct UserProfileView: View {
                 .onDisappear {
                     Task { await viewModel.loadProfile() }
                 }
+        }
+        .sheet(isPresented: $showReportUser) {
+            ReportView(
+                type: .user,
+                targetId: viewModel.userId,
+                targetDisplayName: viewModel.profile?.fullName ?? viewModel.profile?.username ?? "user"
+            )
+        }
+        .alert("Block User?", isPresented: $showBlockConfirmation) {
+            Button("Block", role: .destructive) {
+                Task {
+                    try? await BlockManager.shared.blockUser(userId: viewModel.userId)
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("You won't see their posts and they won't be able to interact with yours.")
         }
         .navigationDestination(item: $selectedPost) { post in
             PostDetailView(post: post, feedViewModel: nil)

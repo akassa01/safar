@@ -12,6 +12,11 @@ struct FeedView: View {
     @State private var selectedPost: FeedPost?
     @State private var selectedUserId: String?
     @State private var selectedCityId: Int?
+    @State private var reportingPost: FeedPost?
+    @State private var blockingUserId: String?
+    @State private var showBlockConfirmation = false
+
+    private let currentUserId = DatabaseManager.shared.getCurrentUserId()
 
     var body: some View {
         Group {
@@ -39,6 +44,27 @@ struct FeedView: View {
         }
         .navigationDestination(item: $selectedCityId) { cityId in
             CityDetailView(cityId: cityId)
+        }
+        .sheet(item: $reportingPost) { post in
+            ReportView(
+                type: .post,
+                targetId: String(post.id),
+                targetDisplayName: "post"
+            )
+        }
+        .alert("Block User?", isPresented: $showBlockConfirmation) {
+            Button("Block", role: .destructive) {
+                if let id = blockingUserId {
+                    Task {
+                        try? await BlockManager.shared.blockUser(userId: id)
+                        viewModel.removePostsByUser(id)
+                        blockingUserId = nil
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) { blockingUserId = nil }
+        } message: {
+            Text("You won't see their posts and they won't be able to interact with yours.")
         }
     }
 
@@ -75,6 +101,7 @@ struct FeedView: View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 ForEach(viewModel.posts) { post in
+                    let isOwnPost = post.userId == currentUserId
                     FeedPostCard(
                         post: post,
                         onLikeTapped: {
@@ -88,6 +115,13 @@ struct FeedView: View {
                         },
                         onPostTapped: {
                             selectedPost = post
+                        },
+                        onReportPostTapped: isOwnPost ? nil : {
+                            reportingPost = post
+                        },
+                        onBlockUserTapped: isOwnPost ? nil : {
+                            blockingUserId = post.userId
+                            showBlockConfirmation = true
                         }
                     )
                     .onAppear {

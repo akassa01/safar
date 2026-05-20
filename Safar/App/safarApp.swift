@@ -89,6 +89,7 @@ struct safarApp: App {
         guard !isDataPreloaded else { return }
         Task { await feedViewModel.loadFeed(refresh: true) }
         Task { await leaderboardViewModel.refresh() }
+        Task { await BlockManager.shared.loadBlockedUsers() }
         Task {
             await userCitiesViewModel.initializeWithCurrentUser()
             isDataPreloaded = true

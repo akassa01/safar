@@ -13,10 +13,12 @@ struct CommentRow: View {
     let onDelete: () -> Void
     let onReply: () -> Void
     let onToggleLike: () -> Void
+    var onReportTapped: (() -> Void)? = nil
     // For replies: closures that take the specific reply
     var onDeleteReply: ((PostComment) -> Void)?
     var onToggleLikeReply: ((PostComment) -> Void)?
     var canDeleteReply: ((PostComment) -> Bool)?
+    var onReportReplyTapped: ((PostComment) -> Void)? = nil
     var isReply: Bool = false
 
     var body: some View {
@@ -97,6 +99,16 @@ struct CommentRow: View {
                             }
                             .buttonStyle(.plain)
                         }
+
+                        // Report button (only for other users' comments)
+                        if !canDelete, let onReport = onReportTapped {
+                            Button(action: onReport) {
+                                Image(systemName: "ellipsis")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                     .padding(.top, 2)
                 }
@@ -113,6 +125,7 @@ struct CommentRow: View {
                             onDelete: { onDeleteReply?(reply) },
                             onReply: {},
                             onToggleLike: { onToggleLikeReply?(reply) },
+                            onReportTapped: onReportReplyTapped.map { cb in { cb(reply) } },
                             isReply: true
                         )
                     }

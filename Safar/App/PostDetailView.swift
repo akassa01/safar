@@ -25,6 +25,10 @@ struct PostDetailView: View {
     @State private var showLikesSheet = false
     @State private var selectedUserId: PostUserNavItem?
     @State private var selectedCityId: PostCityNavItem?
+    @State private var showReportPost = false
+    @State private var showBlockConfirmation = false
+    @State private var reportingCommentId: Int64?
+    @State private var reportingCommentUserId: String?
     @Environment(\.dismiss) private var dismiss
     private let currentUserId = DatabaseManager.shared.getCurrentUserId()
 
@@ -72,6 +76,36 @@ struct PostDetailView: View {
         }
         .sheet(isPresented: $showLikesSheet) {
             likesSheet
+        }
+        .sheet(isPresented: $showReportPost) {
+            ReportView(
+                type: .post,
+                targetId: String(post.id),
+                targetDisplayName: "post"
+            )
+        }
+        .sheet(isPresented: Binding(
+            get: { reportingCommentId != nil },
+            set: { if !$0 { reportingCommentId = nil; reportingCommentUserId = nil } }
+        )) {
+            if let commentId = reportingCommentId {
+                ReportView(
+                    type: .comment,
+                    targetId: String(commentId),
+                    targetDisplayName: "comment"
+                )
+            }
+        }
+        .alert("Block User?", isPresented: $showBlockConfirmation) {
+            Button("Block", role: .destructive) {
+                Task {
+                    try? await BlockManager.shared.blockUser(userId: post.userId)
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("You won't see their posts and they won't be able to interact with yours.")
         }
         .navigationDestination(item: $selectedUserId) { nav in
             UserProfileView(userId: nav.userId)
@@ -123,8 +157,30 @@ struct PostDetailView: View {
 
             Spacer()
 
-            if let rating = post.rating, (post.authorVisitedCitiesCount ?? 0) >= 5 {
-                RatingCircle(rating: rating, size: 50)
+            VStack(alignment: .trailing, spacing: 8) {
+                if let rating = post.rating, (post.authorVisitedCitiesCount ?? 0) >= 5 {
+                    RatingCircle(rating: rating, size: 50)
+                }
+
+                if post.userId != currentUserId {
+                    Menu {
+                        Button {
+                            showReportPost = true
+                        } label: {
+                            Label("Report Post", systemImage: "exclamationmark.bubble")
+                        }
+                        Button(role: .destructive) {
+                            showBlockConfirmation = true
+                        } label: {
+                            Label("Block User", systemImage: "hand.raised")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(6)
+                    }
+                }
             }
         }
     }
@@ -270,6 +326,10 @@ struct PostDetailView: View {
                         onToggleLike: {
                             Task { await viewModel.toggleCommentLike(for: comment) }
                         },
+                        onReportTapped: viewModel.canDeleteComment(comment) ? nil : {
+                            reportingCommentId = comment.id
+                            reportingCommentUserId = comment.userId
+                        },
                         onDeleteReply: { reply in
                             Task {
                                 await viewModel.deleteComment(reply)
@@ -281,6 +341,12 @@ struct PostDetailView: View {
                         },
                         canDeleteReply: { reply in
                             viewModel.canDeleteComment(reply)
+                        },
+                        onReportReplyTapped: { reply in
+                            if !viewModel.canDeleteComment(reply) {
+                                reportingCommentId = reply.id
+                                reportingCommentUserId = reply.userId
+                            }
                         }
                     )
 

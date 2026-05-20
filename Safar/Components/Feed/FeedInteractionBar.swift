@@ -2,7 +2,8 @@
 //  FeedInteractionBar.swift
 //  Safar
 //
-//  Like and comment interaction bar for feed posts
+//  Like and comment interaction bar for feed posts.
+//  Optional report/block callbacks show a ... menu on the trailing edge.
 //
 
 import SwiftUI
@@ -12,6 +13,8 @@ struct FeedInteractionBar: View {
     let commentCount: Int
     let isLiked: Bool
     let onLikeTapped: () -> Void
+    var onReportTapped: (() -> Void)? = nil
+    var onBlockTapped: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 16) {
@@ -31,7 +34,7 @@ struct FeedInteractionBar: View {
             }
             .buttonStyle(.plain)
 
-            // Comment count (not a button - entire card navigates to detail)
+            // Comment count (not a button — entire card navigates to detail)
             HStack(spacing: 4) {
                 Image(systemName: "bubble.right")
                     .font(.subheadline)
@@ -45,6 +48,30 @@ struct FeedInteractionBar: View {
             }
 
             Spacer()
+
+            // Overflow menu (report / block) — only shown for other users' posts
+            if onReportTapped != nil || onBlockTapped != nil {
+                Menu {
+                    if let onReport = onReportTapped {
+                        Button {
+                            onReport()
+                        } label: {
+                            Label("Report Post", systemImage: "exclamationmark.bubble")
+                        }
+                    }
+                    if let onBlock = onBlockTapped {
+                        Button(role: .destructive) {
+                            onBlock()
+                        } label: {
+                            Label("Block User", systemImage: "hand.raised")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
         }
         .padding(.top, 8)
     }
@@ -56,7 +83,9 @@ struct FeedInteractionBar: View {
             likeCount: 12,
             commentCount: 3,
             isLiked: true,
-            onLikeTapped: {}
+            onLikeTapped: {},
+            onReportTapped: {},
+            onBlockTapped: {}
         )
 
         FeedInteractionBar(

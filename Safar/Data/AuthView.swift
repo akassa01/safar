@@ -224,6 +224,18 @@ struct AuthView: View {
                     .frame(height: 50)
                     .cornerRadius(12)
 
+                    // Terms of use notice (shown during sign up only)
+                    if isSignUp {
+                        HStack(spacing: 3) {
+                            Text("By creating an account, you agree to Safar's")
+                                .foregroundColor(.secondary)
+                            Link("Terms of Use",
+                                 destination: URL(string: "https://www.getsafar.ca/terms")!)
+                        }
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                    }
+
                     // Toggle between Sign In and Sign Up
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.3)) {
@@ -294,6 +306,7 @@ struct AuthView: View {
                     password: password,
                     redirectTo: URL(string: "safar://auth-callback")
                 )
+                try? await DatabaseManager.shared.acceptTerms()
                 result = .success(())
             } catch {
                 result = .failure(error)
@@ -336,6 +349,8 @@ struct AuthView: View {
                                 .update(["full_name": displayName])
                                 .eq("id", value: currentUser.id)
                                 .execute()
+                            // First sign-in = new account: record terms acceptance
+                            try? await DatabaseManager.shared.acceptTerms()
                         }
 
                         result = .success(())

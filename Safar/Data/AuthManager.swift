@@ -107,6 +107,7 @@ class AuthManager: ObservableObject {
             CityCacheManager.shared.clearCache(for: userId)
             UserDefaults.standard.removeObject(forKey: "onboarding_completed_\(userId.uuidString)")
         }
+        BlockManager.shared.reset()
         try await supabase.auth.signOut()
         // State will be updated by the auth listener
     }
@@ -116,6 +117,7 @@ class AuthManager: ObservableObject {
             CityCacheManager.shared.clearCache(for: userId)
             UserDefaults.standard.removeObject(forKey: "onboarding_completed_\(userId.uuidString)")
         }
+        BlockManager.shared.reset()
         try await supabase.functions.invoke("delete-account", options: .init())
         try await supabase.auth.signOut()
     }

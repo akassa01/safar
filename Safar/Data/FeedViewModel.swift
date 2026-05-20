@@ -37,10 +37,11 @@ class FeedViewModel: ObservableObject {
         error = nil
 
         do {
-            let newPosts = try await databaseManager.getFeedPosts(
+            let fetchedPosts = try await databaseManager.getFeedPosts(
                 limit: pageSize,
                 offset: currentOffset
             )
+            let newPosts = BlockManager.shared.filter(fetchedPosts, keyPath: \.userId)
 
             if refresh {
                 posts = newPosts
@@ -48,8 +49,9 @@ class FeedViewModel: ObservableObject {
                 posts.append(contentsOf: newPosts)
             }
 
-            hasMorePosts = newPosts.count == pageSize
-            currentOffset += newPosts.count
+            // Advance offset by raw fetch count to keep server-side pagination consistent
+            hasMorePosts = fetchedPosts.count == pageSize
+            currentOffset += fetchedPosts.count
         } catch is CancellationError {
             // Task was cancelled (e.g. view disappeared) — ignore
             isLoading = false
@@ -106,6 +108,11 @@ class FeedViewModel: ObservableObject {
         }
     }
 
+    /// Remove all posts from a user (called immediately after blocking them)
+    func removePostsByUser(_ userId: String) {
+        posts.removeAll { $0.userId == userId }
+    }
+
     /// Update comment count for a post (called after adding/deleting comments)
     func updateCommentCount(for postId: Int64, delta: Int) {
         if let index = posts.firstIndex(where: { $0.id == postId }) {
@@ -138,7 +145,8 @@ class PostDetailViewModel: ObservableObject {
         error = nil
 
         do {
-            comments = try await databaseManager.getPostComments(userCityId: post.id)
+            let fetched = try await databaseManager.getPostComments(userCityId: post.id)
+            comments = BlockManager.shared.filter(fetched, keyPath: \.userId)
         } catch {
             self.error = error
             Log.data.error("loadComments failed for post \(self.post.id): \(error)")

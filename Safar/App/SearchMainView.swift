@@ -294,7 +294,8 @@ struct SearchMainView: View {
             Task {
                 do {
                     let results = try await DatabaseManager.shared.searchPeople(query: currentQuery)
-                    self.searchResults = results.map { .person($0) }
+                    let filtered = BlockManager.shared.filter(results, keyPath: \.id)
+                    self.searchResults = filtered.map { .person($0) }
                 } catch {
                     Log.ui.error("People search failed for '\(currentQuery)': \(error)")
                     self.searchResults = []
