@@ -29,6 +29,48 @@ struct Profile: Codable {
     }
   }
 
+// MARK: - Notifications
+
+/// Nested actor profile returned inside an AppNotification.
+struct ActorProfile: Codable {
+    let id: String?
+    let username: String?
+    let fullName: String?
+    let avatarURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case username
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+    }
+}
+
+/// A single in-app notification row from the `notifications` table.
+struct AppNotification: Codable, Identifiable {
+    let id: Int64
+    let type: String
+    let read: Bool
+    let createdAt: String
+    let actor: ActorProfile?
+    /// Contextual reference for deep-linking:
+    ///   post_liked / post_commented / comment_liked / comment_replied → user_city.id
+    ///   city_ranked                                                   → cities.id
+    ///   new_follower / contact_joined                                 → nil (actor info suffices)
+    let referenceId: Int64?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case type
+        case read
+        case createdAt = "created_at"
+        case actor
+        case referenceId = "reference_id"
+    }
+}
+
+// MARK: - People Search
+
 struct ProfileSearchResult: Codable, Identifiable {
     let id: String
     let username: String?

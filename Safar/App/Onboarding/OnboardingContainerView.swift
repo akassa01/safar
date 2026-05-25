@@ -26,8 +26,12 @@ struct OnboardingContainerView: View {
                     FullNameView(viewModel: viewModel)
                 case .username:
                     UsernameView(viewModel: viewModel)
+                case .phoneNumber:
+                    PhoneNumberView(viewModel: viewModel)
                 case .profile:
                     ProfileSetupView(viewModel: viewModel)
+                case .findFriends:
+                    FindFriendsOnboardingView(viewModel: viewModel)
                 case .welcome:
                     WelcomeView(viewModel: viewModel, onComplete: onComplete)
                 }

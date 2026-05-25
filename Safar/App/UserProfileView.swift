@@ -16,6 +16,7 @@ struct UserProfileView: View {
     @StateObject private var viewModel: UserProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showingEditProfile = false
+    @State private var showingFindFriends = false
     @State private var selectedPost: FeedPost?
     @State private var selectedCityId: CityNavItem?
     @State private var showReportUser = false
@@ -71,6 +72,15 @@ struct UserProfileView: View {
                             .fontWeight(.medium)
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingFindFriends = true
+                    } label: {
+                        Image(systemName: "person.2.fill")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                }
             }
             if !viewModel.isOwnProfile {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -100,6 +110,9 @@ struct UserProfileView: View {
                 .onDisappear {
                     Task { await viewModel.loadProfile() }
                 }
+        }
+        .sheet(isPresented: $showingFindFriends) {
+            FindFriendsView()
         }
         .sheet(isPresented: $showReportUser) {
             ReportView(

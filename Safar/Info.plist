@@ -6,7 +6,9 @@
 	<string>$(UNSPLASH_ACCESS_KEY)</string>
 	<key>POSTHOG_API_KEY</key>
 	<string>$(POSTHOG_API_KEY)</string>
-	<key>CFBundleURLTypes</key>
+	<key>NSContactsUsageDescription</key>
+<string>Used to help you find friends who are already on Safar</string>
+<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleTypeRole</key>

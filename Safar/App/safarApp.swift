@@ -17,6 +17,7 @@ struct safarApp: App {
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showOfflineView = false
     @State private var isDataPreloaded = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         AnalyticsManager.shared.configure()
@@ -97,6 +98,37 @@ struct safarApp: App {
                     try? await supabase.auth.session(from: url)
                 }
             }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active,
+                      authManager.isAuthenticated,
+                      !authManager.needsOnboarding else { return }
+                Task { await syncContactHashesIfNeeded() }
+            }
+        }
+    }
+
+    /// Re-uploads the user's contact hashes at most once every 30 days.
+    /// Keyed per user so the interval resets correctly on sign-in/out.
+    /// Silently skips if contacts permission has been denied.
+    private func syncContactHashesIfNeeded() async {
+        guard let userId = supabase.auth.currentUser?.id.uuidString else { return }
+
+        let key = "contactHashLastSync_\(userId)"
+        let lastSync = UserDefaults.standard.object(forKey: key) as? Date ?? .distantPast
+        let thirtyDays: TimeInterval = 30 * 24 * 60 * 60
+
+        guard Date().timeIntervalSince(lastSync) >= thirtyDays else { return }
+
+        do {
+            let hashes = try await ContactsManager().hashedPhoneNumbers()
+            guard !hashes.isEmpty else { return }
+            try await DatabaseManager.shared.saveContactHashes(hashes)
+            UserDefaults.standard.set(Date(), forKey: key)
+            Log.data.info("Contact hashes synced for user \(userId)")
+        } catch is ContactsPermissionError {
+            // User hasn't granted contacts access — skip silently
+        } catch {
+            Log.data.error("Contact hash sync failed: \(error)")
         }
     }
 

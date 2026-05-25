@@ -4,3 +4,4 @@ Safar/Data/*.sqlite
 Secrets.xcconfig
 *.xcconfig
 web/
+supabase/

@@ -10,10 +10,12 @@ import Supabase
 import os
 
 enum OnboardingStep: Int, CaseIterable {
-    case fullName
-    case username
-    case profile
-    case welcome
+    case fullName    // 0
+    case username    // 1
+    case phoneNumber // 2
+    case profile     // 3
+    case findFriends // 4
+    case welcome     // 5
 }
 
 enum UsernameCheckState {
@@ -47,6 +49,10 @@ class OnboardingViewModel: ObservableObject {
     var isUsernameLocallyValid: Bool {
         usernameValidator.validateFormat(username.trimmingCharacters(in: .whitespaces)) == nil
     }
+
+    // Phone number step
+    @Published var phoneCountryCode = "+1"
+    @Published var phoneNumber = ""
 
     // Profile step
     @Published var bio = ""
@@ -123,7 +129,7 @@ class OnboardingViewModel: ObservableObject {
                 usernameCheckState = .available
                 AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "username"])
                 try? await Task.sleep(nanoseconds: 600_000_000)
-                currentStep = .profile
+                currentStep = .phoneNumber
             } else {
                 usernameCheckState = .idle
                 usernameValidator.validationMessage = update.message
@@ -167,13 +173,56 @@ class OnboardingViewModel: ObservableObject {
             }
 
             AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "profile"])
-            currentStep = .welcome
+            currentStep = .findFriends
         } catch {
             Log.data.error("saveProfile failed: \(error)")
             errorMessage = "Failed to save profile. Please try again."
         }
 
         isLoading = false
+    }
+
+    // MARK: - Phone Number
+
+    var isPhoneNumberLocallyValid: Bool {
+        phoneNumber.filter(\.isNumber).count >= 7
+    }
+
+    func savePhoneNumber() async {
+        guard let e164 = ContactsManager.normalizePhone(
+            countryCode: phoneCountryCode,
+            number: phoneNumber
+        ) else {
+            errorMessage = "Please enter a valid phone number."
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let hash = ContactsManager.sha256(e164)
+            try await DatabaseManager.shared.savePhoneHash(hash)
+            AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "phone_number"])
+            currentStep = .profile
+        } catch {
+            Log.data.error("savePhoneNumber failed: \(error)")
+            errorMessage = "Failed to save phone number. Please try again."
+        }
+
+        isLoading = false
+    }
+
+    func skipPhoneNumber() {
+        AnalyticsManager.shared.capture("onboarding_step_skipped", properties: ["step": "phone_number"])
+        currentStep = .profile
+    }
+
+    // MARK: - Find Friends
+
+    func advanceToWelcome() {
+        AnalyticsManager.shared.capture("onboarding_step_completed", properties: ["step": "find_friends"])
+        currentStep = .welcome
     }
 
     // MARK: - Complete Onboarding

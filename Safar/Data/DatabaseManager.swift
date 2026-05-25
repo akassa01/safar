@@ -1468,6 +1468,48 @@ extension DatabaseManager {
         }
     }
 
+    /// Fetch a single FeedPost by its user_city.id — used for notification deep-linking.
+    func getFeedPost(userCityId: Int64) async throws -> FeedPost {
+        let currentUserId = getCurrentUserId() ?? ""
+
+        let response: [FeedPost.FeedPostResponse] = try await supabase
+            .from("user_city")
+            .select("""
+                id, user_id, visited, rating, notes, visited_at,
+                city_id (id, display_name, admin, country, latitude, longitude)
+            """)
+            .eq("id", value: Int(userCityId))
+            .eq("visited", value: true)
+            .limit(1)
+            .execute()
+            .value
+
+        guard let item = response.first else {
+            throw DatabaseError.cityNotFound
+        }
+
+        let profiles = try await getProfilesByIds([item.userId])
+        let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+        let (likeCount, commentCount, isLiked) = try await getPostSocialData(userCityId: userCityId)
+
+        var places: [Place] = []
+        if let uid = UUID(uuidString: item.userId) {
+            places = (try? await getUserPlaces(userId: uid, cityId: item.cities.id)) ?? []
+        }
+
+        let profile = profileMap[item.userId]
+        var post = FeedPost(from: item)
+        post.username = profile?.username
+        post.fullName = profile?.fullName
+        post.avatarURL = profile?.avatarURL
+        post.authorVisitedCitiesCount = profile?.visitedCitiesCount
+        post.likeCount = likeCount
+        post.commentCount = commentCount
+        post.isLikedByCurrentUser = isLiked
+        post.places = places
+        return post
+    }
+
     // MARK: - Like Operations
 
     /// Like a post
@@ -1989,4 +2031,158 @@ extension DatabaseManager {
             .execute()
     }
 
+}
+
+// MARK: - Find Friends & Notifications
+extension DatabaseManager {
+
+    // MARK: Private request/response types
+
+    private struct MatchContactsRequest: Encodable {
+        let hashed_phones: [String]
+    }
+
+    private struct MatchContactsResponse: Decodable {
+        let matches: [ProfileSearchResult]
+    }
+
+    private struct ContactHashInsert: Encodable {
+        let user_id: String
+        let contact_hash: String
+    }
+
+    // MARK: Phone hash
+
+    /// Save the user's SHA-256 hashed phone number to their profile row.
+    func savePhoneHash(_ hash: String) async throws {
+        let currentUser = try await getCurrentUser()
+        do {
+            try await supabase
+                .from("profiles")
+                .upsert([
+                    "id": currentUser.id.uuidString,
+                    "phone_hash": hash
+                ])
+                .execute()
+        } catch {
+            Log.data.error("savePhoneHash failed: \(error)")
+            throw DatabaseError.networkError("Failed to save phone hash: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: Contact hashes
+
+    /// Replaces the user's stored contact hashes with a fresh batch.
+    /// Deletes all existing rows first, then inserts in chunks of 500.
+    func saveContactHashes(_ hashes: [String]) async throws {
+        guard !hashes.isEmpty else { return }
+        let currentUser = try await getCurrentUser()
+        let userId = currentUser.id.uuidString
+
+        do {
+            // Clear existing rows for this user
+            try await supabase
+                .from("contact_hashes")
+                .delete()
+                .eq("user_id", value: userId)
+                .execute()
+
+            // Insert in chunks of 500 to stay within request-size limits
+            let chunkSize = 500
+            var index = 0
+            while index < hashes.count {
+                let end = min(index + chunkSize, hashes.count)
+                let chunk = Array(hashes[index..<end])
+                let inserts = chunk.map { ContactHashInsert(user_id: userId, contact_hash: $0) }
+                try await supabase
+                    .from("contact_hashes")
+                    .insert(inserts)
+                    .execute()
+                index = end
+            }
+        } catch {
+            Log.data.error("saveContactHashes failed: \(error)")
+            throw DatabaseError.networkError("Failed to save contact hashes: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: Contact matching (Edge Function)
+
+    /// Calls the `match-contacts` Edge Function to find Safar users whose
+    /// phone_hash matches any of the provided hashes.
+    func matchContacts(hashedPhones: [String]) async throws -> [ProfileSearchResult] {
+        guard !hashedPhones.isEmpty else { return [] }
+
+        do {
+            let request = MatchContactsRequest(hashed_phones: hashedPhones)
+            // The Supabase Swift SDK supports generic decoding from functions.invoke.
+            // If your SDK version doesn't have the generic overload, decode manually:
+            //   let raw = try await supabase.functions.invoke("match-contacts", options: .init(body: request))
+            //   return try JSONDecoder().decode(MatchContactsResponse.self, from: raw.data).matches
+            let response: MatchContactsResponse = try await supabase.functions.invoke(
+                "match-contacts",
+                options: .init(body: request)
+            )
+            return response.matches
+        } catch {
+            Log.data.error("matchContacts failed: \(error)")
+            throw DatabaseError.networkError("Failed to match contacts: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: In-app notifications
+
+    /// Returns the number of unread notifications for the current user.
+    func getUnreadNotificationCount() async throws -> Int {
+        struct CountRow: Decodable { let count: Int }
+        do {
+            // Use `count` aggregate via head request
+            let response = try await supabase
+                .from("notifications")
+                .select("id", head: true, count: .exact)
+                .eq("read", value: false)
+                .execute()
+            return response.count ?? 0
+        } catch {
+            Log.data.error("getUnreadNotificationCount failed: \(error)")
+            return 0
+        }
+    }
+
+    /// Fetches the most recent notifications for the current user, with actor
+    /// profile info joined via a nested select.
+    func getNotifications(limit: Int = 50, offset: Int = 0) async throws -> [AppNotification] {
+        do {
+            let response: [AppNotification] = try await supabase
+                .from("notifications")
+                .select("""
+                    id, type, read, created_at, reference_id,
+                    actor:actor_id ( id, username, full_name, avatar_url )
+                    """)
+                .order("created_at", ascending: false)
+                .range(from: offset, to: offset + limit - 1)
+                .execute()
+                .value
+            return response
+        } catch {
+            Log.data.error("getNotifications failed: \(error)")
+            throw DatabaseError.networkError("Failed to load notifications: \(error.localizedDescription)")
+        }
+    }
+
+    /// Marks the given notification IDs as read.
+    func markNotificationsRead(ids: [Int64]) async throws {
+        guard !ids.isEmpty else { return }
+        do {
+            // Supabase Swift SDK: filter by array of values using .in
+            try await supabase
+                .from("notifications")
+                .update(["read": true])
+                .in("id", values: ids.map { String($0) })
+                .execute()
+        } catch {
+            Log.data.error("markNotificationsRead failed: \(error)")
+            // Non-fatal — don't rethrow, worst case unread dots persist until next open
+        }
+    }
 }

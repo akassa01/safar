@@ -33,7 +33,19 @@ struct EditProfileView: View {
     @State private var showingErrorAlert = false
     @StateObject private var usernameValidator = UsernameValidator()
 
+    // Phone number states
+    @State private var phoneCountryCode = "+1"
+    @State private var phoneNumber = ""
+    @State private var isEditingPhone = false
+    @State private var phoneError: String?
+    @State private var isSavingPhone = false
+    @State private var hasPhoneOnFile = false
+    @State private var showingPhoneInfo = false
+
     @FocusState private var isBioFocused: Bool
+    @FocusState private var focusedPhoneField: PhoneField?
+
+    private enum PhoneField { case countryCode, number }
 
     var body: some View {
         NavigationStack {
@@ -221,6 +233,134 @@ struct EditProfileView: View {
                     .padding(.horizontal)
                     .padding(.bottom, 24)
 
+                    // Phone Number Section
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("Phone Number")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            if !isEditingPhone {
+                                Button(hasPhoneOnFile ? "Change" : "Add") {
+                                    isEditingPhone = true
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.accentColor)
+                            }
+                        }
+
+                        if isEditingPhone {
+                            VStack(spacing: 12) {
+                                HStack(spacing: 8) {
+                                    TextField("+1", text: $phoneCountryCode)
+                                        .keyboardType(.phonePad)
+                                        .focused($focusedPhoneField, equals: .countryCode)
+                                        .multilineTextAlignment(.center)
+                                        .frame(width: 64)
+                                        .padding()
+                                        .background(Color(.systemGray6))
+                                        .cornerRadius(12)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(focusedPhoneField == .countryCode ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                                        )
+
+                                    TextField("613 555 1234", text: $phoneNumber)
+                                        .keyboardType(.phonePad)
+                                        .textContentType(.telephoneNumber)
+                                        .focused($focusedPhoneField, equals: .number)
+                                        .padding()
+                                        .background(Color(.systemGray6))
+                                        .cornerRadius(12)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(focusedPhoneField == .number ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                                        )
+                                }
+
+                                if let error = phoneError {
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
+
+                                HStack(spacing: 12) {
+                                    Button("Cancel") {
+                                        phoneNumber = ""
+                                        phoneError = nil
+                                        isEditingPhone = false
+                                        focusedPhoneField = nil
+                                    }
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 8)
+                                    .background(Color(.systemGray5))
+                                    .cornerRadius(8)
+
+                                    Button {
+                                        focusedPhoneField = nil
+                                        savePhoneNumber()
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            if isSavingPhone {
+                                                ProgressView()
+                                                    .scaleEffect(0.7)
+                                                    .tint(.white)
+                                            } else {
+                                                Text("Save")
+                                            }
+                                        }
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 8)
+                                        .background(isPhoneLocallyValid ? Color.accentColor : Color(.systemGray4))
+                                        .cornerRadius(8)
+                                    }
+                                    .disabled(!isPhoneLocallyValid || isSavingPhone)
+                                }
+                            }
+                        } else {
+                            HStack {
+                                Text(hasPhoneOnFile ? "Phone number on file" : "Not added yet")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                if hasPhoneOnFile {
+                                    Button {
+                                        showingPhoneInfo = true
+                                    } label: {
+                                        Image(systemName: "info.circle")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .popover(isPresented: $showingPhoneInfo) {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("Why can't I see my number?")
+                                                .font(.headline)
+                                            Text("Your phone number is hashed on your device before it's saved — we only store an encrypted fingerprint, never the number itself. That's why friends can find you, but we can't show it back to you.")
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        }
+                                        .padding()
+                                        .frame(maxWidth: 280)
+                                        .presentationCompactAdaptation(.popover)
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 24)
+
                     // Sign Out Button
                     VStack(spacing: 12) {
                         Divider()
@@ -338,6 +478,10 @@ struct EditProfileView: View {
         }
     }
 
+    private var isPhoneLocallyValid: Bool {
+        phoneNumber.filter(\.isNumber).count >= 7
+    }
+
     func getInitialProfile() async {
         do {
             let currentUser = try await supabase.auth.session.user
@@ -361,8 +505,37 @@ struct EditProfileView: View {
                 try await downloadImage(path: avatarURL)
             }
 
+            hasPhoneOnFile = profile.phoneHash != nil
+
         } catch {
             debugPrint(error)
+        }
+    }
+
+    private func savePhoneNumber() {
+        guard let e164 = ContactsManager.normalizePhone(
+            countryCode: phoneCountryCode,
+            number: phoneNumber
+        ) else {
+            phoneError = "Please enter a valid phone number."
+            return
+        }
+
+        isSavingPhone = true
+        phoneError = nil
+
+        Task {
+            do {
+                let hash = ContactsManager.sha256(e164)
+                try await DatabaseManager.shared.savePhoneHash(hash)
+                hasPhoneOnFile = true
+                phoneNumber = ""
+                isEditingPhone = false
+                AnalyticsManager.shared.capture("profile_phone_saved")
+            } catch {
+                phoneError = "Failed to save phone number. Please try again."
+            }
+            isSavingPhone = false
         }
     }
 

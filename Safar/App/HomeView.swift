@@ -18,6 +18,9 @@ struct HomeView: View {
     @State private var citiesNavigationPath = NavigationPath()
     @State private var exploreNavigationPath = NavigationPath()
     @State private var feedNavigationPath = NavigationPath()
+    @State private var notificationsNavigationPath = NavigationPath()
+
+    @StateObject private var notificationsViewModel = NotificationsViewModel()
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
@@ -188,10 +191,24 @@ struct HomeView: View {
                 Label("Feed", systemImage: "airplane.departure")
             }
             .tag(3)
+
+            NavigationStack(path: $notificationsNavigationPath) {
+                NotificationsView(viewModel: notificationsViewModel)
+            }
+            .tabItem {
+                Label("Notifications", systemImage: "bell.fill")
+            }
+            // Red dot (no number) when there are unread notifications
+            .badge(notificationsViewModel.unreadCount > 0 ? Text("") : nil)
+            .tag(4)
+        }
+        .task {
+            // Seed the unread count for the badge on first load
+            await notificationsViewModel.refreshUnreadCount()
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue != newValue {
-                let tabNames = ["home", "cities", "explore", "feed"]
+                let tabNames = ["home", "cities", "explore", "feed", "notifications"]
                 let tabName = newValue < tabNames.count ? tabNames[newValue] : "\(newValue)"
                 AnalyticsManager.shared.capture("tab_selected", properties: ["tab": tabName])
             }
@@ -208,9 +225,15 @@ struct HomeView: View {
                     exploreNavigationPath = NavigationPath()
                 case 3:
                     feedNavigationPath = NavigationPath()
+                case 4:
+                    notificationsNavigationPath = NavigationPath()
                 default:
                     break
                 }
+            }
+            // Refresh unread count when the user taps away from notifications
+            if oldValue == 4 && newValue != 4 {
+                Task { await notificationsViewModel.refreshUnreadCount() }
             }
         }
         .overlay {
