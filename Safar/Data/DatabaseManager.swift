@@ -485,12 +485,13 @@ extension DatabaseManager {
     }
     
     func removeUserCity(userId: UUID, cityId: Int) async throws {
+        struct Params: Encodable {
+            let p_user_id: String
+            let p_city_id: Int
+        }
         do {
             try await supabase
-                .from("user_city")
-                .delete()
-                .eq("user_id", value: userId.uuidString)
-                .eq("city_id", value: cityId)
+                .rpc("delete_user_city", params: Params(p_user_id: userId.uuidString, p_city_id: cityId))
                 .execute()
         } catch {
             throw DatabaseError.networkError("Failed to remove user city: \(error.localizedDescription)")
@@ -1762,16 +1763,17 @@ extension DatabaseManager {
         return comment
     }
 
-    /// Delete a comment (only own comments)
+    /// Delete a comment (only own comments). Handles replies + their likes via RPC.
     func deleteComment(commentId: Int64) async throws {
         let currentUser = try await getCurrentUser()
 
+        struct Params: Encodable {
+            let p_comment_id: Int64
+            let p_user_id: String
+        }
         do {
             try await supabase
-                .from("post_comments")
-                .delete()
-                .eq("id", value: Int(commentId))
-                .eq("user_id", value: currentUser.id.uuidString)
+                .rpc("delete_comment", params: Params(p_comment_id: commentId, p_user_id: currentUser.id.uuidString))
                 .execute()
         } catch {
             Log.data.error("deleteComment failed: \(error)")
@@ -2180,7 +2182,7 @@ extension DatabaseManager {
             let response: [AppNotification] = try await supabase
                 .from("notifications")
                 .select("""
-                    id, type, read, created_at, reference_id,
+                    id, type, read, created_at, reference_id, city_name, content_preview,
                     actor:actor_id ( id, username, full_name, avatar_url )
                     """)
                 .order("created_at", ascending: false)

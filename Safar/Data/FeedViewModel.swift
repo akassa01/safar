@@ -236,7 +236,7 @@ class PostDetailViewModel: ObservableObject {
                     comments[parentIndex].replies?.removeAll { $0.id == comment.id }
                 }
             } else {
-                // Remove top-level comment (and its replies cascade on the DB side)
+                // Remove top-level comment (replies + likes cleaned up by delete_comment RPC)
                 comments.removeAll { $0.id == comment.id }
             }
         } catch {

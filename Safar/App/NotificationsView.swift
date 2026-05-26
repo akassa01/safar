@@ -169,14 +169,46 @@ private struct NotificationRow: View {
 
     private var notificationMessage: String {
         switch notification.type {
-        case "contact_joined":  return "\(actorName) joined Safar"
-        case "new_follower":    return "\(actorName) started following you"
-        case "post_liked":      return "\(actorName) liked your trip"
-        case "post_commented":  return "\(actorName) commented on your trip"
-        case "comment_liked":   return "\(actorName) liked your comment"
-        case "comment_replied": return "\(actorName) replied to your comment"
-        case "city_ranked":     return "\(actorName) ranked a city you've been to"
-        default:                return "New notification from \(actorName)"
+        case "contact_joined":
+            return "\(actorName) joined Safar"
+
+        case "new_follower":
+            return "\(actorName) started following you"
+
+        case "post_liked":
+            if let city = notification.cityName {
+                return "\(actorName) liked your trip to \(city)"
+            }
+            return "\(actorName) liked your trip"
+
+        case "post_commented":
+            let base = notification.cityName.map { "\(actorName) commented on your trip to \($0)" }
+                ?? "\(actorName) commented on your trip"
+            if let preview = notification.contentPreview {
+                return "\(base): \"\(preview)\""
+            }
+            return base
+
+        case "comment_liked":
+            if let preview = notification.contentPreview {
+                return "\(actorName) liked your comment: \"\(preview)\""
+            }
+            return "\(actorName) liked your comment"
+
+        case "comment_replied":
+            if let preview = notification.contentPreview {
+                return "\(actorName) replied to your comment: \"\(preview)\""
+            }
+            return "\(actorName) replied to your comment"
+
+        case "city_ranked":
+            if let city = notification.cityName {
+                return "\(actorName) just ranked \(city)!"
+            }
+            return "\(actorName) ranked a city you've been to"
+
+        default:
+            return "New notification from \(actorName)"
         }
     }
 

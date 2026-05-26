@@ -58,6 +58,10 @@ struct AppNotification: Codable, Identifiable {
     ///   city_ranked                                                   → cities.id
     ///   new_follower / contact_joined                                 → nil (actor info suffices)
     let referenceId: Int64?
+    /// City name stored at notification-creation time (city_ranked, post_liked, post_commented).
+    let cityName: String?
+    /// Short text preview stored at creation time (post_commented, comment_liked, comment_replied).
+    let contentPreview: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -66,6 +70,8 @@ struct AppNotification: Codable, Identifiable {
         case createdAt = "created_at"
         case actor
         case referenceId = "reference_id"
+        case cityName = "city_name"
+        case contentPreview = "content_preview"
     }
 }
 
