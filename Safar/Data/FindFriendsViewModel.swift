@@ -51,10 +51,12 @@ class FindFriendsViewModel: ObservableObject {
             let currentUserId = supabase.auth.currentUser?.id.uuidString
             matches = results.filter { $0.id != currentUserId }
 
-            // Default all matches to "not following" — these are contacts,
-            // so the user almost certainly isn't following them yet.
+            // Seed follow states from the actual follows table so already-followed
+            // contacts show "Following" rather than "Follow".
+            let matchIds = matches.map { $0.id }
+            let alreadyFollowing = (try? await DatabaseManager.shared.followingIds(among: matchIds)) ?? []
             for match in matches {
-                followStates[match.id] = false
+                followStates[match.id] = alreadyFollowing.contains(match.id)
             }
 
         } catch let permError as ContactsPermissionError {

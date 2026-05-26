@@ -1044,6 +1044,30 @@ extension DatabaseManager {
         }
     }
 
+    /// Returns the subset of `userIds` that the current user already follows.
+    /// Uses a single query so it scales regardless of how many IDs are passed.
+    func followingIds(among userIds: [String]) async throws -> Set<String> {
+        guard !userIds.isEmpty else { return [] }
+        let currentUser = try await getCurrentUser()
+        struct FollowRecord: Decodable {
+            let followingId: String
+            enum CodingKeys: String, CodingKey { case followingId = "following_id" }
+        }
+        do {
+            let records: [FollowRecord] = try await supabase
+                .from("follows")
+                .select("following_id")
+                .eq("follower_id", value: currentUser.id.uuidString)
+                .in("following_id", values: userIds)
+                .execute()
+                .value
+            return Set(records.map { $0.followingId })
+        } catch {
+            Log.data.error("followingIds(among:) failed: \(error)")
+            throw DatabaseError.networkError("Failed to check follow status: \(error.localizedDescription)")
+        }
+    }
+
     /// Check if current user follows another user
     func isFollowing(userId: String) async throws -> Bool {
         let currentUser = try await getCurrentUser()
