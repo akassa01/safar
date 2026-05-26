@@ -67,30 +67,23 @@ struct NotesEditorView: View {
     }
     
     private func saveNotes() {
-        guard let userId = viewModel.currentUserId else {
+        guard viewModel.currentUserId != nil else {
             errorMessage = "User not authenticated"
             return
         }
-        
+
         isLoading = true
         errorMessage = nil
-        
+
         Task {
-            do {
-                try await DatabaseManager.shared.updateUserCityNotes(
-                    userId: userId,
-                    cityId: city.id,
-                    notes: notes.isEmpty ? "" : notes
-                )
-                
-                await MainActor.run {
-                    isLoading = false
+            await viewModel.updateCityNotes(cityId: city.id, notes: notes)
+
+            await MainActor.run {
+                isLoading = false
+                if viewModel.error != nil {
+                    errorMessage = "Failed to save notes"
+                } else {
                     dismiss()
-                }
-            } catch {
-                await MainActor.run {
-                    isLoading = false
-                    errorMessage = "Failed to save notes: \(error.localizedDescription)"
                 }
             }
         }
