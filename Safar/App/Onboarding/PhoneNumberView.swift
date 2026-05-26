@@ -44,10 +44,10 @@ struct PhoneNumberView: View {
                     .buttonStyle(.plain)
                     .sheet(isPresented: $showingPhoneInfo) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Why can't I see my number?")
+                            Text("Your privacy comes first")
                                 .font(.headline)
                                 .fontWeight(.semibold)
-                            Text("Your phone number is hashed on your device before it's saved — we only store an encrypted fingerprint, never the number itself. That's why friends can find you, but we can't show it back to you.")
+                            Text("Your number is hashed on your device before it's saved — we never store the actual digits. It's only used to match you with friends who already have your contact.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
