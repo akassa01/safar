@@ -337,18 +337,20 @@ struct EditProfileView: View {
                                             .foregroundColor(.secondary)
                                     }
                                     .buttonStyle(.plain)
-                                    .popover(isPresented: $showingPhoneInfo) {
-                                        VStack(alignment: .leading, spacing: 8) {
+                                    .sheet(isPresented: $showingPhoneInfo) {
+                                        VStack(alignment: .leading, spacing: 12) {
                                             Text("Why can't I see my number?")
                                                 .font(.headline)
+                                                .fontWeight(.semibold)
                                             Text("Your phone number is hashed on your device before it's saved — we only store an encrypted fingerprint, never the number itself. That's why friends can find you, but we can't show it back to you.")
                                                 .font(.subheadline)
                                                 .foregroundColor(.secondary)
-                                                .fixedSize(horizontal: false, vertical: true)
                                         }
-                                        .padding()
-                                        .frame(maxWidth: 280)
-                                        .presentationCompactAdaptation(.popover)
+                                        .padding(24)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .presentationDetents([.height(180)])
+                                        .presentationDragIndicator(.visible)
+                                        .presentationCornerRadius(20)
                                     }
                                 }
                                 Spacer()

@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct TopBar: View {
+    @ObservedObject var notificationsViewModel: NotificationsViewModel
+
     var body: some View {
         NavigationStack {
             HStack {
@@ -17,10 +19,25 @@ struct TopBar: View {
                     .frame(height: 45)
                     .scaleEffect(1.9)
                     .padding(.leading, 40)
-               
+
                 Spacer()
-               
+
                 HStack(spacing: 20) {
+                    NavigationLink(destination: {
+                        NotificationsView(viewModel: notificationsViewModel)
+                    }, label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "bell")
+                                .foregroundColor(Color.accentColor)
+                            if notificationsViewModel.unreadCount > 0 {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 4, y: -4)
+                            }
+                        }
+                    })
+
                     NavigationLink(destination: {
                         UserProfileView(userId: DatabaseManager.shared.getCurrentUserId() ?? "")
                     }, label: {
@@ -33,10 +50,9 @@ struct TopBar: View {
             }
             .background(Color("Background"))
         }
-       
     }
 }
 
 #Preview {
-    TopBar()
+    TopBar(notificationsViewModel: NotificationsViewModel())
 }

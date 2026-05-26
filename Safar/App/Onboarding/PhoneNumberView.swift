@@ -12,6 +12,7 @@ import SwiftUI
 struct PhoneNumberView: View {
     @ObservedObject var viewModel: OnboardingViewModel
     @FocusState private var focusedField: Field?
+    @State private var showingPhoneInfo = false
 
     private enum Field { case countryCode, number }
 
@@ -29,11 +30,35 @@ struct PhoneNumberView: View {
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Help friends find you on Safar")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
+                HStack(spacing: 4) {
+                    Text("Help friends find you on Safar")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Button {
+                        showingPhoneInfo = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showingPhoneInfo) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Why can't I see my number?")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Text("Your phone number is hashed on your device before it's saved — we only store an encrypted fingerprint, never the number itself. That's why friends can find you, but we can't show it back to you.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(24)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .presentationDetents([.height(180)])
+                        .presentationDragIndicator(.visible)
+                        .presentationCornerRadius(20)
+                    }
+                }
+                .padding(.horizontal, 20)
             }
 
             Spacer()
