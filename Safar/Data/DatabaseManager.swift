@@ -673,6 +673,29 @@ extension DatabaseManager {
         }
     }
 
+    /// Fetch top places for a city across all users, ordered by community likes
+    func getTopPlaces(cityId: Int, limit: Int = 50) async throws -> [Place] {
+        do {
+            let rawResponse = try await supabase
+                .from("places")
+                .select("id, name, latitude, longitude, category, city_id, likes, map_kit_id")
+                .eq("city_id", value: cityId)
+                .order("likes", ascending: false)
+                .limit(limit)
+                .execute()
+
+            let decoded = try JSONDecoder().decode([PlaceData].self, from: rawResponse.data)
+            return decoded.map {
+                Place(id: $0.id, name: $0.name, latitude: $0.latitude,
+                      longitude: $0.longitude, category: $0.category,
+                      cityId: $0.cityId, likes: $0.likes, mapKitId: $0.mapKitId)
+            }
+        } catch {
+            print("🔴 getTopPlaces error: \(error)")
+            throw DatabaseError.networkError("Failed to get top places: \(error.localizedDescription)")
+        }
+    }
+
     /// Insert places: upsert into `places` table, then link via `user_place`
     func insertUserPlaces(userId: UUID, cityId: Int, places: [Place]) async throws {
         guard !places.isEmpty else {

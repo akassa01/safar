@@ -36,8 +36,14 @@ struct CityDetailView: View {
     @State private var mapCameraPosition: MapCameraPosition
     @State private var friendsWhoVisited: [FriendCityVisit] = []
     @State private var friendsSectionExpanded = true
+    @State private var topSpotsFilters: Set<PlaceCategory> = []
+    @State private var communityTopPlaces: [Place] = []
 
     private var isOffline: Bool { !networkMonitor.isConnected }
+
+    private var allUserPlaces: [Place] {
+        PlaceCategory.allCases.flatMap { placesViewModel.placesByCategory[$0] ?? [] }
+    }
 
     init(cityId: Int) {
         self.cityId = cityId
@@ -254,6 +260,13 @@ struct CityDetailView: View {
 
     private var visitedCityContent: some View {
         VStack(spacing: 20) {
+            if !isOffline && !communityTopPlaces.isEmpty {
+                TopSpotsSection(
+                    allPlaces: communityTopPlaces,
+                    selectedFilters: $topSpotsFilters,
+                    onOpenInMaps: openInMaps
+                )
+            }
             mapSection
             placesSection
             notesSection
@@ -266,13 +279,10 @@ struct CityDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "City Map", icon: "map.fill")
             if let city = city {
-                let allPlaces = PlaceCategory.allCases.flatMap { category in
-                    placesViewModel.placesByCategory[category] ?? []
-                }
                 CityMapView(
                     latitude: city.latitude,
                     longitude: city.longitude,
-                    places: allPlaces,
+                    places: allUserPlaces,
                     height: 220,
                     isInteractive: true
                 )
@@ -505,6 +515,15 @@ struct CityDetailView: View {
                     self.friendsWhoVisited = friends
                 } catch {
                     Log.ui.error("Failed to load friends who visited city \(cityId): \(error)")
+                }
+            }
+            // Load community top places (online only)
+            if NetworkMonitor.shared.isConnected {
+                do {
+                    let topPlaces = try await DatabaseManager.shared.getTopPlaces(cityId: cityId)
+                    self.communityTopPlaces = topPlaces
+                } catch {
+                    Log.ui.error("Failed to load top places for city \(cityId): \(error)")
                 }
             }
         }
