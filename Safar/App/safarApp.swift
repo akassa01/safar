@@ -107,7 +107,10 @@ struct safarApp: App {
         }
     }
 
-    /// Re-uploads the user's contact hashes at most once every 30 days.
+    /// Refreshes the contact waitlist at most once every 30 days.
+    /// Calls the match-contacts edge function, which saves unmatched hashes
+    /// (contacts not yet on Safar) server-side. Match results are discarded —
+    /// this background sync is purely for keeping the notification waitlist fresh.
     /// Keyed per user so the interval resets correctly on sign-in/out.
     /// Silently skips if contacts permission has been denied.
     private func syncContactHashesIfNeeded() async {
@@ -122,7 +125,9 @@ struct safarApp: App {
         do {
             let hashes = try await ContactsManager().hashedPhoneNumbers()
             guard !hashes.isEmpty else { return }
-            try await DatabaseManager.shared.saveContactHashes(hashes)
+            // Edge function matches + upserts unmatched hashes into the waitlist.
+            // We don't need the match results here — discard them.
+            _ = try await DatabaseManager.shared.matchContacts(hashedPhones: hashes)
             UserDefaults.standard.set(Date(), forKey: key)
             Log.data.info("Contact hashes synced for user \(userId)")
         } catch is ContactsPermissionError {

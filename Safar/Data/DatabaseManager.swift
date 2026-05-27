@@ -2095,11 +2095,6 @@ extension DatabaseManager {
         let matches: [ProfileSearchResult]
     }
 
-    private struct ContactHashInsert: Encodable {
-        let user_id: String
-        let contact_hash: String
-    }
-
     // MARK: Phone hash
 
     /// Save the user's SHA-256 hashed phone number to their profile row.
@@ -2119,43 +2114,10 @@ extension DatabaseManager {
         }
     }
 
-    // MARK: Contact hashes
-
-    /// Replaces the user's stored contact hashes with a fresh batch.
-    /// Deletes all existing rows first, then inserts in chunks of 500.
-    func saveContactHashes(_ hashes: [String]) async throws {
-        guard !hashes.isEmpty else { return }
-        let currentUser = try await getCurrentUser()
-        let userId = currentUser.id.uuidString
-
-        do {
-            // Clear existing rows for this user
-            try await supabase
-                .from("contact_hashes")
-                .delete()
-                .eq("user_id", value: userId)
-                .execute()
-
-            // Insert in chunks of 500 to stay within request-size limits
-            let chunkSize = 500
-            var index = 0
-            while index < hashes.count {
-                let end = min(index + chunkSize, hashes.count)
-                let chunk = Array(hashes[index..<end])
-                let inserts = chunk.map { ContactHashInsert(user_id: userId, contact_hash: $0) }
-                try await supabase
-                    .from("contact_hashes")
-                    .insert(inserts)
-                    .execute()
-                index = end
-            }
-        } catch {
-            Log.data.error("saveContactHashes failed: \(error)")
-            throw DatabaseError.networkError("Failed to save contact hashes: \(error.localizedDescription)")
-        }
-    }
-
     // MARK: Contact matching (Edge Function)
+    // Note: contact_hashes upsert is handled server-side by the match-contacts
+    // edge function. Only unmatched hashes (contacts not yet on Safar) are stored.
+    // See supabase/docs/contact-hashes-design.md for the full design rationale.
 
     /// Calls the `match-contacts` Edge Function to find Safar users whose
     /// phone_hash matches any of the provided hashes.

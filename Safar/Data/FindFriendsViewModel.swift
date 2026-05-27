@@ -34,16 +34,14 @@ class FindFriendsViewModel: ObservableObject {
                 return
             }
 
-            // Run contact matching and hash storage concurrently
-            async let matchTask = DatabaseManager.shared.matchContacts(hashedPhones: hashes)
-            async let saveTask: Void = DatabaseManager.shared.saveContactHashes(hashes)
-
+            // Match contacts via edge function. The edge function also upserts
+            // unmatched hashes into the waitlist table server-side — no separate
+            // save call needed here.
             var results: [ProfileSearchResult]
             do {
-                (results, _) = try await (matchTask, saveTask)
+                results = try await DatabaseManager.shared.matchContacts(hashedPhones: hashes)
             } catch {
-                // If matching fails, at least try to save hashes; if save fails it's also non-fatal
-                Log.data.error("loadMatches concurrent tasks failed: \(error)")
+                Log.data.error("loadMatches matchContacts failed: \(error)")
                 results = []
             }
 
