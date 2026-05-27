@@ -27,10 +27,13 @@ struct LeaderboardCityRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Rating display
+            // Visit count display
             VStack(alignment: .trailing, spacing: 2) {
-                RatingCircle(rating: entry.averageRating, size: 35)
-                Text("^[\(entry.ratingCount) rating](inflect: true)")
+                Text("\(entry.visitCount)")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.accentColor)
+                Text("^[\(entry.visitCount) visit](inflect: true)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -45,8 +48,7 @@ struct LeaderboardCityRow: View {
         displayName: "Tokyo",
         admin: "Tokyo",
         country: "Japan",
-        averageRating: 9.2,
-        ratingCount: 1234,
+        visitCount: 1234,
         rank: 1
     ))
     .padding()

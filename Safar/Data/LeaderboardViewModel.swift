@@ -2,7 +2,7 @@
 //  LeaderboardViewModel.swift
 //  safar
 //
-//  ViewModel for managing leaderboard state (top-rated cities and countries)
+//  ViewModel for managing leaderboard state (most visited cities and countries)
 //
 
 import Foundation
@@ -31,14 +31,11 @@ class LeaderboardViewModel: ObservableObject {
         error = nil
 
         do {
-            if let continent = selectedContinent {
-                topCities = try await databaseManager.getTopRatedCitiesByContinent(
-                    continent: continent,
-                    limit: limit
-                )
-            } else {
-                topCities = try await databaseManager.getTopRatedCities(limit: limit)
-            }
+            topCities = try await databaseManager.getMostVisitedCities(
+                limit: limit,
+                continent: selectedContinent,
+                country: nil
+            )
             AnalyticsManager.shared.capture("leaderboard_viewed", properties: [
                 "tab": "cities",
                 "continent_filter": selectedContinent as Any
@@ -56,7 +53,7 @@ class LeaderboardViewModel: ObservableObject {
         error = nil
 
         do {
-            topCountries = try await databaseManager.getTopRatedCountries(
+            topCountries = try await databaseManager.getMostVisitedCountries(
                 limit: limit,
                 continent: selectedContinent
             )

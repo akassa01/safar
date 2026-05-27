@@ -66,11 +66,6 @@ struct FeedPostHeader: View {
             }
 
             Spacer()
-
-            // Rating badge (hidden until author has ranked 5+ cities)
-            if (post.authorVisitedCitiesCount ?? 0) >= 5, let rating = post.rating {
-                RatingCircle(rating: rating, size: 45)
-            }
         }
     }
 

@@ -80,7 +80,7 @@ struct HomeView: View {
 			Spacer()
                         ShareLink(
                             item: URL(string: "https://apps.apple.com/app/id6759003685")!,
-                            message: Text("Check out Safar – track and rank every city you visit!")
+                            message: Text("Check out Safar – track every city you visit and share your travels!")
                         ) {
                                 HStack {
                                     Image(systemName: "paperplane")

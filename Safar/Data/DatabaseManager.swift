@@ -145,19 +145,6 @@ struct Country: Codable, Identifiable, Hashable {
     }
 }
 
-// MARK: - Rating Update Struct
-struct CityRatingUpdate: Codable {
-    let cityId: Int
-    let rating: Double
-    let userId: UUID
-    
-    enum CodingKeys: String, CodingKey {
-        case cityId = "city_id"
-        case rating
-        case userId = "user_id"
-    }
-}
-
 // MARK: - Database Errors
 enum DatabaseError: LocalizedError {
     case userNotAuthenticated
@@ -505,15 +492,7 @@ extension DatabaseManager {
     func updateUserCityRating(userId: UUID, cityId: Int, rating: Double?) async throws {
         try await updateUserCity(userId: userId, cityId: cityId, rating: rating)
     }
-    
-    func updateCityRating(_ ratingUpdate: CityRatingUpdate) async throws {
-        try await updateUserCity(
-            userId: ratingUpdate.userId,
-            cityId: ratingUpdate.cityId,
-            rating: ratingUpdate.rating
-        )
-    }
-    
+
     // Get any city by ID (for CityDetailView)
     func getCityById(cityId: Int) async throws -> City? {
         do {
@@ -852,58 +831,23 @@ extension DatabaseManager {
 
 // MARK: - Leaderboard Methods
 extension DatabaseManager {
-    private static let minimumRatingsForLeaderboard = 1
 
-    /// Fetch top-rated cities for leaderboard
-    func getTopRatedCities(limit: Int = 50, offset: Int = 0) async throws -> [CityLeaderboardEntry] {
+    /// Fetch most visited cities for leaderboard
+    func getMostVisitedCities(limit: Int = 50, continent: String? = nil, country: String? = nil) async throws -> [CityLeaderboardEntry] {
         do {
-            var entries: [CityLeaderboardEntry] = try await supabase
-                .from("cities")
-                .select("id, display_name, admin, country, average_rating, rating_count")
-                .not("average_rating", operator: .is, value: "null")
-                .gte("rating_count", value: Self.minimumRatingsForLeaderboard)
-                .order("average_rating", ascending: false)
-                .order("rating_count", ascending: false)
-                .range(from: offset, to: offset + limit - 1)
-                .execute()
-                .value
+            var query = supabase
+                .from("most_visited_cities")
+                .select("id, display_name, admin, country, continent, visit_count")
 
-            // Add rank based on position
-            for i in 0..<entries.count {
-                entries[i].rank = offset + i + 1
+            if let continent = continent {
+                query = query.eq("continent", value: continent)
             }
-            return entries
-        } catch {
-            Log.data.error("getTopRatedCities failed: \(error)")
-            throw DatabaseError.networkError("Failed to fetch city leaderboard: \(error.localizedDescription)")
-        }
-    }
+            if let country = country {
+                query = query.eq("country", value: country)
+            }
 
-    /// Fetch top-rated cities filtered by continent
-    func getTopRatedCitiesByContinent(continent: String, limit: Int = 20) async throws -> [CityLeaderboardEntry] {
-        struct CountryName: Codable {
-            let name: String
-        }
-
-        do {
-            // First get country names for this continent
-            let countries: [CountryName] = try await supabase
-                .from("countries")
-                .select("name")
-                .eq("continent", value: continent)
-                .execute()
-                .value
-
-            let countryNames = countries.map { $0.name }
-            guard !countryNames.isEmpty else { return [] }
-
-            var entries: [CityLeaderboardEntry] = try await supabase
-                .from("cities")
-                .select("id, display_name, admin, country, average_rating, rating_count")
-                .in("country", values: countryNames)
-                .not("average_rating", operator: .is, value: "null")
-                .gte("rating_count", value: Self.minimumRatingsForLeaderboard)
-                .order("average_rating", ascending: false)
+            var entries: [CityLeaderboardEntry] = try await query
+                .order("visit_count", ascending: false)
                 .limit(limit)
                 .execute()
                 .value
@@ -913,37 +857,41 @@ extension DatabaseManager {
             }
             return entries
         } catch {
-            Log.data.error("getTopRatedCitiesByContinent failed: \(error)")
-            throw DatabaseError.networkError("Failed to fetch continent leaderboard: \(error.localizedDescription)")
+            Log.data.error("getMostVisitedCities failed: \(error)")
+            throw DatabaseError.networkError("Failed to fetch city leaderboard: \(error.localizedDescription)")
         }
     }
 
-    /// Fetch top-rated countries
-    func getTopRatedCountries(limit: Int = 50, offset: Int = 0, continent: String? = nil) async throws -> [CountryLeaderboardEntry] {
+    /// Fetch most visited countries for leaderboard
+    func getMostVisitedCountries(limit: Int = 50, continent: String? = nil) async throws -> [CountryLeaderboardEntry] {
         do {
             var query = supabase
-                .from("countries")
-                .select("id, name, continent, average_rating")
-                .not("average_rating", operator: .is, value: "null")
+                .from("most_visited_countries")
+                .select("id, name, continent, visit_count")
 
             if let continent = continent {
                 query = query.eq("continent", value: continent)
             }
 
             var entries: [CountryLeaderboardEntry] = try await query
-                .order("average_rating", ascending: false)
-                .range(from: offset, to: offset + limit - 1)
+                .order("visit_count", ascending: false)
+                .limit(limit)
                 .execute()
                 .value
 
             for i in 0..<entries.count {
-                entries[i].rank = offset + i + 1
+                entries[i].rank = i + 1
             }
             return entries
         } catch {
-            Log.data.error("getTopRatedCountries failed: \(error)")
+            Log.data.error("getMostVisitedCountries failed: \(error)")
             throw DatabaseError.networkError("Failed to fetch country leaderboard: \(error.localizedDescription)")
         }
+    }
+
+    /// Fetch most visited cities for a specific country
+    func getTopCitiesForCountry(countryName: String, limit: Int = 50) async throws -> [CityLeaderboardEntry] {
+        return try await getMostVisitedCities(limit: limit, continent: nil, country: countryName)
     }
 
     /// Fetch users ranked by number of cities visited
@@ -990,28 +938,27 @@ extension DatabaseManager {
         }
     }
 
-    /// Fetch top-rated cities for a specific country (cities with 5+ ratings)
-    func getTopCitiesForCountry(countryName: String, limit: Int = 50) async throws -> [CityLeaderboardEntry] {
+    /// Get count of followed users who visited a specific city
+    func getFriendVisitCount(cityId: Int, userId: UUID) async throws -> Int {
+        struct Params: Encodable {
+            let p_city_id: Int
+            let p_user_id: String
+        }
+        struct CountResult: Decodable {
+            let count: Int
+        }
         do {
-            var entries: [CityLeaderboardEntry] = try await supabase
-                .from("cities")
-                .select("id, display_name, admin, country, average_rating, rating_count")
-                .eq("country", value: countryName)
-                .not("average_rating", operator: .is, value: "null")
-                .gte("rating_count", value: Self.minimumRatingsForLeaderboard)
-                .order("average_rating", ascending: false)
-                .order("rating_count", ascending: false)
-                .limit(limit)
+            let result: Int = try await supabase
+                .rpc("get_friend_visit_count", params: Params(
+                    p_city_id: cityId,
+                    p_user_id: userId.uuidString
+                ))
                 .execute()
                 .value
-
-            for i in 0..<entries.count {
-                entries[i].rank = i + 1
-            }
-            return entries
+            return result
         } catch {
-            Log.data.error("getTopCitiesForCountry failed: \(error)")
-            throw DatabaseError.networkError("Failed to fetch top cities for country: \(error.localizedDescription)")
+            Log.data.error("getFriendVisitCount failed: \(error)")
+            return 0
         }
     }
 }

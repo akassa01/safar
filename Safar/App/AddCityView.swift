@@ -21,8 +21,6 @@ struct AddCityView: View {
     
     @State private var activePlaceCategory: PlaceCategory? = nil
     @State private var notes: String = ""
-    @State private var showingRating = false
-    @State private var selectedRating: Double? = nil
     @State private var showingPlaceSearch = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var loadedImages: [UIImage] = []
@@ -61,14 +59,6 @@ struct AddCityView: View {
                     }
                 )
                 .listRowBackground(Color(.accent).opacity(0.07))
-                
-                if isVisited {
-                    RatingSection(
-                        selectedRating: selectedRating,
-                        showingRating: $showingRating
-                    )
-                    .listRowBackground(Color("Background"))
-                }
             }
             .scrollContentBackground(.hidden)
             .background(Color("Background"))
@@ -80,20 +70,11 @@ struct AddCityView: View {
                         dismiss()
                     }
                 }
-            }
-            .sheet(isPresented: $showingRating) {
-                CityRatingView(
-                    isPresented: $showingRating,
-                    cityName: baseResult.title,
-                    country: baseResult.country,
-                    cityID: Int(baseResult.data_id) ?? 0,
-                    onRatingSelected: { rating in
-                        selectedRating = rating
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
                         saveCity()
                     }
-                )
-                .environmentObject(viewModel)
-                .presentationBackground(Color("Background"))
+                }
             }
             .sheet(item: $activePlaceCategory) { category in
                 PlaceSearchView(
@@ -162,10 +143,10 @@ struct AddCityView: View {
 
             let cityId = Int(baseResult.data_id) ?? 0
 
-            print("🔵 AddCityView.saveCity() - cityId: \(cityId), isVisited: \(isVisited), rating: \(selectedRating ?? -1), notes: '\(notes)'")
+            print("🔵 AddCityView.saveCity() - cityId: \(cityId), isVisited: \(isVisited), notes: '\(notes)'")
 
             if isVisited {
-                await viewModel.markCityAsVisited(cityId: cityId, rating: selectedRating, notes: notes)
+                await viewModel.markCityAsVisited(cityId: cityId, notes: notes)
                 print("🔵 After markCityAsVisited call")
             } else {
                 await viewModel.addCityToBucketList(cityId: cityId)

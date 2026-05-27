@@ -158,10 +158,6 @@ struct PostDetailView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 8) {
-                if let rating = post.rating, (post.authorVisitedCitiesCount ?? 0) >= 5 {
-                    RatingCircle(rating: rating, size: 50)
-                }
-
                 if post.userId != currentUserId {
                     Menu {
                         Button {

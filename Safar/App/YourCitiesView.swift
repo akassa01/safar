@@ -13,8 +13,6 @@ struct YourCitiesView: View {
     @State private var selectedTab: CityTab = .visited
     @State private var cityToDelete: City?
     @State private var showDeleteConfirmation = false
-    @State private var showingRatingSheet = false
-    @State private var cityToRate: City?
     @State private var cityToMarkVisited: City?
     @State private var showOfflineToast = false
 
@@ -22,7 +20,7 @@ struct YourCitiesView: View {
         case visited = "Visited"
         case bucketList = "Bucket List"
         var id: String { rawValue }
-        
+
         var icon: String {
             switch self {
             case .visited: return "suitcase.fill"
@@ -35,7 +33,7 @@ struct YourCitiesView: View {
             case .bucketList: return true
             }
         }
-        
+
     }
 
     var body: some View {
@@ -45,9 +43,9 @@ struct YourCitiesView: View {
                     iconSize: 22,
                 )
 
-                List(currentCities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 }).enumerated().map({ $0 }), id: \.element) { i, city in
+                List(currentCities.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { city in
                     ZStack {
-                        CityListMember(index: i, city: city, bucketList: selectedTab.bucketList, locked: currentCities.count < 5)
+                        CityListMember(city: city, bucketList: selectedTab.bucketList)
                         NavigationLink(destination: CityDetailView(cityId: city.id)) {
                             EmptyView()
                         }
@@ -57,12 +55,6 @@ struct YourCitiesView: View {
                     .contextMenu {
                         if networkMonitor.isConnected {
                             if selectedTab == .visited {
-                                Button {
-                                    cityToRate = city
-                                    showingRatingSheet = true
-                                } label: {
-                                    Label("Change Rating", systemImage: "pencil")
-                                }
                                 Button(role: .destructive) {
                                     cityToDelete = city
                                     showDeleteConfirmation = true
@@ -90,39 +82,8 @@ struct YourCitiesView: View {
                 .listStyle(.plain)
                 .background(Color("Background"))
                 .toast(isPresented: $showOfflineToast, message: "City details unavailable offline")
-
-                if selectedTab == .visited && viewModel.visitedCities.count < 5 {
-                    VStack(spacing: 12) {
-                        Image(systemName: "lock.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(.accent)
-                        Text("Rank \(5 - viewModel.visitedCities.count) more \(5 - viewModel.visitedCities.count == 1 ? "city" : "cities") to unlock ratings!")
-                            .font(.headline)
-                            .foregroundStyle(.accent)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
             }
             .background(Color("Background"))
-            .sheet(isPresented: $showingRatingSheet) {
-                if let city = cityToRate {
-                    CityRatingView(
-                        isPresented: $showingRatingSheet,
-                        cityName: city.displayName,
-                        country: city.country,
-                        cityID: city.id,
-                        onRatingSelected: { rating in
-                            Task {
-                                await viewModel.updateCityRating(cityId: city.id, rating: rating)
-                            }
-                        }
-                    )
-                    .environmentObject(viewModel)
-                    .presentationBackground(Color("Background"))
-                }
-            }
             .sheet(item: $cityToMarkVisited) { city in
                 AddCityView(
                     baseResult: SearchResult(

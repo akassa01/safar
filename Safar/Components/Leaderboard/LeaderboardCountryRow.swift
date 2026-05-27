@@ -21,8 +21,16 @@ struct LeaderboardCountryRow: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Rating display
-            RatingCircle(rating: entry.averageRating, size: 35)
+            // Visit count display
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(entry.visitCount)")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.accentColor)
+                Text("^[\(entry.visitCount) visit](inflect: true)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(.vertical, 4)
     }
@@ -33,7 +41,7 @@ struct LeaderboardCountryRow: View {
         id: 1,
         name: "Japan",
         continent: "Asia",
-        averageRating: 8.9,
+        visitCount: 890,
         rank: 1
     ))
     .padding()

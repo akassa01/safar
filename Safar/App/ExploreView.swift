@@ -80,10 +80,10 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Top Rated Cities")
+                    Text("Most Visited Cities")
                         .font(.title2)
                         .bold()
-                    Text("Based on community ratings")
+                    Text("Based on visit count")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -124,10 +124,10 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Top Rated Countries")
+                    Text("Most Visited Countries")
                         .font(.title2)
                         .bold()
-                    Text("Based on city averages")
+                    Text("Based on visit count")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

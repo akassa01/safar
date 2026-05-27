@@ -23,7 +23,6 @@ struct CityDetailView: View {
     @State private var errorMessage: String?
     @State private var showingAddCityView = false
     @State private var showingNotesEditor = false
-    @State private var showingRatingView = false
     @State private var showingPhotoViewer = false
     @State private var selectedPhotoIndex = 0
     @State private var showingPhotoPicker = false
@@ -99,15 +98,9 @@ struct CityDetailView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         if city.visited == true || city.visited == false {
-                            if (city.rating != nil) {
-                                Button("Change Rating", systemImage: "pencil") {
-                                    showingRatingView = true
-                                }
-                            }
                             Button("Delete City", systemImage: "trash", role: .destructive) {
                                 showingDeleteConfirmation = true
                             }
-
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -149,25 +142,6 @@ struct CityDetailView: View {
             if let city = city {
                 NotesEditorView(city: city)
                     .environmentObject(viewModel)
-            }
-        }
-        .sheet(isPresented: $showingRatingView) {
-            if let city = city {
-                CityRatingView(
-                    isPresented: $showingRatingView,
-                    cityName: city.displayName,
-                    country: city.country,
-                    cityID: city.id,
-                    onRatingSelected: { rating in
-                        Task {
-                            await viewModel.updateCityRating(cityId: city.id, rating: rating)
-                            await loadCityData(showLoading: false)
-                            print("Successfully updated city \(city.displayName), \(city.country)'s rating to \(rating) (unique ID: \(city.id))")
-                        }
-                    }
-                )
-                .environmentObject(viewModel)
-                .presentationBackground(Color("Background"))
             }
         }
         // .sheet(isPresented: $showingPhotoViewer) {
@@ -222,9 +196,6 @@ struct CityDetailView: View {
                     admin: city.admin,
                     country: city.country,
                     population: city.population,
-                    rating: viewModel.visitedCities.count >= 5 ? city.rating : nil,
-                    communityRating: (city.ratingCount ?? 0) > 0 ? city.averageRating : nil,
-                    communityRatingCount: city.ratingCount,
                     isVisited: city.visited,
                     showActionButtons: !isOffline,
                     onAddToVisited: { showingAddCityView = true },

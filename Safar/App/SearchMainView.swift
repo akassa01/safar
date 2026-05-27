@@ -61,8 +61,6 @@ struct SearchMainView: View {
 
     // Context menu state
     @State private var cityResultToVisit: SearchResult?
-    @State private var showingRatingSheet = false
-    @State private var cityToRate: SearchResult?
     @State private var showDeleteConfirmation = false
     @State private var cityToDelete: SearchResult?
     
@@ -185,23 +183,6 @@ struct SearchMainView: View {
                 )
                 .environmentObject(viewModel)
             }
-            .sheet(isPresented: $showingRatingSheet) {
-                if let result = cityToRate {
-                    CityRatingView(
-                        isPresented: $showingRatingSheet,
-                        cityName: result.title,
-                        country: result.country,
-                        cityID: Int(result.data_id) ?? 0,
-                        onRatingSelected: { rating in
-                            Task {
-                                await viewModel.updateCityRating(cityId: Int(result.data_id) ?? 0, rating: rating)
-                            }
-                        }
-                    )
-                    .environmentObject(viewModel)
-                    .presentationBackground(Color("Background"))
-                }
-            }
             .alert("Remove City", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {
                     cityToDelete = nil
@@ -225,11 +206,7 @@ struct SearchMainView: View {
             case (.city(let cityA), .city(let cityB)):
                 return cityA.population > cityB.population
             case (.country(let countryA), .country(let countryB)):
-                // Sort by rating if both have ratings, otherwise keep order
-                if countryA.averageRating > 0 && countryB.averageRating > 0 {
-                    return countryA.averageRating > countryB.averageRating
-                }
-                return false
+                return countryA.name < countryB.name
             default:
                 return false
             }
@@ -284,7 +261,7 @@ struct SearchMainView: View {
                             id: country.id,
                             name: country.name,
                             continent: country.continent,
-                            averageRating: country.averageRating ?? 0,
+                            visitCount: 0,
                             rank: nil
                         ))
                     }
@@ -327,12 +304,6 @@ struct SearchMainView: View {
         let isInBucket = viewModel.bucketListCities.contains { $0.id == cityId }
 
         if isVisited {
-            Button {
-                cityToRate = result
-                showingRatingSheet = true
-            } label: {
-                Label("Change Rating", systemImage: "pencil")
-            }
             Button(role: .destructive) {
                 cityToDelete = result
                 showDeleteConfirmation = true

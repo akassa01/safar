@@ -8,7 +8,7 @@ import SwiftUI
 struct CountryBannerView: View {
     let countryId: Int64
     let countryName: String
-    let rating: Double
+    let visitCount: Int
     let rank: Int?
 
     @StateObject private var photoViewModel = CountryPhotoViewModel()
@@ -37,8 +37,15 @@ struct CountryBannerView: View {
 
                 Spacer()
 
-                if rating > 0 {
-                    RatingCircle(rating: rating, size: 50)
+                if visitCount > 0 {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(visitCount)")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white)
+                        Text("^[\(visitCount) visit](inflect: true)")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                 }
             }
             .padding()
@@ -62,7 +69,7 @@ struct CountryBannerView: View {
             }
         }
         .frame(height: bannerHeight)
-	.clipped()
+        .clipped()
         .task {
             await photoViewModel.loadPhoto(for: Int(countryId), countryName: countryName)
         }
@@ -119,7 +126,7 @@ struct CountryBannerView: View {
     CountryBannerView(
         countryId: 1,
         countryName: "Japan",
-        rating: 8.9,
+        visitCount: 890,
         rank: 1
     )
 }

@@ -26,30 +26,6 @@ struct CityDetailsSection: View {
     }
 }
 
-struct RatingSection: View {
-    let selectedRating: Double?
-    @Binding var showingRating: Bool
-    
-    var body: some View {
-        HStack {
-            Spacer()
-            Button("Rank & Save") {
-                    showingRating = true
-            }
-            .foregroundStyle(.white)
-            .font(.title3)
-            .bold()
-            .background(
-                Rectangle()
-                    .foregroundStyle(.accent)
-                    .frame(width: 350, height: 40)
-                    .cornerRadius(20)
-            )
-            Spacer()
-        }
-    }
-}
-
 struct NotesSection: View {
     @Binding var notes: String
     

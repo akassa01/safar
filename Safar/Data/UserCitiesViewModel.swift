@@ -218,7 +218,7 @@ class UserCitiesViewModel: ObservableObject {
         }
     }
 
-    func markCityAsVisited(cityId: Int, rating: Double? = nil, notes: String? = nil, placesCount: Int = 0) async {
+    func markCityAsVisited(cityId: Int, notes: String? = nil, placesCount: Int = 0) async {
         guard let userId = _currentUserId else {
             print("🔴 markCityAsVisited failed: no current user ID")
             return
@@ -228,7 +228,7 @@ class UserCitiesViewModel: ObservableObject {
             try await databaseManager.markCityAsVisited(
                 userId: userId,
                 cityId: cityId,
-                rating: rating,
+                rating: nil,
                 notes: notes
             )
             print("🟢 ViewModel markCityAsVisited succeeded for cityId: \(cityId)")
@@ -240,8 +240,7 @@ class UserCitiesViewModel: ObservableObject {
                     "country": city.country,
                     "visited": true,
                     "has_notes": !(notes ?? "").isEmpty,
-                    "places_count": placesCount,
-                    "has_rating": rating != nil
+                    "places_count": placesCount
                 ])
             }
         } catch {
@@ -273,35 +272,6 @@ class UserCitiesViewModel: ObservableObject {
     // Helper method to get cities with relationship details
     private func getUserCitiesWithDetails(userId: UUID) async throws -> [City] {
         return try await databaseManager.getUserCities(userId: userId)
-    }
-    
-    // MARK: - Rating Functions
-
-    func updateCityRating(cityId: Int, rating: Double) async {
-        await updateCityRatingWithoutRefresh(cityId: cityId, rating: rating)
-        await loadUserData()
-        AnalyticsManager.shared.capture("city_rating_set", properties: [
-            "city_id": cityId,
-            "rating": rating,
-            "cities_count": visitedCitiesCount
-        ])
-    }
-
-    /// Updates city rating without refreshing data - use this for batch updates
-    func updateCityRatingWithoutRefresh(cityId: Int, rating: Double) async {
-        guard let userId = _currentUserId else { return }
-
-        do {
-            let ratingUpdate = CityRatingUpdate(
-                cityId: cityId,
-                rating: rating,
-                userId: userId
-            )
-            try await databaseManager.updateCityRating(ratingUpdate)
-        } catch {
-            print("🔴 updateCityRatingWithoutRefresh error for cityId \(cityId): \(error)")
-            self.error = error
-        }
     }
     
     func updateCityNotes(cityId: Int, notes: String) async {
