@@ -233,9 +233,9 @@ struct PostDetailView: View {
                                     Spacer()
 
                                     if let liked = place.liked {
-                                        Image(systemName: liked ? "heart.fill" : "xmark.circle.fill")
+                                        Image(systemName: liked ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
                                             .font(.caption)
-                                            .foregroundColor(liked ? .accentColor : .red)
+                                            .foregroundColor(liked ? .accentColor : .secondary)
                                     }
                                 }
                                 .padding(.leading, 8)
@@ -255,8 +255,8 @@ struct PostDetailView: View {
                 Task { await feedViewModel?.toggleLike(for: post) }
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: currentPost.isLikedByCurrentUser ? "heart.fill" : "heart")
-                        .foregroundColor(currentPost.isLikedByCurrentUser ? .red : .primary)
+                    Image(systemName: currentPost.isLikedByCurrentUser ? "hand.thumbsup.fill" : "hand.thumbsup")
+                        .foregroundColor(currentPost.isLikedByCurrentUser ? .accentColor : .primary)
                     Text("\(currentPost.likeCount)")
                 }
                 .font(.subheadline)

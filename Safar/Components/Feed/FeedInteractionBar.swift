@@ -21,9 +21,9 @@ struct FeedInteractionBar: View {
             // Like button
             Button(action: onLikeTapped) {
                 HStack(spacing: 4) {
-                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                    Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
                         .font(.subheadline)
-                        .foregroundColor(isLiked ? .red : .secondary)
+                        .foregroundColor(isLiked ? .accentColor : .secondary)
 
                     if likeCount > 0 {
                         Text("\(likeCount)")

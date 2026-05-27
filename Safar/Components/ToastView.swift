@@ -48,6 +48,9 @@ struct ToastModifier: ViewModifier {
     var onTap: (() -> Void)? = nil
     var undoAction: (() -> Void)? = nil
 
+    // Cancellable dismiss work so re-triggering resets the timer
+    @State private var dismissWork: DispatchWorkItem?
+
     func body(content: Content) -> some View {
         ZStack {
             content
@@ -70,19 +73,29 @@ struct ToastModifier: ViewModifier {
                             }
                         }
                     )
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 16)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .animation(.easeInOut(duration: 0.3), value: isPresented)
                 .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                        withAnimation {
-                            isPresented = false
-                        }
-                    }
+                    scheduleDismiss()
+                }
+                .onChange(of: message) { _, _ in
+                    scheduleDismiss()
                 }
             }
         }
+    }
+
+    private func scheduleDismiss() {
+        dismissWork?.cancel()
+        let work = DispatchWorkItem {
+            withAnimation {
+                isPresented = false
+            }
+        }
+        dismissWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
     }
 }
 

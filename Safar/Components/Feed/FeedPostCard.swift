@@ -32,18 +32,22 @@ struct FeedPostCard: View {
 
                     Spacer(minLength: 4)
 
-                    // Bookmark button — where the rating circle used to be
+                    // Bookmark / visited indicator
                     if onBookmarkTapped != nil {
-                        Button {
-                            guard !isVisited else { return }
-                            onBookmarkTapped?()
-                        } label: {
-                            Image(systemName: post.isCityInUserList ? "bookmark.fill" : "bookmark")
+                        if isVisited {
+                            Image(systemName: "checkmark.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(post.isCityInUserList ? .accentColor : .secondary)
+                                .foregroundColor(.accentColor)
+                        } else {
+                            Button {
+                                onBookmarkTapped?()
+                            } label: {
+                                Image(systemName: post.isCityInUserList ? "bookmark.fill" : "bookmark")
+                                    .font(.title2)
+                                    .foregroundColor(post.isCityInUserList ? .accentColor : .secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(isVisited)
                     }
                 }
 
