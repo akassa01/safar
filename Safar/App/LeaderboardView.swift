@@ -2,7 +2,7 @@
 //  LeaderboardView.swift
 //  safar
 //
-//  Top Rated cities and countries leaderboard view
+//  Top Visited cities and countries leaderboard view
 //
 
 import SwiftUI
@@ -24,6 +24,7 @@ enum LeaderboardTab: String, CaseIterable, Identifiable, IconRepresentable {
 struct LeaderboardView: View {
     @EnvironmentObject var viewModel: LeaderboardViewModel
     @State private var selectedTab: LeaderboardTab
+    @State private var showFilterSheet = false
 
     init(initialTab: LeaderboardTab = .cities) {
         _selectedTab = State(initialValue: initialTab)
@@ -37,8 +38,10 @@ struct LeaderboardView: View {
                     iconSize: 20
                 )
 
-                // TODO: Re-enable continent filters
-                // continentFilterView
+                // Active filter chips
+                if viewModel.hasActiveFilters {
+                    activeFilterChips
+                }
 
                 // Content
                 Group {
@@ -54,38 +57,50 @@ struct LeaderboardView: View {
         .background(Color("Background"))
         .navigationTitle("Most Visited")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showFilterSheet = true
+                } label: {
+                    Image(systemName: viewModel.hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        .foregroundColor(viewModel.hasActiveFilters ? .accentColor : .primary)
+                }
+            }
+        }
+        .sheet(isPresented: $showFilterSheet) {
+            LeaderboardFilterSheet()
+                .environmentObject(viewModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .task {
             if viewModel.topCities.isEmpty {
                 await viewModel.loadTopCities()
                 await viewModel.loadTopCountries()
             }
+            if viewModel.availableCountries.isEmpty {
+                await viewModel.loadAvailableCountries()
+            }
         }
     }
 
-    private var continentFilterView: some View {
+    private var activeFilterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                FilterChip(
-                    title: "All",
-                    isSelected: viewModel.selectedContinent == nil,
-                    action: {
+                if let continent = viewModel.selectedContinent {
+                    ActiveFilterChip(label: continent) {
                         Task { await viewModel.selectContinent(nil) }
                     }
-                )
-
-                ForEach(viewModel.continents, id: \.self) { continent in
-                    FilterChip(
-                        title: continent,
-                        isSelected: viewModel.selectedContinent == continent,
-                        action: {
-                            Task { await viewModel.selectContinent(continent) }
-                        }
-                    )
+                }
+                if let country = viewModel.selectedCountry {
+                    ActiveFilterChip(label: country) {
+                        Task { await viewModel.selectCountry(nil) }
+                    }
                 }
             }
             .padding(.horizontal)
+            .padding(.vertical, 8)
         }
-        .padding(.vertical, 8)
     }
 
     private var cityLeaderboardContent: some View {
@@ -162,6 +177,125 @@ struct LeaderboardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+    }
+}
+
+// MARK: - Active Filter Chip
+
+struct ActiveFilterChip: View {
+    let label: String
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.subheadline)
+                .fontWeight(.medium)
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Color.accentColor.opacity(0.15))
+        .foregroundColor(.accentColor)
+        .cornerRadius(20)
+    }
+}
+
+// MARK: - Filter Sheet
+
+struct LeaderboardFilterSheet: View {
+    @EnvironmentObject var viewModel: LeaderboardViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var countrySearch = ""
+
+    var filteredCountries: [String] {
+        if countrySearch.isEmpty { return viewModel.availableCountries }
+        return viewModel.availableCountries.filter {
+            $0.localizedCaseInsensitiveContains(countrySearch)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                // MARK: Continent Section
+                Section("Continent") {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            FilterChip(
+                                title: "All",
+                                isSelected: viewModel.selectedContinent == nil,
+                                action: {
+                                    Task { await viewModel.selectContinent(nil) }
+                                }
+                            )
+                            ForEach(viewModel.continents, id: \.self) { continent in
+                                FilterChip(
+                                    title: continent,
+                                    isSelected: viewModel.selectedContinent == continent,
+                                    action: {
+                                        Task { await viewModel.selectContinent(continent) }
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                }
+
+                // MARK: Country Section
+                Section("Country") {
+                    TextField("Search countries…", text: $countrySearch)
+                        .autocorrectionDisabled()
+                    if viewModel.availableCountries.isEmpty {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    } else {
+                        ForEach(filteredCountries, id: \.self) { country in
+                            Button {
+                                let newValue = viewModel.selectedCountry == country ? nil : country
+                                Task { await viewModel.selectCountry(newValue) }
+                            } label: {
+                                HStack {
+                                    Text(country)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    if viewModel.selectedCountry == country {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.accentColor)
+                                            .fontWeight(.semibold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Filter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if viewModel.hasActiveFilters {
+                        Button("Clear") {
+                            Task { await viewModel.clearAllFilters() }
+                        }
+                        .foregroundColor(.red)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
     }
 }
 

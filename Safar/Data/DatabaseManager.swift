@@ -894,6 +894,25 @@ extension DatabaseManager {
         return try await getMostVisitedCities(limit: limit, continent: nil, country: countryName)
     }
 
+    /// Fetch all country names sorted alphabetically for filter UI
+    func getAvailableCountries() async throws -> [String] {
+        do {
+            struct CountryName: Decodable {
+                let name: String
+            }
+            let response: [CountryName] = try await supabase
+                .from("countries")
+                .select("name")
+                .order("name", ascending: true)
+                .execute()
+                .value
+            return response.map { $0.name }
+        } catch {
+            Log.data.error("getAvailableCountries failed: \(error)")
+            throw DatabaseError.networkError("Failed to fetch countries: \(error.localizedDescription)")
+        }
+    }
+
     /// Fetch users ranked by number of cities visited
     func getTopTravelersByCities(limit: Int = 50, offset: Int = 0) async throws -> [PeopleLeaderboardEntry] {
         do {
