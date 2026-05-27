@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PostHog
+import UserNotifications
 
 @main
 struct safarApp: App {
@@ -137,8 +138,19 @@ struct safarApp: App {
         }
     }
 
+    private func requestPushAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+            if granted {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
+    }
+
     private func preloadData() {
         guard !isDataPreloaded else { return }
+        requestPushAuthorization()
         Task { await feedViewModel.loadFeed(refresh: true) }
         Task { await leaderboardViewModel.refresh() }
         Task { await BlockManager.shared.loadBlockedUsers() }

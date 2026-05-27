@@ -207,6 +207,12 @@ private struct NotificationRow: View {
             }
             return "\(actorName) saved your trip"
 
+        case "bucket_list_friend_visit":
+            if let city = notification.cityName {
+                return "\(actorName) visited \(city), which is on your bucket list"
+            }
+            return "\(actorName) visited a city on your bucket list"
+
         case "city_ranked":
             if let city = notification.cityName {
                 return "\(actorName) just ranked \(city)!"
@@ -255,8 +261,8 @@ private extension AppNotification {
         case "new_follower", "contact_joined":
             return actorDestination
 
-        // City ranked → open the city detail
-        case "city_ranked":
+        // City ranked or bucket-list friend visit → open the city detail
+        case "city_ranked", "bucket_list_friend_visit":
             if let ref = referenceId {
                 return .city(cityId: Int(ref))
             }
