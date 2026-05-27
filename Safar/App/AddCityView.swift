@@ -62,7 +62,7 @@ struct AddCityView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color("Background"))
-            .navigationTitle("Add City")
+            .navigationTitle(baseResult.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

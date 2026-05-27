@@ -14,6 +14,7 @@ struct SearchListMember: View {
 
     var result: SearchResult
     var onMarkVisited: (SearchResult) -> Void
+    var onInstantAdd: (SearchResult) -> Void
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
     
@@ -60,7 +61,7 @@ struct SearchListMember: View {
                     .foregroundColor(.accent)
             } else {
                 Button(action: {
-                    onMarkVisited(result)
+                    onInstantAdd(result)
                 }) {
                     Image(systemName: "plus.circle")
                         .foregroundColor(.accent)

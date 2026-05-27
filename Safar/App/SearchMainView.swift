@@ -63,6 +63,11 @@ struct SearchMainView: View {
     @State private var cityResultToVisit: SearchResult?
     @State private var showDeleteConfirmation = false
     @State private var cityToDelete: SearchResult?
+
+    // Instant add + enrichment
+    @State private var lastAddedCity: SearchResult?
+    @State private var showAddCitySheet = false
+    @State private var showInstantAddToast = false
     
     var body: some View {
         NavigationStack {
@@ -124,7 +129,16 @@ struct SearchMainView: View {
                             ZStack {
                                 SearchListMember(
                                     result: result,
-                                    onMarkVisited: { cityResultToVisit = $0 }
+                                    onMarkVisited: { cityResultToVisit = $0 },
+                                    onInstantAdd: { searchResult in
+                                        Task {
+                                            await viewModel.markCityAsVisited(cityId: Int(searchResult.data_id) ?? 0)
+                                            lastAddedCity = searchResult
+                                            withAnimation {
+                                                showInstantAddToast = true
+                                            }
+                                        }
+                                    }
                                 )
                                 NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
                                     EmptyView()
@@ -183,6 +197,28 @@ struct SearchMainView: View {
                 )
                 .environmentObject(viewModel)
             }
+            .sheet(isPresented: $showAddCitySheet) {
+                if let city = lastAddedCity {
+                    AddCityView(
+                        baseResult: city,
+                        isVisited: true,
+                        onSave: { _ in
+                            Task {
+                                await viewModel.loadUserData()
+                            }
+                        }
+                    )
+                    .environmentObject(viewModel)
+                }
+            }
+            .toast(
+                isPresented: $showInstantAddToast,
+                message: "\(lastAddedCity?.title ?? "City") added. Tap to add details.",
+                duration: 4.0,
+                onTap: {
+                    showAddCitySheet = true
+                }
+            )
             .alert("Remove City", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {
                     cityToDelete = nil
