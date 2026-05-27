@@ -55,9 +55,9 @@ struct TopSpotsPlaceRow: View {
 
                 if place.likes > 0 {
                     HStack(spacing: 3) {
-                        Image(systemName: "hand.thumbsup.fill")
+                        Image(systemName: "heart.fill")
                             .font(.caption2)
-                            .foregroundColor(.green)
+                            .foregroundColor(.accentColor)
                         Text("\(place.likes)")
                             .font(.caption)
                             .foregroundColor(.secondary)

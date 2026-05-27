@@ -30,6 +30,7 @@ struct CityListMember: View {
                         .foregroundColor(.accentColor)
                 }
             }
+            .padding(.leading, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
         }

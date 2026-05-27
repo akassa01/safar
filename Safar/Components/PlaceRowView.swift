@@ -44,16 +44,16 @@ struct PlaceRowView: View {
                         Button(action: {
                             onRatingChanged(rating == true ? nil : true)
                         }) {
-                            Image(systemName: "hand.thumbsup.fill")
-                                .foregroundColor(rating == true ? .green : .gray)
+                            Image(systemName: rating == true ? "heart.fill" : "heart")
+                                .foregroundColor(rating == true ? .accentColor : .secondary)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        
+
                         Button(action: {
                             onRatingChanged(rating == false ? nil : false)
                         }) {
-                            Image(systemName: "hand.thumbsdown.fill")
-                                .foregroundColor(rating == false ? .red : .gray)
+                            Image(systemName: rating == false ? "xmark.circle.fill" : "xmark.circle")
+                                .foregroundColor(rating == false ? .red : .secondary)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }

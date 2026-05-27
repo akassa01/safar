@@ -99,7 +99,7 @@ struct NotificationsView: View {
             Text("No notifications yet")
                 .font(.headline)
 
-            Text("You'll see it here when someone likes your post, comments on your trip, replies to your comment, follows you, or ranks a city you've been to.")
+            Text("You'll see it here when someone likes your post, comments on your trip, replies to your comment, or follows you.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

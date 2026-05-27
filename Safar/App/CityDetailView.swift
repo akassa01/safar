@@ -327,7 +327,7 @@ struct CityDetailView: View {
     private var placesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                SectionHeader(title: "Places", icon: "mappin.and.ellipse")
+                SectionHeader(title: "Your Places", icon: "mappin.and.ellipse")
                 Spacer()
                 if !isOffline {
                     Button {
@@ -373,14 +373,14 @@ struct CityDetailView: View {
                                         Button {
                                             Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
                                         } label: {
-                                            Image(systemName: place.liked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                                .foregroundColor(place.liked == true ? .green : .gray)
+                                            Image(systemName: place.liked == true ? "heart.fill" : "heart")
+                                                .foregroundColor(place.liked == true ? .accentColor : .secondary)
                                         }
                                         Button {
                                             Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
                                         } label: {
-                                            Image(systemName: place.liked == false ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                                                .foregroundColor(place.liked == false ? .red : .gray)
+                                            Image(systemName: place.liked == false ? "xmark.circle.fill" : "xmark.circle")
+                                                .foregroundColor(place.liked == false ? .red : .secondary)
                                         }
                                         Button(role: .destructive) {
                                             Task { await placesViewModel.deletePlace(userPlaceId: place.userPlaceId ?? 0, cityId: cityId) }
@@ -402,11 +402,11 @@ struct CityDetailView: View {
                                                 .foregroundColor(.secondary)
                                             Spacer()
                                             if place.liked == true {
-                                                Image(systemName: "hand.thumbsup.fill")
-                                                    .foregroundColor(.green)
+                                                Image(systemName: "heart.fill")
+                                                    .foregroundColor(.accentColor)
                                                     .font(.caption)
                                             } else if place.liked == false {
-                                                Image(systemName: "hand.thumbsdown.fill")
+                                                Image(systemName: "xmark.circle.fill")
                                                     .foregroundColor(.red)
                                                     .font(.caption)
                                             }

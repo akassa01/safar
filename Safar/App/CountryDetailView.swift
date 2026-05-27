@@ -91,10 +91,10 @@ struct CountryDetailView: View {
             Image(systemName: "building.2")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary.opacity(0.5))
-            Text("No top-rated cities yet")
+            Text("No top cities yet")
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text("Cities need at least 5 ratings to appear here")
+            Text("Cities need at least 5 visits to appear here")
                 .font(.caption)
                 .foregroundColor(.secondary.opacity(0.7))
         }
