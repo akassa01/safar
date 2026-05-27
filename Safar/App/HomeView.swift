@@ -7,17 +7,18 @@ struct HomeView: View {
             span: MKCoordinateSpan(latitudeDelta: 100.0, longitudeDelta: 100.0)
         )
     )
-    @State private var mapPresentation: mapType = .visited
+    @State private var mapPresentation: mapType = .all
 
     @State private var selectedTab: Int = 0
     @State private var isMapExpanded = false
     @State private var showSearchScreen = false
     @State private var showOfflineToast = false
+    @State private var showingCityList = false
 
     @State private var homeNavigationPath = NavigationPath()
-    @State private var citiesNavigationPath = NavigationPath()
     @State private var exploreNavigationPath = NavigationPath()
     @State private var feedNavigationPath = NavigationPath()
+    @State private var profileNavigationPath = NavigationPath()
 
     @StateObject private var notificationsViewModel = NotificationsViewModel()
 
@@ -130,7 +131,7 @@ struct HomeView: View {
                             }
                             .overlay(alignment: .bottom) {
                                 Button(action: {
-                                    selectedTab = 1
+                                    showingCityList = true
                                 }) {
                                     Text("View List")
                                         .fontWeight(.semibold)
@@ -156,6 +157,10 @@ struct HomeView: View {
                     FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel)
                         .environmentObject(viewModel)
                 }
+                .sheet(isPresented: $showingCityList) {
+                    YourCitiesView()
+                        .environmentObject(viewModel)
+                }
                 .navigationDestination(for: City.self) { city in
                     CityDetailView(cityId: city.id)
                         .environmentObject(viewModel)
@@ -167,27 +172,33 @@ struct HomeView: View {
             }
             .tag(0)
 
-            NavigationStack(path: $citiesNavigationPath) {
-                YourCitiesView()
-            }
-            .tabItem {
-                Label("Your Cities", systemImage: "building.2")
-            }
-            .tag(1)
-
             NavigationStack(path: $exploreNavigationPath) {
                 ExploreView()
             }
             .tabItem {
                 Label("Explore", systemImage: "safari")
             }
-            .tag(2)
+            .tag(1)
 
             NavigationStack(path: $feedNavigationPath) {
                 FeedView()
             }
             .tabItem {
                 Label("Feed", systemImage: "airplane.departure")
+            }
+            .tag(2)
+
+            NavigationStack(path: $profileNavigationPath) {
+                if let userId = viewModel.currentUserId?.uuidString {
+                    UserProfileView(userId: userId)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color("Background"))
+                }
+            }
+            .tabItem {
+                Label("Profile", systemImage: "person.fill")
             }
             .tag(3)
 
@@ -198,7 +209,7 @@ struct HomeView: View {
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue != newValue {
-                let tabNames = ["home", "cities", "explore", "feed"]
+                let tabNames = ["home", "explore", "feed", "profile"]
                 let tabName = newValue < tabNames.count ? tabNames[newValue] : "\(newValue)"
                 AnalyticsManager.shared.capture("tab_selected", properties: ["tab": tabName])
             }
@@ -210,11 +221,11 @@ struct HomeView: View {
                     showSearchScreen = false
                     isMapExpanded = false
                 case 1:
-                    citiesNavigationPath = NavigationPath()
-                case 2:
                     exploreNavigationPath = NavigationPath()
-                case 3:
+                case 2:
                     feedNavigationPath = NavigationPath()
+                case 3:
+                    profileNavigationPath = NavigationPath()
                 default:
                     break
                 }
