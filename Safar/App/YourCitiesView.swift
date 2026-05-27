@@ -15,6 +15,7 @@ struct YourCitiesView: View {
     @State private var showDeleteConfirmation = false
     @State private var cityToMarkVisited: City?
     @State private var showOfflineToast = false
+    @State private var friendCounts: [Int: Int] = [:]
 
     enum CityTab: String, CaseIterable, Identifiable, IconRepresentable {
         case visited = "Visited"
@@ -45,7 +46,11 @@ struct YourCitiesView: View {
 
                 List(currentCities.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { city in
                     ZStack {
-                        CityListMember(city: city, bucketList: selectedTab.bucketList)
+                        CityListMember(
+                            city: city,
+                            bucketList: selectedTab.bucketList,
+                            friendCount: selectedTab == .bucketList ? friendCounts[city.id] : nil
+                        )
                         NavigationLink(destination: CityDetailView(cityId: city.id)) {
                             EmptyView()
                         }
@@ -82,6 +87,21 @@ struct YourCitiesView: View {
                 .listStyle(.plain)
                 .background(Color("Background"))
                 .toast(isPresented: $showOfflineToast, message: "City details unavailable offline")
+                .task {
+                    if selectedTab == .bucketList {
+                        await loadFriendCounts()
+                    }
+                }
+                .onChange(of: selectedTab) { _, newTab in
+                    if newTab == .bucketList {
+                        Task { await loadFriendCounts() }
+                    }
+                }
+                .onChange(of: viewModel.bucketListCities) { _, _ in
+                    if selectedTab == .bucketList {
+                        Task { await loadFriendCounts() }
+                    }
+                }
             }
             .background(Color("Background"))
             .sheet(item: $cityToMarkVisited) { city in
@@ -129,6 +149,15 @@ struct YourCitiesView: View {
             return viewModel.visitedCities
         case .bucketList:
             return viewModel.bucketListCities
+        }
+    }
+
+    private func loadFriendCounts() async {
+        let cities = viewModel.bucketListCities
+        guard !cities.isEmpty, let userId = viewModel.currentUserId else { return }
+        for city in cities {
+            let count = (try? await DatabaseManager.shared.getFriendVisitCount(cityId: city.id, userId: userId)) ?? 0
+            friendCounts[city.id] = count
         }
     }
 }

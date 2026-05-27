@@ -10,6 +10,8 @@ import SwiftUI
 struct CityListMember: View {
     var city: City
     var bucketList: Bool
+    var friendCount: Int? = nil
+
     var body: some View {
         HStack(alignment: .center) {
             VStack (alignment: .leading) {
@@ -22,6 +24,11 @@ struct CityListMember: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
+                if let count = friendCount, count > 0 {
+                    Text(count == 1 ? "1 friend has been here" : "\(count) friends have been here")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
