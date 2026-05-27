@@ -14,6 +14,7 @@ struct FeedPostCard: View {
     let onUserTapped: () -> Void
     let onCityTapped: () -> Void
     let onPostTapped: () -> Void
+    var isVisited: Bool = false
     var onBookmarkTapped: (() -> Void)? = nil
     var onReportPostTapped: (() -> Void)? = nil
     var onBlockUserTapped: (() -> Void)? = nil
@@ -21,12 +22,30 @@ struct FeedPostCard: View {
     var body: some View {
         Button(action: onPostTapped) {
             VStack(alignment: .leading, spacing: 12) {
-                // Header with user info and rating
-                FeedPostHeader(
-                    post: post,
-                    onUserTapped: onUserTapped,
-                    onCityTapped: onCityTapped
-                )
+                // Header row: user info + bookmark button (top right)
+                HStack(alignment: .top, spacing: 12) {
+                    FeedPostHeader(
+                        post: post,
+                        onUserTapped: onUserTapped,
+                        onCityTapped: onCityTapped
+                    )
+
+                    Spacer(minLength: 4)
+
+                    // Bookmark button — where the rating circle used to be
+                    if onBookmarkTapped != nil {
+                        Button {
+                            guard !isVisited else { return }
+                            onBookmarkTapped?()
+                        } label: {
+                            Image(systemName: post.isCityInUserList ? "bookmark.fill" : "bookmark")
+                                .font(.title2)
+                                .foregroundColor(post.isCityInUserList ? .accentColor : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isVisited)
+                    }
+                }
 
                 // Map with places
                 CityMapView(
@@ -48,14 +67,12 @@ struct FeedPostCard: View {
                 // Places disclosure groups
                 FeedPlacesSection(places: post.places)
 
-                // Interaction bar (likes, comments, bookmark, optional ... menu)
+                // Interaction bar (likes, comments, optional ... menu)
                 FeedInteractionBar(
                     likeCount: post.likeCount,
                     commentCount: post.commentCount,
                     isLiked: post.isLikedByCurrentUser,
-                    isBookmarked: post.isCityInUserList,
                     onLikeTapped: onLikeTapped,
-                    onBookmarkTapped: onBookmarkTapped,
                     onReportTapped: onReportPostTapped,
                     onBlockTapped: onBlockUserTapped
                 )

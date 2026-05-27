@@ -66,7 +66,7 @@ struct SearchMainView: View {
 
     // Instant add + enrichment
     @State private var lastAddedCity: SearchResult?
-    @State private var showAddCitySheet = false
+    @State private var cityToEnrich: SearchResult?   // drives sheet via item — preserves @State across re-renders
     @State private var showInstantAddToast = false
     
     var body: some View {
@@ -197,26 +197,27 @@ struct SearchMainView: View {
                 )
                 .environmentObject(viewModel)
             }
-            .sheet(isPresented: $showAddCitySheet) {
-                if let city = lastAddedCity {
-                    AddCityView(
-                        baseResult: city,
-                        isVisited: true,
-                        onSave: { _ in
-                            Task {
-                                await viewModel.loadUserData()
-                            }
-                        }
-                    )
-                    .environmentObject(viewModel)
-                }
+            .sheet(item: $cityToEnrich) { city in
+                AddCityView(
+                    baseResult: city,
+                    isVisited: true,
+                    onSave: { _ in }   // loadUserData already called inside saveCity → markCityAsVisited
+                )
+                .environmentObject(viewModel)
             }
             .toast(
                 isPresented: $showInstantAddToast,
                 message: "\(lastAddedCity?.title ?? "City") added. Tap to add details.",
                 duration: 4.0,
                 onTap: {
-                    showAddCitySheet = true
+                    cityToEnrich = lastAddedCity
+                },
+                undoAction: {
+                    if let city = lastAddedCity {
+                        Task {
+                            await viewModel.removeCityFromList(cityId: Int(city.data_id) ?? 0)
+                        }
+                    }
                 }
             )
             .alert("Remove City", isPresented: $showDeleteConfirmation) {

@@ -44,7 +44,7 @@ struct PlaceRowView: View {
                         Button(action: {
                             onRatingChanged(rating == true ? nil : true)
                         }) {
-                            Image(systemName: rating == true ? "heart.fill" : "heart")
+                            Image(systemName: rating == true ? "hand.thumbsup.fill" : "hand.thumbsup")
                                 .foregroundColor(rating == true ? .accentColor : .secondary)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -52,8 +52,8 @@ struct PlaceRowView: View {
                         Button(action: {
                             onRatingChanged(rating == false ? nil : false)
                         }) {
-                            Image(systemName: rating == false ? "xmark.circle.fill" : "xmark.circle")
-                                .foregroundColor(rating == false ? .red : .secondary)
+                            Image(systemName: rating == false ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                                .foregroundColor(rating == false ? .accentColor : .secondary)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }

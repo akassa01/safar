@@ -116,6 +116,7 @@ struct FeedView: View {
                         onPostTapped: {
                             selectedPost = post
                         },
+                        isVisited: viewModel.userVisitedCityIds.contains(post.cityId),
                         onBookmarkTapped: isOwnPost ? nil : {
                             Task {
                                 if post.isCityInUserList {

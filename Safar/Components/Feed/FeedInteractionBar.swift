@@ -12,11 +12,7 @@ struct FeedInteractionBar: View {
     let likeCount: Int
     let commentCount: Int
     let isLiked: Bool
-    let isBookmarked: Bool
-    /// True when the city is already in the visited list — bookmark shows filled but is non-interactive.
-    var isVisited: Bool = false
     let onLikeTapped: () -> Void
-    var onBookmarkTapped: (() -> Void)? = nil
     var onReportTapped: (() -> Void)? = nil
     var onBlockTapped: (() -> Void)? = nil
 
@@ -53,18 +49,6 @@ struct FeedInteractionBar: View {
 
             Spacer()
 
-            // Bookmark button — filled when city is in user's list, disabled if already visited
-            Button {
-                guard !isVisited else { return }
-                onBookmarkTapped?()
-            } label: {
-                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                    .font(.subheadline)
-                    .foregroundColor(isBookmarked ? .accentColor : .secondary)
-            }
-            .buttonStyle(.plain)
-            .disabled(isVisited)
-
             // Overflow menu (report / block) — only shown for other users' posts
             if onReportTapped != nil || onBlockTapped != nil {
                 Menu {
@@ -99,9 +83,7 @@ struct FeedInteractionBar: View {
             likeCount: 12,
             commentCount: 3,
             isLiked: true,
-            isBookmarked: false,
             onLikeTapped: {},
-            onBookmarkTapped: {},
             onReportTapped: {},
             onBlockTapped: {}
         )
@@ -110,17 +92,6 @@ struct FeedInteractionBar: View {
             likeCount: 0,
             commentCount: 0,
             isLiked: false,
-            isBookmarked: true,
-            onLikeTapped: {},
-            onBookmarkTapped: {}
-        )
-
-        FeedInteractionBar(
-            likeCount: 5,
-            commentCount: 1,
-            isLiked: false,
-            isBookmarked: true,
-            isVisited: true,
             onLikeTapped: {}
         )
     }

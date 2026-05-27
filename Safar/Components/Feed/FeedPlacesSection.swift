@@ -38,9 +38,9 @@ struct FeedPlacesSection: View {
                                         Spacer()
 
                                         if let liked = place.liked {
-                                            Image(systemName: liked ? "heart.fill" : "xmark.circle.fill")
+                                            Image(systemName: liked ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
                                                 .font(.caption)
-                                                .foregroundColor(liked ? .accentColor : .red)
+                                                .foregroundColor(.accentColor)
                                         }
                                     }
                                     .padding(.leading, 4)

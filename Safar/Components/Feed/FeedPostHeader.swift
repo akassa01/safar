@@ -65,7 +65,6 @@ struct FeedPostHeader: View {
                 }
             }
 
-            Spacer()
         }
     }
 

@@ -8,18 +8,36 @@ import SwiftUI
 struct ToastView: View {
     let message: String
     var onTap: (() -> Void)? = nil
+    var undoAction: (() -> Void)? = nil
 
     var body: some View {
-        Text(message)
-            .font(.subheadline)
-            .foregroundColor(.white)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(Color.black.opacity(0.8))
-            .cornerRadius(25)
-            .onTapGesture {
-                onTap?()
+        HStack(spacing: 10) {
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.white)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let undo = undoAction {
+                Spacer(minLength: 8)
+                Button {
+                    undo()
+                } label: {
+                    Text("Undo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.9))
+                        .underline()
+                }
+                .buttonStyle(.plain)
             }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .frame(minWidth: 280)
+        .background(Color.accentColor)
+        .cornerRadius(25)
+        .onTapGesture {
+            onTap?()
+        }
     }
 }
 
@@ -28,6 +46,7 @@ struct ToastModifier: ViewModifier {
     let message: String
     let duration: Double
     var onTap: (() -> Void)? = nil
+    var undoAction: (() -> Void)? = nil
 
     func body(content: Content) -> some View {
         ZStack {
@@ -36,12 +55,21 @@ struct ToastModifier: ViewModifier {
             if isPresented {
                 VStack {
                     Spacer()
-                    ToastView(message: message, onTap: onTap.map { action in
-                        {
-                            withAnimation { isPresented = false }
-                            action()
+                    ToastView(
+                        message: message,
+                        onTap: onTap.map { action in
+                            {
+                                withAnimation { isPresented = false }
+                                action()
+                            }
+                        },
+                        undoAction: undoAction.map { action in
+                            {
+                                withAnimation { isPresented = false }
+                                action()
+                            }
                         }
-                    })
+                    )
                     .padding(.bottom, 100)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -59,8 +87,14 @@ struct ToastModifier: ViewModifier {
 }
 
 extension View {
-    func toast(isPresented: Binding<Bool>, message: String, duration: Double = 2.0, onTap: (() -> Void)? = nil) -> some View {
-        modifier(ToastModifier(isPresented: isPresented, message: message, duration: duration, onTap: onTap))
+    func toast(
+        isPresented: Binding<Bool>,
+        message: String,
+        duration: Double = 2.0,
+        onTap: (() -> Void)? = nil,
+        undoAction: (() -> Void)? = nil
+    ) -> some View {
+        modifier(ToastModifier(isPresented: isPresented, message: message, duration: duration, onTap: onTap, undoAction: undoAction))
     }
 }
 
