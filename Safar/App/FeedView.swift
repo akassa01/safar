@@ -116,6 +116,15 @@ struct FeedView: View {
                         onPostTapped: {
                             selectedPost = post
                         },
+                        onBookmarkTapped: isOwnPost ? nil : {
+                            Task {
+                                if post.isCityInUserList {
+                                    await viewModel.unbookmarkCity(post: post)
+                                } else {
+                                    await viewModel.bookmarkCity(post: post)
+                                }
+                            }
+                        },
                         onReportPostTapped: isOwnPost ? nil : {
                             reportingPost = post
                         },

@@ -14,6 +14,7 @@ struct FeedPostCard: View {
     let onUserTapped: () -> Void
     let onCityTapped: () -> Void
     let onPostTapped: () -> Void
+    var onBookmarkTapped: (() -> Void)? = nil
     var onReportPostTapped: (() -> Void)? = nil
     var onBlockUserTapped: (() -> Void)? = nil
 
@@ -47,12 +48,14 @@ struct FeedPostCard: View {
                 // Places disclosure groups
                 FeedPlacesSection(places: post.places)
 
-                // Interaction bar (likes, comments, optional ... menu)
+                // Interaction bar (likes, comments, bookmark, optional ... menu)
                 FeedInteractionBar(
                     likeCount: post.likeCount,
                     commentCount: post.commentCount,
                     isLiked: post.isLikedByCurrentUser,
+                    isBookmarked: post.isCityInUserList,
                     onLikeTapped: onLikeTapped,
+                    onBookmarkTapped: onBookmarkTapped,
                     onReportTapped: onReportPostTapped,
                     onBlockTapped: onBlockUserTapped
                 )

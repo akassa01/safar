@@ -2162,4 +2162,69 @@ extension DatabaseManager {
             // Non-fatal — don't rethrow, worst case unread dots persist until next open
         }
     }
+
+    // MARK: - Post bookmark notifications
+
+    /// Notify the post owner that the current user bookmarked their city.
+    /// Uses RPC so the function can safely look up the post owner and skip self-notifications.
+    func notifyPostBookmarked(actorId: UUID, postUserCityId: Int64) async throws {
+        struct Params: Encodable {
+            let p_actor_id: String
+            let p_user_city_id: Int64
+        }
+        do {
+            try await supabase
+                .rpc("notify_post_bookmarked",
+                     params: Params(p_actor_id: actorId.uuidString, p_user_city_id: postUserCityId))
+                .execute()
+        } catch {
+            // Non-fatal — notification failure shouldn't block the bookmark action
+            Log.data.error("notifyPostBookmarked failed: \(error)")
+        }
+    }
+
+    /// Delete the post_bookmarked notification when a user un-bookmarks.
+    func deletePostBookmarkedNotification(actorId: UUID, postUserCityId: Int64) async throws {
+        struct Params: Encodable {
+            let p_actor_id: String
+            let p_user_city_id: Int64
+        }
+        do {
+            try await supabase
+                .rpc("delete_post_bookmarked_notification",
+                     params: Params(p_actor_id: actorId.uuidString, p_user_city_id: postUserCityId))
+                .execute()
+        } catch {
+            Log.data.error("deletePostBookmarkedNotification failed: \(error)")
+        }
+    }
+
+    // MARK: - Current user city IDs (for bookmark state)
+
+    /// Fetches all city IDs in the current user's list (visited + bucket list).
+    /// Returns two sets: all city IDs, and visited-only city IDs.
+    func getCurrentUserCityIds() async throws -> (all: Set<Int>, visited: Set<Int>) {
+        struct CityIdRow: Decodable {
+            let cityId: Int
+            let visited: Bool
+            enum CodingKeys: String, CodingKey {
+                case cityId = "city_id"
+                case visited
+            }
+        }
+        let currentUser = try await getCurrentUser()
+        do {
+            let rows: [CityIdRow] = try await supabase
+                .from("user_city")
+                .select("city_id, visited")
+                .eq("user_id", value: currentUser.id.uuidString)
+                .execute()
+                .value
+            let allIds = Set(rows.map(\.cityId))
+            let visitedIds = Set(rows.filter(\.visited).map(\.cityId))
+            return (all: allIds, visited: visitedIds)
+        } catch {
+            throw DatabaseError.networkError("Failed to fetch user city IDs: \(error.localizedDescription)")
+        }
+    }
 }

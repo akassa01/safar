@@ -201,6 +201,12 @@ private struct NotificationRow: View {
             }
             return "\(actorName) replied to your comment"
 
+        case "post_bookmarked":
+            if let city = notification.cityName {
+                return "\(actorName) saved your trip to \(city)"
+            }
+            return "\(actorName) saved your trip"
+
         case "city_ranked":
             if let city = notification.cityName {
                 return "\(actorName) just ranked \(city)!"
@@ -239,7 +245,7 @@ private extension AppNotification {
     var navigationDestination: NotificationDestination? {
         switch type {
         // Post-level actions → open the post
-        case "post_liked", "post_commented", "comment_liked", "comment_replied":
+        case "post_liked", "post_commented", "comment_liked", "comment_replied", "post_bookmarked":
             if let ref = referenceId {
                 return .post(userCityId: ref)
             }
