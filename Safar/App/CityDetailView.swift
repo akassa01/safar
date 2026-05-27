@@ -95,6 +95,17 @@ struct CityDetailView: View {
         }
         .toolbar {
             if let city = city, !isOffline {
+                if city.visited == true {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        ShareLink(
+                            item: URL(string: "https://apps.apple.com/app/id6759003685")!,
+                            message: Text("Check out \(city.displayName) on Safar!")
+                        ) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         if city.visited == true || city.visited == false {
