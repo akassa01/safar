@@ -2061,6 +2061,51 @@ extension DatabaseManager {
         let matches: [ProfileSearchResult]
     }
 
+    // MARK: Device tokens (APNs push notifications)
+
+    /// Upsert the current user's APNs device token.
+    /// Called by AppDelegate after successful registration.
+    func saveDeviceToken(_ token: String) async throws {
+        guard let user = supabase.auth.currentUser else { return }
+        // DEBUG builds route to sandbox APNs; release builds (TestFlight/App Store) use production.
+        #if DEBUG
+        let environment = "sandbox"
+        #else
+        let environment = "production"
+        #endif
+        do {
+            try await supabase
+                .from("device_tokens")
+                .upsert([
+                    "user_id":     user.id.uuidString,
+                    "token":       token,
+                    "platform":    "ios",
+                    "environment": environment,
+                    "updated_at":  ISO8601DateFormatter().string(from: Date())
+                ], onConflict: "user_id,token")
+                .execute()
+        } catch {
+            // Non-fatal — push will just not be delivered on this device
+            Log.data.error("saveDeviceToken failed: \(error)")
+        }
+    }
+
+    /// Remove a specific device token on sign-out so the user stops receiving
+    /// pushes on this device. Call before supabase.auth.signOut().
+    func deleteDeviceToken(_ token: String) async throws {
+        guard let user = supabase.auth.currentUser else { return }
+        do {
+            try await supabase
+                .from("device_tokens")
+                .delete()
+                .eq("user_id", value: user.id.uuidString)
+                .eq("token", value: token)
+                .execute()
+        } catch {
+            Log.data.error("deleteDeviceToken failed: \(error)")
+        }
+    }
+
     // MARK: Phone hash
 
     /// Save the user's SHA-256 hashed phone number to their profile row.

@@ -1,6 +1,17 @@
 import SwiftUI
 import MapKit
 
+/// Typed navigation target for push notification deep links to a city.
+/// Kept separate from `City` because deep links only carry a cityId, not a full model.
+private struct DeepLinkCityTarget: Hashable {
+    let cityId: Int
+}
+
+/// Typed navigation target for push notification deep links to a user profile.
+private struct DeepLinkUserTarget: Hashable {
+    let userId: String
+}
+
 struct HomeView: View {
     @State private var cameraPosition: MapCameraPosition = .region(MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 20.0, longitude: 0.0),
@@ -24,6 +35,7 @@ struct HomeView: View {
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
+    @ObservedObject private var pushRouter = PushNotificationRouter.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -165,6 +177,10 @@ struct HomeView: View {
                     CityDetailView(cityId: city.id)
                         .environmentObject(viewModel)
                 }
+                .navigationDestination(for: DeepLinkCityTarget.self) { target in
+                    CityDetailView(cityId: target.cityId)
+                        .environmentObject(viewModel)
+                }
                 .toolbar(.hidden, for: .navigationBar)
             }
             .tabItem {
@@ -182,6 +198,12 @@ struct HomeView: View {
 
             NavigationStack(path: $feedNavigationPath) {
                 FeedView()
+                    .navigationDestination(for: FeedPost.self) { post in
+                        PostDetailView(post: post)
+                    }
+                    .navigationDestination(for: DeepLinkUserTarget.self) { target in
+                        UserProfileView(userId: target.userId)
+                    }
             }
             .tabItem {
                 Label("Feed", systemImage: "airplane.departure")
@@ -236,6 +258,39 @@ struct HomeView: View {
                 ProgressView()
             }
         }
+        }
+        .onChange(of: pushRouter.pendingDestination) { _, destination in
+            guard let destination else { return }
+            switch destination {
+            case .cityDetail(let cityId):
+                // Switch to Home tab, clear the stack, then push city detail
+                selectedTab = 0
+                homeNavigationPath = NavigationPath()
+                Task { @MainActor in
+                    // Brief pause lets the tab switch settle before pushing
+                    try? await Task.sleep(for: .milliseconds(50))
+                    homeNavigationPath.append(DeepLinkCityTarget(cityId: cityId))
+                }
+            case .postDetail(let userCityId):
+                // Switch to Feed tab, then fetch + push post detail
+                selectedTab = 2
+                feedNavigationPath = NavigationPath()
+                Task {
+                    if let post = try? await DatabaseManager.shared.getFeedPost(userCityId: Int64(userCityId)) {
+                        try? await Task.sleep(for: .milliseconds(50))
+                        await MainActor.run { feedNavigationPath.append(post) }
+                    }
+                }
+            case .userProfile(let userId):
+                // Switch to Feed tab and push the actor's profile
+                selectedTab = 2
+                feedNavigationPath = NavigationPath()
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(50))
+                    feedNavigationPath.append(DeepLinkUserTarget(userId: userId))
+                }
+            }
+            pushRouter.pendingDestination = nil
         }
         .toast(isPresented: $showOfflineToast, message: "This feature is unavailable offline")
     }

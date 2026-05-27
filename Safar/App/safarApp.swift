@@ -11,6 +11,7 @@ import UserNotifications
 
 @main
 struct safarApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var authManager = AuthManager()
     @StateObject private var userCitiesViewModel = UserCitiesViewModel()
     @StateObject private var feedViewModel = FeedViewModel()
@@ -104,6 +105,8 @@ struct safarApp: App {
                       authManager.isAuthenticated,
                       !authManager.needsOnboarding else { return }
                 Task { await syncContactHashesIfNeeded() }
+                // Clear the app icon badge whenever the user opens the app
+                Task { try? await UNUserNotificationCenter.current().setBadgeCount(0) }
             }
         }
     }
