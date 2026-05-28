@@ -20,7 +20,7 @@ struct PlaceRowInList: View {
             Text(place.name)
             if let liked = place.liked {
                 Image(systemName: liked ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
-                    .foregroundColor(.accent)
+                    .foregroundColor(.accentColor)
                     .font(.caption)
             }
             Spacer()

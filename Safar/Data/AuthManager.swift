@@ -49,7 +49,7 @@ class AuthManager: ObservableObject {
                     if let user = state.session?.user {
                         AnalyticsManager.shared.identify(userId: user.id.uuidString, username: nil)
                         if state.event == .signedIn {
-                            let method = (user.appMetadata["provider"] as? String == "apple") ? "apple" : "email"
+                            let method = (user.appMetadata["provider"]?.stringValue == "apple") ? "apple" : "email"
                             AnalyticsManager.shared.capture("user_signed_in", properties: ["method": method])
                         }
                     }

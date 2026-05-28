@@ -17,9 +17,25 @@ class FeedViewModel: ObservableObject {
     @Published var error: Error?
     @Published var hasMorePosts = true
 
+    /// City IDs currently in the user's list (visited + bucket list).
+    @Published var userCityIds: Set<Int> = []
+    /// Subset of userCityIds where visited == true.
+    @Published var userVisitedCityIds: Set<Int> = []
+
     private let databaseManager = DatabaseManager.shared
     private let pageSize = 20
     private var currentOffset = 0
+
+    /// Load user's city ID sets so bookmark state can be derived for feed posts.
+    func loadUserCityIds() async {
+        do {
+            let (all, visited) = try await databaseManager.getCurrentUserCityIds()
+            userCityIds = all
+            userVisitedCityIds = visited
+        } catch {
+            Log.data.error("loadUserCityIds failed: \(error)")
+        }
+    }
 
     /// Load feed posts (initial load or refresh)
     func loadFeed(refresh: Bool = false) async {
@@ -36,12 +52,22 @@ class FeedViewModel: ObservableObject {
 
         error = nil
 
+        // Refresh user city IDs on initial load or explicit refresh so bookmark icons are accurate.
+        if refresh || userCityIds.isEmpty {
+            await loadUserCityIds()
+        }
+
         do {
             let fetchedPosts = try await databaseManager.getFeedPosts(
                 limit: pageSize,
                 offset: currentOffset
             )
-            let newPosts = BlockManager.shared.filter(fetchedPosts, keyPath: \.userId)
+            var newPosts = BlockManager.shared.filter(fetchedPosts, keyPath: \.userId)
+
+            // Inject isCityInUserList based on the current user's city set
+            for index in newPosts.indices {
+                newPosts[index].isCityInUserList = userCityIds.contains(newPosts[index].cityId)
+            }
 
             if refresh {
                 posts = newPosts
@@ -128,6 +154,64 @@ class FeedViewModel: ObservableObject {
     func updateCommentCount(for postId: Int64, delta: Int) {
         if let index = posts.firstIndex(where: { $0.id == postId }) {
             posts[index].commentCount = max(0, posts[index].commentCount + delta)
+        }
+    }
+
+    /// Bookmark the city from a feed post (adds to bucket list) with optimistic update.
+    func bookmarkCity(post: FeedPost) async {
+        guard let index = posts.firstIndex(where: { $0.id == post.id }) else { return }
+
+        // Optimistic update
+        posts[index].isCityInUserList = true
+        userCityIds.insert(post.cityId)
+
+        do {
+            let currentUser = try await databaseManager.getCurrentUser()
+            try await databaseManager.addCityToBucketList(userId: currentUser.id, cityId: post.cityId)
+            try await databaseManager.notifyPostBookmarked(actorId: currentUser.id, postUserCityId: post.id)
+            AnalyticsManager.shared.capture("post_bookmarked", properties: [
+                "post_id": post.id,
+                "city_id": post.cityId
+            ])
+        } catch {
+            // Revert optimistic update on failure
+            if let revertIndex = posts.firstIndex(where: { $0.id == post.id }) {
+                posts[revertIndex].isCityInUserList = false
+            }
+            userCityIds.remove(post.cityId)
+            self.error = error
+            Log.data.error("bookmarkCity failed for post \(post.id): \(error)")
+        }
+    }
+
+    /// Un-bookmark the city from a feed post (removes from bucket list) with optimistic update.
+    /// Only removes if the city is in the bucket list (not visited), since visited cities
+    /// show the bookmark as filled but non-interactive.
+    func unbookmarkCity(post: FeedPost) async {
+        guard let index = posts.firstIndex(where: { $0.id == post.id }) else { return }
+        // Don't allow removing a visited city via the bookmark button
+        guard !userVisitedCityIds.contains(post.cityId) else { return }
+
+        // Optimistic update
+        posts[index].isCityInUserList = false
+        userCityIds.remove(post.cityId)
+
+        do {
+            let currentUser = try await databaseManager.getCurrentUser()
+            try await databaseManager.removeUserCity(userId: currentUser.id, cityId: post.cityId)
+            try await databaseManager.deletePostBookmarkedNotification(actorId: currentUser.id, postUserCityId: post.id)
+            AnalyticsManager.shared.capture("post_unbookmarked", properties: [
+                "post_id": post.id,
+                "city_id": post.cityId
+            ])
+        } catch {
+            // Revert optimistic update on failure
+            if let revertIndex = posts.firstIndex(where: { $0.id == post.id }) {
+                posts[revertIndex].isCityInUserList = true
+            }
+            userCityIds.insert(post.cityId)
+            self.error = error
+            Log.data.error("unbookmarkCity failed for post \(post.id): \(error)")
         }
     }
 }

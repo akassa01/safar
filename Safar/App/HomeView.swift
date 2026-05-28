@@ -1,28 +1,41 @@
 import SwiftUI
 import MapKit
 
+/// Typed navigation target for push notification deep links to a city.
+/// Kept separate from `City` because deep links only carry a cityId, not a full model.
+private struct DeepLinkCityTarget: Hashable {
+    let cityId: Int
+}
+
+/// Typed navigation target for push notification deep links to a user profile.
+private struct DeepLinkUserTarget: Hashable {
+    let userId: String
+}
+
 struct HomeView: View {
     @State private var cameraPosition: MapCameraPosition = .region(MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 20.0, longitude: 0.0),
             span: MKCoordinateSpan(latitudeDelta: 100.0, longitudeDelta: 100.0)
         )
     )
-    @State private var mapPresentation: mapType = .visited
+    @State private var mapPresentation: mapType = .all
 
     @State private var selectedTab: Int = 0
     @State private var isMapExpanded = false
     @State private var showSearchScreen = false
     @State private var showOfflineToast = false
+    @State private var showingCityList = false
 
     @State private var homeNavigationPath = NavigationPath()
-    @State private var citiesNavigationPath = NavigationPath()
     @State private var exploreNavigationPath = NavigationPath()
     @State private var feedNavigationPath = NavigationPath()
+    @State private var profileNavigationPath = NavigationPath()
 
     @StateObject private var notificationsViewModel = NotificationsViewModel()
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
+    @ObservedObject private var pushRouter = PushNotificationRouter.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -80,7 +93,7 @@ struct HomeView: View {
 			Spacer()
                         ShareLink(
                             item: URL(string: "https://apps.apple.com/app/id6759003685")!,
-                            message: Text("Check out Safar – track and rank every city you visit!")
+                            message: Text("Check out Safar – track every city you visit and share your travels!")
                         ) {
                                 HStack {
                                     Image(systemName: "paperplane")
@@ -130,7 +143,7 @@ struct HomeView: View {
                             }
                             .overlay(alignment: .bottom) {
                                 Button(action: {
-                                    selectedTab = 1
+                                    showingCityList = true
                                 }) {
                                     Text("View List")
                                         .fontWeight(.semibold)
@@ -156,8 +169,16 @@ struct HomeView: View {
                     FullScreenMapView(isFullScreen: isMapExpanded, cameraPosition: cameraPosition, mapPresentation: $mapPresentation, viewModel: viewModel)
                         .environmentObject(viewModel)
                 }
+                .sheet(isPresented: $showingCityList) {
+                    YourCitiesView()
+                        .environmentObject(viewModel)
+                }
                 .navigationDestination(for: City.self) { city in
                     CityDetailView(cityId: city.id)
+                        .environmentObject(viewModel)
+                }
+                .navigationDestination(for: DeepLinkCityTarget.self) { target in
+                    CityDetailView(cityId: target.cityId)
                         .environmentObject(viewModel)
                 }
                 .toolbar(.hidden, for: .navigationBar)
@@ -167,27 +188,39 @@ struct HomeView: View {
             }
             .tag(0)
 
-            NavigationStack(path: $citiesNavigationPath) {
-                YourCitiesView()
-            }
-            .tabItem {
-                Label("Your Cities", systemImage: "building.2")
-            }
-            .tag(1)
-
             NavigationStack(path: $exploreNavigationPath) {
                 ExploreView()
             }
             .tabItem {
                 Label("Explore", systemImage: "safari")
             }
-            .tag(2)
+            .tag(1)
 
             NavigationStack(path: $feedNavigationPath) {
                 FeedView()
+                    .navigationDestination(for: FeedPost.self) { post in
+                        PostDetailView(post: post)
+                    }
+                    .navigationDestination(for: DeepLinkUserTarget.self) { target in
+                        UserProfileView(userId: target.userId)
+                    }
             }
             .tabItem {
                 Label("Feed", systemImage: "airplane.departure")
+            }
+            .tag(2)
+
+            NavigationStack(path: $profileNavigationPath) {
+                if let userId = viewModel.currentUserId?.uuidString {
+                    UserProfileView(userId: userId)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color("Background"))
+                }
+            }
+            .tabItem {
+                Label("Profile", systemImage: "person.fill")
             }
             .tag(3)
 
@@ -198,7 +231,7 @@ struct HomeView: View {
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue != newValue {
-                let tabNames = ["home", "cities", "explore", "feed"]
+                let tabNames = ["home", "explore", "feed", "profile"]
                 let tabName = newValue < tabNames.count ? tabNames[newValue] : "\(newValue)"
                 AnalyticsManager.shared.capture("tab_selected", properties: ["tab": tabName])
             }
@@ -210,11 +243,11 @@ struct HomeView: View {
                     showSearchScreen = false
                     isMapExpanded = false
                 case 1:
-                    citiesNavigationPath = NavigationPath()
-                case 2:
                     exploreNavigationPath = NavigationPath()
-                case 3:
+                case 2:
                     feedNavigationPath = NavigationPath()
+                case 3:
+                    profileNavigationPath = NavigationPath()
                 default:
                     break
                 }
@@ -225,6 +258,39 @@ struct HomeView: View {
                 ProgressView()
             }
         }
+        }
+        .onChange(of: pushRouter.pendingDestination) { _, destination in
+            guard let destination else { return }
+            switch destination {
+            case .cityDetail(let cityId):
+                // Switch to Home tab, clear the stack, then push city detail
+                selectedTab = 0
+                homeNavigationPath = NavigationPath()
+                Task { @MainActor in
+                    // Brief pause lets the tab switch settle before pushing
+                    try? await Task.sleep(for: .milliseconds(50))
+                    homeNavigationPath.append(DeepLinkCityTarget(cityId: cityId))
+                }
+            case .postDetail(let userCityId):
+                // Switch to Feed tab, then fetch + push post detail
+                selectedTab = 2
+                feedNavigationPath = NavigationPath()
+                Task {
+                    if let post = try? await DatabaseManager.shared.getFeedPost(userCityId: Int64(userCityId)) {
+                        try? await Task.sleep(for: .milliseconds(50))
+                        await MainActor.run { feedNavigationPath.append(post) }
+                    }
+                }
+            case .userProfile(let userId):
+                // Switch to Feed tab and push the actor's profile
+                selectedTab = 2
+                feedNavigationPath = NavigationPath()
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(50))
+                    feedNavigationPath.append(DeepLinkUserTarget(userId: userId))
+                }
+            }
+            pushRouter.pendingDestination = nil
         }
         .toast(isPresented: $showOfflineToast, message: "This feature is unavailable offline")
     }

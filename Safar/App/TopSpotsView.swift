@@ -52,10 +52,17 @@ struct TopSpotsView: View {
                     .padding(.top, 60)
                 } else {
                     LazyVStack(spacing: 0) {
-                        ForEach(filteredSortedPlaces, id: \.localKey) { place in
-                            TopSpotsPlaceRow(place: place, onOpenInMaps: { _ in openInMaps(place) })
-                                .padding(.horizontal)
-                                .padding(.vertical, 10)
+                        ForEach(Array(filteredSortedPlaces.enumerated()), id: \.element.localKey) { index, place in
+                            HStack(spacing: 8) {
+                                Text("\(index + 1)")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 18, alignment: .trailing)
+                                TopSpotsPlaceRow(place: place, onOpenInMaps: { _ in openInMaps(place) })
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
                             Divider()
                                 .padding(.horizontal)
                         }

@@ -8,16 +8,12 @@
 import SwiftUI
 
 struct CityListMember: View {
-    var index: Int
     var city: City
     var bucketList: Bool
-    var locked: Bool
+    var friendCount: Int? = nil
+
     var body: some View {
         HStack(alignment: .center) {
-            Text(String(index + 1))
-                .font(.title2)
-                .bold(true)
-                .frame(width: 40, alignment: .leading)
             VStack (alignment: .leading) {
                 Text(city.displayName)
                     .font(.headline)
@@ -28,27 +24,16 @@ struct CityListMember: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-            }
-            .frame(width: 250, alignment: .leading)
-            .layoutPriority(1)
-            
-            if (!bucketList) {
-                if (locked) {
-                    Image(systemName: "lock.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundColor(.accent)
-                        .frame(width: 25, height: 25)
-                } else {
-                    RatingCircle(rating: city.rating!, size: 50)
+                if let count = friendCount, count > 0 {
+                    Text(count == 1 ? "1 friend has been here" : "\(count) friends have been here")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
                 }
             }
+            .padding(.leading, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
         }
         .background(Color("Background"))
     }
 }
-
-//#Preview("City List w/ Items") {
-//    CityListMember(city: City(name: "Vancouver", latitude: 40.7128, longitude: -74.0060, bucketList: false, isVisited: true, country: "Canada", admin: "British Columbia"))
-//}
-

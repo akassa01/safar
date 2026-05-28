@@ -2,7 +2,7 @@
 //  FeedInteractionBar.swift
 //  Safar
 //
-//  Like and comment interaction bar for feed posts.
+//  Like, comment, and bookmark interaction bar for feed posts.
 //  Optional report/block callbacks show a ... menu on the trailing edge.
 //
 
@@ -23,7 +23,7 @@ struct FeedInteractionBar: View {
                 HStack(spacing: 4) {
                     Image(systemName: isLiked ? "heart.fill" : "heart")
                         .font(.subheadline)
-                        .foregroundColor(isLiked ? .red : .secondary)
+                        .foregroundColor(isLiked ? .accentColor : .secondary)
 
                     if likeCount > 0 {
                         Text("\(likeCount)")

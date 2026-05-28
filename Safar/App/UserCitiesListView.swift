@@ -39,9 +39,9 @@ struct UserCitiesListView: View {
             )
 
             List {
-                ForEach(currentSortedCities.enumerated().map({ $0 }), id: \.element) { i, city in
+                ForEach(currentSortedCities, id: \.self) { city in
                     ZStack {
-                        CityListMember(index: i, city: city, bucketList: selectedTab == .bucketList, locked: currentCities.count < 5)
+                        CityListMember(city: city, bucketList: selectedTab == .bucketList)
                         if selectedTab == .visited, let post = feedPosts.first(where: { $0.cityId == city.id }) {
                             NavigationLink(destination: PostDetailView(post: post, feedViewModel: nil)) {
                                 EmptyView()
@@ -62,19 +62,6 @@ struct UserCitiesListView: View {
             .listStyle(.plain)
             .background(Color("Background"))
 
-            if selectedTab == .visited && cities.count < 5 {
-                VStack(spacing: 12) {
-                    Image(systemName: "lock.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.accent)
-                    Text("\(userName) needs to rank \(5 - cities.count) more \(5 - cities.count == 1 ? "city" : "cities") to unlock ratings!")
-                        .font(.headline)
-                        .foregroundStyle(.accent)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
         }
         .background(Color("Background"))
         .navigationTitle("\(userName)'s Cities")
@@ -91,7 +78,7 @@ struct UserCitiesListView: View {
     }
 
     private var currentSortedCities: [City] {
-        currentCities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 })
+        currentCities.sorted(by: { $0.displayName < $1.displayName })
     }
 
     private func loadData() async {

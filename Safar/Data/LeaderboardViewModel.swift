@@ -2,7 +2,7 @@
 //  LeaderboardViewModel.swift
 //  safar
 //
-//  ViewModel for managing leaderboard state (top-rated cities and countries)
+//  ViewModel for managing leaderboard state (most visited cities and countries)
 //
 
 import Foundation
@@ -20,28 +20,32 @@ class LeaderboardViewModel: ObservableObject {
     @Published var isLoadingPeopleByCities = false
     @Published var isLoadingPeopleByCountries = false
     @Published var error: Error?
-    @Published var selectedContinent: String?
+    @Published var selectedContinents: Set<String> = []
+    @Published var selectedCountry: String?
+    @Published var availableCountries: [String] = []
 
     private let databaseManager = DatabaseManager.shared
 
     let continents = ["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]
+
+    var hasActiveFilters: Bool {
+        !selectedContinents.isEmpty || selectedCountry != nil
+    }
 
     func loadTopCities(limit: Int = 50) async {
         isLoadingCities = true
         error = nil
 
         do {
-            if let continent = selectedContinent {
-                topCities = try await databaseManager.getTopRatedCitiesByContinent(
-                    continent: continent,
-                    limit: limit
-                )
-            } else {
-                topCities = try await databaseManager.getTopRatedCities(limit: limit)
-            }
+            topCities = try await databaseManager.getMostVisitedCities(
+                limit: limit,
+                continents: Array(selectedContinents),
+                country: selectedCountry
+            )
             AnalyticsManager.shared.capture("leaderboard_viewed", properties: [
                 "tab": "cities",
-                "continent_filter": selectedContinent as Any
+                "continent_filter": Array(selectedContinents).joined(separator: ",") as Any,
+                "country_filter": selectedCountry as Any
             ])
         } catch {
             self.error = error
@@ -56,13 +60,13 @@ class LeaderboardViewModel: ObservableObject {
         error = nil
 
         do {
-            topCountries = try await databaseManager.getTopRatedCountries(
+            topCountries = try await databaseManager.getMostVisitedCountries(
                 limit: limit,
-                continent: selectedContinent
+                continents: Array(selectedContinents)
             )
             AnalyticsManager.shared.capture("leaderboard_viewed", properties: [
                 "tab": "countries",
-                "continent_filter": selectedContinent as Any
+                "continent_filter": Array(selectedContinents).joined(separator: ",") as Any
             ])
         } catch {
             self.error = error
@@ -72,6 +76,14 @@ class LeaderboardViewModel: ObservableObject {
         isLoadingCountries = false
     }
 
+    func loadAvailableCountries() async {
+        do {
+            availableCountries = try await databaseManager.getAvailableCountries()
+        } catch {
+            Log.data.error("loadAvailableCountries failed: \(error)")
+        }
+    }
+
     func refresh() async {
         await loadTopCities()
         await loadTopCountries()
@@ -79,8 +91,27 @@ class LeaderboardViewModel: ObservableObject {
         await loadTopTravelersByCountries()
     }
 
-    func selectContinent(_ continent: String?) async {
-        selectedContinent = continent
+    func toggleContinent(_ continent: String) async {
+        if selectedContinents.contains(continent) {
+            selectedContinents.remove(continent)
+        } else {
+            selectedContinents.insert(continent)
+        }
+        async let cities: () = loadTopCities()
+        async let countries: () = loadTopCountries()
+        _ = await (cities, countries)
+    }
+
+    func selectCountry(_ country: String?) async {
+        selectedCountry = country
+        async let cities: () = loadTopCities()
+        async let countries: () = loadTopCountries()
+        _ = await (cities, countries)
+    }
+
+    func clearAllFilters() async {
+        selectedContinents = []
+        selectedCountry = nil
         async let cities: () = loadTopCities()
         async let countries: () = loadTopCountries()
         _ = await (cities, countries)

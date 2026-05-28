@@ -32,6 +32,9 @@ struct FeedPost: Identifiable, Hashable {
     var commentCount: Int = 0
     var isLikedByCurrentUser: Bool = false
 
+    // Bookmark state (derived from user's city list — not a DB column)
+    var isCityInUserList: Bool = false
+
     // Places (fetched separately)
     var places: [Place] = []
 

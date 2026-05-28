@@ -99,7 +99,7 @@ struct NotificationsView: View {
             Text("No notifications yet")
                 .font(.headline)
 
-            Text("You'll see it here when someone likes your post, comments on your trip, replies to your comment, follows you, or ranks a city you've been to.")
+            Text("You'll see it here when someone likes your post, comments on your trip, replies to your comment, or follows you.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -201,6 +201,18 @@ private struct NotificationRow: View {
             }
             return "\(actorName) replied to your comment"
 
+        case "post_bookmarked":
+            if let city = notification.cityName {
+                return "\(actorName) saved your trip to \(city)"
+            }
+            return "\(actorName) saved your trip"
+
+        case "bucket_list_friend_visit":
+            if let city = notification.cityName {
+                return "\(actorName) visited \(city), which is on your bucket list"
+            }
+            return "\(actorName) visited a city on your bucket list"
+
         case "city_ranked":
             if let city = notification.cityName {
                 return "\(actorName) just ranked \(city)!"
@@ -239,7 +251,7 @@ private extension AppNotification {
     var navigationDestination: NotificationDestination? {
         switch type {
         // Post-level actions → open the post
-        case "post_liked", "post_commented", "comment_liked", "comment_replied":
+        case "post_liked", "post_commented", "comment_liked", "comment_replied", "post_bookmarked":
             if let ref = referenceId {
                 return .post(userCityId: ref)
             }
@@ -249,8 +261,8 @@ private extension AppNotification {
         case "new_follower", "contact_joined":
             return actorDestination
 
-        // City ranked → open the city detail
-        case "city_ranked":
+        // City ranked or bucket-list friend visit → open the city detail
+        case "city_ranked", "bucket_list_friend_visit":
             if let ref = referenceId {
                 return .city(cityId: Int(ref))
             }

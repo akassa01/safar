@@ -61,10 +61,13 @@ struct SearchMainView: View {
 
     // Context menu state
     @State private var cityResultToVisit: SearchResult?
-    @State private var showingRatingSheet = false
-    @State private var cityToRate: SearchResult?
     @State private var showDeleteConfirmation = false
     @State private var cityToDelete: SearchResult?
+
+    // Instant add + enrichment
+    @State private var lastAddedCity: SearchResult?
+    @State private var cityToEnrich: SearchResult?   // drives sheet via item — preserves @State across re-renders
+    @State private var showInstantAddToast = false
     
     var body: some View {
         NavigationStack {
@@ -126,7 +129,16 @@ struct SearchMainView: View {
                             ZStack {
                                 SearchListMember(
                                     result: result,
-                                    onMarkVisited: { cityResultToVisit = $0 }
+                                    onMarkVisited: { cityResultToVisit = $0 },
+                                    onInstantAdd: { searchResult in
+                                        Task { @MainActor in
+                                            await viewModel.markCityAsVisited(cityId: Int(searchResult.data_id) ?? 0)
+                                            lastAddedCity = searchResult
+                                            withAnimation {
+                                                showInstantAddToast = true
+                                            }
+                                        }
+                                    }
                                 )
                                 NavigationLink(destination: CityDetailView(cityId: Int(result.data_id) ?? 0)) {
                                     EmptyView()
@@ -173,49 +185,55 @@ struct SearchMainView: View {
                 searchResults = []
                 performSearch()
             }
-            .sheet(item: $cityResultToVisit) { result in
-                AddCityView(
-                    baseResult: result,
-                    isVisited: true,
-                    onSave: { _ in
-                        Task {
-                            await viewModel.loadUserData()
-                        }
-                    }
-                )
-                .environmentObject(viewModel)
-            }
-            .sheet(isPresented: $showingRatingSheet) {
-                if let result = cityToRate {
-                    CityRatingView(
-                        isPresented: $showingRatingSheet,
-                        cityName: result.title,
-                        country: result.country,
-                        cityID: Int(result.data_id) ?? 0,
-                        onRatingSelected: { rating in
-                            Task {
-                                await viewModel.updateCityRating(cityId: Int(result.data_id) ?? 0, rating: rating)
-                            }
-                        }
-                    )
-                    .environmentObject(viewModel)
-                    .presentationBackground(Color("Background"))
-                }
-            }
-            .alert("Remove City", isPresented: $showDeleteConfirmation) {
-                Button("Cancel", role: .cancel) {
-                    cityToDelete = nil
-                }
-                Button("Remove", role: .destructive) {
-                    if let result = cityToDelete {
-                        Task {
-                            await viewModel.removeCityFromList(cityId: Int(result.data_id) ?? 0)
-                        }
+        }
+        .sheet(item: $cityResultToVisit) { result in
+            AddCityView(
+                baseResult: result,
+                isVisited: true,
+                onSave: { _ in
+                    Task {
+                        await viewModel.loadUserData()
                     }
                 }
-            } message: {
-                Text("Are you sure you want to remove \(cityToDelete?.title ?? "this city")? This action cannot be undone.")
+            )
+            .environmentObject(viewModel)
+        }
+        .sheet(item: $cityToEnrich) { city in
+            AddCityView(
+                baseResult: city,
+                isVisited: true,
+                onSave: { _ in }   // loadUserData already called inside saveCity → markCityAsVisited
+            )
+            .environmentObject(viewModel)
+        }
+        .toast(
+            isPresented: $showInstantAddToast,
+            message: "\(lastAddedCity?.title ?? "City") added. Tap to add details.",
+            duration: 4.0,
+            onTap: {
+                cityToEnrich = lastAddedCity
+            },
+            undoAction: {
+                if let city = lastAddedCity {
+                    Task {
+                        await viewModel.removeCityFromList(cityId: Int(city.data_id) ?? 0)
+                    }
+                }
             }
+        )
+        .alert("Remove City", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                cityToDelete = nil
+            }
+            Button("Remove", role: .destructive) {
+                if let result = cityToDelete {
+                    Task {
+                        await viewModel.removeCityFromList(cityId: Int(result.data_id) ?? 0)
+                    }
+                }
+            }
+        } message: {
+            Text("Are you sure you want to remove \(cityToDelete?.title ?? "this city")? This action cannot be undone.")
         }
     }
 
@@ -225,11 +243,7 @@ struct SearchMainView: View {
             case (.city(let cityA), .city(let cityB)):
                 return cityA.population > cityB.population
             case (.country(let countryA), .country(let countryB)):
-                // Sort by rating if both have ratings, otherwise keep order
-                if countryA.averageRating > 0 && countryB.averageRating > 0 {
-                    return countryA.averageRating > countryB.averageRating
-                }
-                return false
+                return countryA.name < countryB.name
             default:
                 return false
             }
@@ -284,7 +298,7 @@ struct SearchMainView: View {
                             id: country.id,
                             name: country.name,
                             continent: country.continent,
-                            averageRating: country.averageRating ?? 0,
+                            visitCount: 0,
                             rank: nil
                         ))
                     }
@@ -327,12 +341,6 @@ struct SearchMainView: View {
         let isInBucket = viewModel.bucketListCities.contains { $0.id == cityId }
 
         if isVisited {
-            Button {
-                cityToRate = result
-                showingRatingSheet = true
-            } label: {
-                Label("Change Rating", systemImage: "pencil")
-            }
             Button(role: .destructive) {
                 cityToDelete = result
                 showDeleteConfirmation = true

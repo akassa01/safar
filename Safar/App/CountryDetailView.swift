@@ -52,7 +52,7 @@ struct CountryDetailView: View {
         CountryBannerView(
             countryId: country.id,
             countryName: country.name,
-            rating: country.averageRating,
+            visitCount: country.visitCount,
             rank: country.rank
         )
     }
@@ -91,10 +91,10 @@ struct CountryDetailView: View {
             Image(systemName: "building.2")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary.opacity(0.5))
-            Text("No top-rated cities yet")
+            Text("No top cities yet")
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text("Cities need at least 5 ratings to appear here")
+            Text("Cities need at least 5 visits to appear here")
                 .font(.caption)
                 .foregroundColor(.secondary.opacity(0.7))
         }
@@ -167,8 +167,11 @@ struct CountryCityRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Rating display
-            RatingCircle(rating: entry.averageRating, size: 35)
+            // Visit count display
+            Text("\(entry.visitCount)")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.accentColor)
 
             Image(systemName: "chevron.right")
                 .font(.caption)
@@ -183,7 +186,7 @@ struct CountryCityRow: View {
             id: 1,
             name: "Japan",
             continent: "Asia",
-            averageRating: 8.9,
+            visitCount: 890,
             rank: 1
         ))
     }

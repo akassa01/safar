@@ -92,15 +92,6 @@ struct FriendsWhoVisitedContent: View {
                     }
                 }
                 Spacer()
-                if (friend.visitedCitiesCount ?? 0) < 5 {
-                    Image(systemName: "lock.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundColor(.accent)
-                        .frame(width: 35, height: 35)
-                } else if let rating = friend.rating {
-                    RatingCircle(rating: rating, size: 35)
-                }
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -186,16 +177,6 @@ struct FriendsWhoVisitedListView: View {
                         }
 
                         Spacer()
-
-                        if (friend.visitedCitiesCount ?? 0) < 5 {
-                            Image(systemName: "lock.circle.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .foregroundColor(.accent)
-                                .frame(width: 35, height: 35)
-                        } else if let rating = friend.rating {
-                            RatingCircle(rating: rating, size: 35)
-                        }
                     }
                     .padding(.vertical, 4)
                 }
@@ -233,8 +214,8 @@ struct FriendsWhoVisitedListView: View {
                     rating: nil,
                     notes: nil,
                     userId: nil,
-                    averageRating: 8.5,
-                    ratingCount: 52
+                    averageRating: nil,
+                    ratingCount: nil
                 )
             )
             .padding()

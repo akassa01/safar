@@ -7,9 +7,11 @@
 
 import SwiftUI
 import PostHog
+import UserNotifications
 
 @main
 struct safarApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var authManager = AuthManager()
     @StateObject private var userCitiesViewModel = UserCitiesViewModel()
     @StateObject private var feedViewModel = FeedViewModel()
@@ -103,6 +105,8 @@ struct safarApp: App {
                       authManager.isAuthenticated,
                       !authManager.needsOnboarding else { return }
                 Task { await syncContactHashesIfNeeded() }
+                // Clear the app icon badge whenever the user opens the app
+                Task { try? await UNUserNotificationCenter.current().setBadgeCount(0) }
             }
         }
     }
@@ -137,8 +141,19 @@ struct safarApp: App {
         }
     }
 
+    private func requestPushAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+            if granted {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
+    }
+
     private func preloadData() {
         guard !isDataPreloaded else { return }
+        requestPushAuthorization()
         Task { await feedViewModel.loadFeed(refresh: true) }
         Task { await leaderboardViewModel.refresh() }
         Task { await BlockManager.shared.loadBlockedUsers() }

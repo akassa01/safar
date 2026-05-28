@@ -158,10 +158,6 @@ struct PostDetailView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 8) {
-                if let rating = post.rating, (post.authorVisitedCitiesCount ?? 0) >= 5 {
-                    RatingCircle(rating: rating, size: 50)
-                }
-
                 if post.userId != currentUserId {
                     Menu {
                         Button {
@@ -239,7 +235,7 @@ struct PostDetailView: View {
                                     if let liked = place.liked {
                                         Image(systemName: liked ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
                                             .font(.caption)
-                                            .foregroundColor(liked ? .green : .red)
+                                            .foregroundColor(liked ? .accentColor : .secondary)
                                     }
                                 }
                                 .padding(.leading, 8)
@@ -260,7 +256,7 @@ struct PostDetailView: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: currentPost.isLikedByCurrentUser ? "heart.fill" : "heart")
-                        .foregroundColor(currentPost.isLikedByCurrentUser ? .red : .primary)
+                        .foregroundColor(currentPost.isLikedByCurrentUser ? .accentColor : .primary)
                     Text("\(currentPost.likeCount)")
                 }
                 .font(.subheadline)

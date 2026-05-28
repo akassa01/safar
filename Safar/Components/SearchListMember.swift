@@ -14,6 +14,7 @@ struct SearchListMember: View {
 
     var result: SearchResult
     var onMarkVisited: (SearchResult) -> Void
+    var onInstantAdd: (SearchResult) -> Void
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
     
@@ -31,16 +32,17 @@ struct SearchListMember: View {
             
             // add to bucket
             if viewModel.bucketListCities.contains(where: { $0.id == Int(result.data_id) }) {
-                Button (action: {
+                Button(action: {
                     Task {
                         await viewModel.removeCityFromList(cityId: Int(result.data_id)!)
                     }
                 }) {
                     Image(systemName: "bookmark.fill")
+                        .font(.title3)
                         .foregroundColor(.accent)
                 }
                 .buttonStyle(BorderlessButtonStyle())
-                
+
             } else if !viewModel.visitedCities.contains(where: { $0.id == Int(result.data_id) }) {
                 Button(action: {
                     Task {
@@ -48,23 +50,24 @@ struct SearchListMember: View {
                     }
                 }) {
                     Image(systemName: "bookmark")
+                        .font(.title3)
                         .foregroundColor(.accent)
-                        .imageScale(.large)
                 }
                 .buttonStyle(BorderlessButtonStyle())
             }
-            
+
             // add to visited
             if viewModel.visitedCities.contains(where: { $0.id == Int(result.data_id) }) {
                 Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
                     .foregroundColor(.accent)
             } else {
                 Button(action: {
-                    onMarkVisited(result)
+                    onInstantAdd(result)
                 }) {
                     Image(systemName: "plus.circle")
+                        .font(.title3)
                         .foregroundColor(.accent)
-                        .imageScale(.large)
                 }
                 .buttonStyle(BorderlessButtonStyle())
             }

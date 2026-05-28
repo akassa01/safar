@@ -2,7 +2,7 @@
 //  LeaderboardView.swift
 //  safar
 //
-//  Top Rated cities and countries leaderboard view
+//  Top Visited cities and countries leaderboard view
 //
 
 import SwiftUI
@@ -37,9 +37,6 @@ struct LeaderboardView: View {
                     iconSize: 20
                 )
 
-                // TODO: Re-enable continent filters
-                // continentFilterView
-
                 // Content
                 Group {
                     switch selectedTab {
@@ -52,7 +49,7 @@ struct LeaderboardView: View {
             }
         }
         .background(Color("Background"))
-        .navigationTitle("Top Rated")
+        .navigationTitle("Most Visited")
         .navigationBarTitleDisplayMode(.large)
         .task {
             if viewModel.topCities.isEmpty {
@@ -62,32 +59,6 @@ struct LeaderboardView: View {
         }
     }
 
-    private var continentFilterView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                FilterChip(
-                    title: "All",
-                    isSelected: viewModel.selectedContinent == nil,
-                    action: {
-                        Task { await viewModel.selectContinent(nil) }
-                    }
-                )
-
-                ForEach(viewModel.continents, id: \.self) { continent in
-                    FilterChip(
-                        title: continent,
-                        isSelected: viewModel.selectedContinent == continent,
-                        action: {
-                            Task { await viewModel.selectContinent(continent) }
-                        }
-                    )
-                }
-            }
-            .padding(.horizontal)
-        }
-        .padding(.vertical, 8)
-    }
-
     private var cityLeaderboardContent: some View {
         Group {
             if viewModel.isLoadingCities {
@@ -95,7 +66,7 @@ struct LeaderboardView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
             } else if viewModel.topCities.isEmpty {
-                emptyStateView(message: "No rated cities yet")
+                emptyStateView(message: "No visited cities yet")
             } else {
                 VStack(spacing: 0) {
                     ForEach(viewModel.topCities) { city in
@@ -125,7 +96,7 @@ struct LeaderboardView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
             } else if viewModel.topCountries.isEmpty {
-                emptyStateView(message: "No rated countries yet")
+                emptyStateView(message: "No visited countries yet")
             } else {
                 VStack(spacing: 0) {
                     ForEach(viewModel.topCountries) { country in
@@ -156,7 +127,7 @@ struct LeaderboardView: View {
             Text(message)
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text("Cities need at least 5 ratings to appear")
+            Text("Cities need at least 1 visit to appear")
                 .font(.caption)
                 .foregroundColor(.secondary.opacity(0.7))
         }
@@ -164,6 +135,7 @@ struct LeaderboardView: View {
         .padding(.vertical, 40)
     }
 }
+
 
 #Preview {
     NavigationStack {

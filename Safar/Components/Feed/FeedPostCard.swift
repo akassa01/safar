@@ -14,18 +14,42 @@ struct FeedPostCard: View {
     let onUserTapped: () -> Void
     let onCityTapped: () -> Void
     let onPostTapped: () -> Void
+    var isVisited: Bool = false
+    var onBookmarkTapped: (() -> Void)? = nil
     var onReportPostTapped: (() -> Void)? = nil
     var onBlockUserTapped: (() -> Void)? = nil
 
     var body: some View {
         Button(action: onPostTapped) {
             VStack(alignment: .leading, spacing: 12) {
-                // Header with user info and rating
-                FeedPostHeader(
-                    post: post,
-                    onUserTapped: onUserTapped,
-                    onCityTapped: onCityTapped
-                )
+                // Header row: user info + bookmark button (top right)
+                HStack(alignment: .top, spacing: 12) {
+                    FeedPostHeader(
+                        post: post,
+                        onUserTapped: onUserTapped,
+                        onCityTapped: onCityTapped
+                    )
+
+                    Spacer(minLength: 4)
+
+                    // Bookmark / visited indicator
+                    if onBookmarkTapped != nil {
+                        if isVisited {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.accentColor)
+                        } else {
+                            Button {
+                                onBookmarkTapped?()
+                            } label: {
+                                Image(systemName: post.isCityInUserList ? "bookmark.fill" : "bookmark")
+                                    .font(.title2)
+                                    .foregroundColor(post.isCityInUserList ? .accentColor : .secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
 
                 // Map with places
                 CityMapView(

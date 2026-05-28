@@ -13,16 +13,16 @@ struct YourCitiesView: View {
     @State private var selectedTab: CityTab = .visited
     @State private var cityToDelete: City?
     @State private var showDeleteConfirmation = false
-    @State private var showingRatingSheet = false
-    @State private var cityToRate: City?
     @State private var cityToMarkVisited: City?
     @State private var showOfflineToast = false
+    @State private var friendCounts: [Int: Int] = [:]
+    @State private var searchText = ""
 
     enum CityTab: String, CaseIterable, Identifiable, IconRepresentable {
         case visited = "Visited"
         case bucketList = "Bucket List"
         var id: String { rawValue }
-        
+
         var icon: String {
             switch self {
             case .visited: return "suitcase.fill"
@@ -35,34 +35,32 @@ struct YourCitiesView: View {
             case .bucketList: return true
             }
         }
-        
+
     }
 
     var body: some View {
-        VStack {
+        NavigationStack {
+            VStack {
                 TabBarView<CityTab>(
                     selectedCategory: $selectedTab,
                     iconSize: 22,
                 )
 
-                List(currentCities.sorted(by: { $0.rating ?? 0 > $1.rating ?? 0 }).enumerated().map({ $0 }), id: \.element) { i, city in
+                List(filteredCities, id: \.self) { city in
                     ZStack {
-                        CityListMember(index: i, city: city, bucketList: selectedTab.bucketList, locked: currentCities.count < 5)
-                        NavigationLink(destination: CityDetailView(cityId: city.id)) {
+                        CityListMember(
+                            city: city,
+                            bucketList: selectedTab.bucketList,
+                            friendCount: selectedTab == .bucketList ? friendCounts[city.id] : nil
+                        )
+                        NavigationLink(destination: CityDetailView(cityId: city.id).environmentObject(viewModel)) {
                             EmptyView()
                         }
-                        .opacity(0)
                     }
                     .contentShape(Rectangle())
                     .contextMenu {
                         if networkMonitor.isConnected {
                             if selectedTab == .visited {
-                                Button {
-                                    cityToRate = city
-                                    showingRatingSheet = true
-                                } label: {
-                                    Label("Change Rating", systemImage: "pencil")
-                                }
                                 Button(role: .destructive) {
                                     cityToDelete = city
                                     showDeleteConfirmation = true
@@ -90,39 +88,27 @@ struct YourCitiesView: View {
                 .listStyle(.plain)
                 .background(Color("Background"))
                 .toast(isPresented: $showOfflineToast, message: "City details unavailable offline")
-
-                if selectedTab == .visited && viewModel.visitedCities.count < 5 {
-                    VStack(spacing: 12) {
-                        Image(systemName: "lock.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(.accent)
-                        Text("Rank \(5 - viewModel.visitedCities.count) more \(5 - viewModel.visitedCities.count == 1 ? "city" : "cities") to unlock ratings!")
-                            .font(.headline)
-                            .foregroundStyle(.accent)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
+                .task {
+                    if selectedTab == .bucketList {
+                        await loadFriendCounts()
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .onChange(of: selectedTab) { _, newTab in
+                    searchText = ""
+                    if newTab == .bucketList {
+                        Task { await loadFriendCounts() }
+                    }
+                }
+                .onChange(of: viewModel.bucketListCities) { _, _ in
+                    if selectedTab == .bucketList {
+                        Task { await loadFriendCounts() }
+                    }
                 }
             }
             .background(Color("Background"))
-            .sheet(isPresented: $showingRatingSheet) {
-                if let city = cityToRate {
-                    CityRatingView(
-                        isPresented: $showingRatingSheet,
-                        cityName: city.displayName,
-                        country: city.country,
-                        cityID: city.id,
-                        onRatingSelected: { rating in
-                            Task {
-                                await viewModel.updateCityRating(cityId: city.id, rating: rating)
-                            }
-                        }
-                    )
-                    .environmentObject(viewModel)
-                    .presentationBackground(Color("Background"))
-                }
-            }
+            .navigationTitle("Your Cities")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search cities")
             .sheet(item: $cityToMarkVisited) { city in
                 AddCityView(
                     baseResult: SearchResult(
@@ -158,8 +144,7 @@ struct YourCitiesView: View {
             } message: {
                 Text("Are you sure you want to remove \(cityToDelete?.displayName ?? "this city")? This action cannot be undone.")
             }
-            .navigationTitle("Your Cities")
-            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 
     private var currentCities: [City] {
@@ -168,6 +153,21 @@ struct YourCitiesView: View {
             return viewModel.visitedCities
         case .bucketList:
             return viewModel.bucketListCities
+        }
+    }
+
+    private var filteredCities: [City] {
+        let sorted = currentCities.sorted(by: { $0.displayName < $1.displayName })
+        guard !searchText.isEmpty else { return sorted }
+        return sorted.filter { $0.displayName.lowercased().hasPrefix(searchText.lowercased()) }
+    }
+
+    private func loadFriendCounts() async {
+        let cities = viewModel.bucketListCities
+        guard !cities.isEmpty, let userId = viewModel.currentUserId else { return }
+        for city in cities {
+            let count = (try? await DatabaseManager.shared.getFriendVisitCount(cityId: city.id, userId: userId)) ?? 0
+            friendCounts[city.id] = count
         }
     }
 }
