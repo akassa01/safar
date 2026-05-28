@@ -48,8 +48,8 @@ struct ToastModifier: ViewModifier {
     var onTap: (() -> Void)? = nil
     var undoAction: (() -> Void)? = nil
 
-    // Cancellable dismiss work so re-triggering resets the timer
     @State private var dismissWork: DispatchWorkItem?
+    @State private var keyboardHeight: CGFloat = 0
 
     func body(content: Content) -> some View {
         ZStack {
@@ -73,7 +73,7 @@ struct ToastModifier: ViewModifier {
                             }
                         }
                     )
-                    .padding(.bottom, 16)
+                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 16 : 16)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .animation(.easeInOut(duration: 0.3), value: isPresented)
@@ -83,6 +83,18 @@ struct ToastModifier: ViewModifier {
                 .onChange(of: message) { _, _ in
                     scheduleDismiss()
                 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
+            if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    keyboardHeight = frame.height
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.25)) {
+                keyboardHeight = 0
             }
         }
     }

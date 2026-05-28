@@ -185,55 +185,55 @@ struct SearchMainView: View {
                 searchResults = []
                 performSearch()
             }
-            .sheet(item: $cityResultToVisit) { result in
-                AddCityView(
-                    baseResult: result,
-                    isVisited: true,
-                    onSave: { _ in
-                        Task {
-                            await viewModel.loadUserData()
-                        }
-                    }
-                )
-                .environmentObject(viewModel)
-            }
-            .sheet(item: $cityToEnrich) { city in
-                AddCityView(
-                    baseResult: city,
-                    isVisited: true,
-                    onSave: { _ in }   // loadUserData already called inside saveCity → markCityAsVisited
-                )
-                .environmentObject(viewModel)
-            }
-            .toast(
-                isPresented: $showInstantAddToast,
-                message: "\(lastAddedCity?.title ?? "City") added. Tap to add details.",
-                duration: 4.0,
-                onTap: {
-                    cityToEnrich = lastAddedCity
-                },
-                undoAction: {
-                    if let city = lastAddedCity {
-                        Task {
-                            await viewModel.removeCityFromList(cityId: Int(city.data_id) ?? 0)
-                        }
+        }
+        .sheet(item: $cityResultToVisit) { result in
+            AddCityView(
+                baseResult: result,
+                isVisited: true,
+                onSave: { _ in
+                    Task {
+                        await viewModel.loadUserData()
                     }
                 }
             )
-            .alert("Remove City", isPresented: $showDeleteConfirmation) {
-                Button("Cancel", role: .cancel) {
-                    cityToDelete = nil
-                }
-                Button("Remove", role: .destructive) {
-                    if let result = cityToDelete {
-                        Task {
-                            await viewModel.removeCityFromList(cityId: Int(result.data_id) ?? 0)
-                        }
+            .environmentObject(viewModel)
+        }
+        .sheet(item: $cityToEnrich) { city in
+            AddCityView(
+                baseResult: city,
+                isVisited: true,
+                onSave: { _ in }   // loadUserData already called inside saveCity → markCityAsVisited
+            )
+            .environmentObject(viewModel)
+        }
+        .toast(
+            isPresented: $showInstantAddToast,
+            message: "\(lastAddedCity?.title ?? "City") added. Tap to add details.",
+            duration: 4.0,
+            onTap: {
+                cityToEnrich = lastAddedCity
+            },
+            undoAction: {
+                if let city = lastAddedCity {
+                    Task {
+                        await viewModel.removeCityFromList(cityId: Int(city.data_id) ?? 0)
                     }
                 }
-            } message: {
-                Text("Are you sure you want to remove \(cityToDelete?.title ?? "this city")? This action cannot be undone.")
             }
+        )
+        .alert("Remove City", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                cityToDelete = nil
+            }
+            Button("Remove", role: .destructive) {
+                if let result = cityToDelete {
+                    Task {
+                        await viewModel.removeCityFromList(cityId: Int(result.data_id) ?? 0)
+                    }
+                }
+            }
+        } message: {
+            Text("Are you sure you want to remove \(cityToDelete?.title ?? "this city")? This action cannot be undone.")
         }
     }
 
