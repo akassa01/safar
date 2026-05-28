@@ -59,7 +59,7 @@ struct CountryDetailView: View {
 
     private var topCitiesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-        	SectionHeader(title: "Top Cities", icon: "building.2.fill")
+        	SectionHeader(title: "Most Visited Cities", icon: "building.2.fill")
             .padding(.horizontal)
             .padding(.top, 20)
 
@@ -91,12 +91,9 @@ struct CountryDetailView: View {
             Image(systemName: "building.2")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary.opacity(0.5))
-            Text("No top cities yet")
+            Text("No visits to this country have been logged yet")
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text("Cities need at least 5 visits to appear here")
-                .font(.caption)
-                .foregroundColor(.secondary.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
