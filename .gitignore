@@ -5,3 +5,4 @@ Secrets.xcconfig
 *.xcconfig
 web/
 supabase/
+secrets/
