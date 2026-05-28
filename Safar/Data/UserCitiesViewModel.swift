@@ -19,6 +19,7 @@ class UserCitiesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
     @Published var isOfflineData = false
+    @Published var currentUserAvatarURL: String?
 
     private let databaseManager = DatabaseManager.shared
     private var _currentUserId: UUID?
@@ -190,7 +191,7 @@ class UserCitiesViewModel: ObservableObject {
         do {
             let profile: Profile = try await supabase
                 .from("profiles")
-                .select("visited_cities_count, visited_countries_count")
+                .select("visited_cities_count, visited_countries_count, avatar_url")
                 .eq("id", value: userId)
                 .single()
                 .execute()
@@ -198,6 +199,7 @@ class UserCitiesViewModel: ObservableObject {
 
             self.visitedCitiesCount = profile.visitedCitiesCount ?? 0
             self.visitedCountriesCount = profile.visitedCountriesCount ?? 0
+            self.currentUserAvatarURL = profile.avatarURL
         } catch {
             print("Error loading profile counts: \(error)")
         }

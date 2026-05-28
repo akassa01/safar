@@ -32,6 +32,7 @@ struct HomeView: View {
     @State private var profileNavigationPath = NavigationPath()
 
     @StateObject private var notificationsViewModel = NotificationsViewModel()
+    @State private var profileTabImage: UIImage?
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
@@ -220,15 +221,16 @@ struct HomeView: View {
                         .background(Color("Background"))
                 }
             }
-            .tabItem {
-                Label("Profile", systemImage: "person.fill")
-            }
+            .tabItem { profileTabItem }
             .tag(3)
 
         }
         .task {
             // Seed the unread count for the badge on first load
             await notificationsViewModel.refreshUnreadCount()
+        }
+        .task(id: viewModel.currentUserAvatarURL) {
+            await loadProfileTabImage()
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
@@ -302,6 +304,37 @@ struct HomeView: View {
             pushRouter.pendingDestination = nil
         }
         .toast(isPresented: $showOfflineToast, message: "This feature is unavailable offline")
+    }
+
+    @ViewBuilder
+    private var profileTabItem: some View {
+        if let img = profileTabImage {
+            Label(title: { Text("Profile") }, icon: { Image(uiImage: img) })
+        } else {
+            Label("Profile", systemImage: "person.fill")
+        }
+    }
+
+    private func loadProfileTabImage() async {
+        guard let path = viewModel.currentUserAvatarURL, !path.isEmpty else {
+            profileTabImage = nil
+            return
+        }
+        guard let raw = await AvatarCache.shared.image(for: path) else {
+            profileTabImage = nil
+            return
+        }
+        profileTabImage = makeCircularTabImage(raw).withRenderingMode(.alwaysOriginal)
+    }
+
+    private func makeCircularTabImage(_ image: UIImage) -> UIImage {
+        let size: CGFloat = 26
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+        return renderer.image { _ in
+            let rect = CGRect(origin: .zero, size: CGSize(width: size, height: size))
+            UIBezierPath(ovalIn: rect).addClip()
+            image.draw(in: rect)
+        }
     }
 }
 

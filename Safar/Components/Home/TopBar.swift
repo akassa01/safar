@@ -38,12 +38,6 @@ struct TopBar: View {
                         }
                     })
 
-                    NavigationLink(destination: {
-                        UserProfileView(userId: DatabaseManager.shared.getCurrentUserId() ?? "")
-                    }, label: {
-                        Image(systemName: "person.crop.circle")
-                            .foregroundColor(Color.accentColor)
-                    })
                 }
                 .font(.title2)
                 .padding(.trailing)
