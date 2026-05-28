@@ -82,6 +82,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+        // Cache so AuthManager can re-associate the token on account switch
+        UserDefaults.standard.set(token, forKey: "apnsDeviceToken")
         Task {
             try? await DatabaseManager.shared.saveDeviceToken(token)
         }

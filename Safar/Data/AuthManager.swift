@@ -52,6 +52,12 @@ class AuthManager: ObservableObject {
                             let method = (user.appMetadata["provider"]?.stringValue == "apple") ? "apple" : "email"
                             AnalyticsManager.shared.capture("user_signed_in", properties: ["method": method])
                         }
+                        // Re-associate the cached device token with the newly signed-in account.
+                        // iOS won't re-fire didRegisterForRemoteNotificationsWithDeviceToken on
+                        // account switch, so we do it manually here.
+                        if let token = UserDefaults.standard.string(forKey: "apnsDeviceToken") {
+                            Task { try? await DatabaseManager.shared.saveDeviceToken(token) }
+                        }
                     }
 
                     // Check onboarding status (skip if mid-password-reset)
@@ -120,6 +126,11 @@ class AuthManager: ObservableObject {
     }
 
     func signOut() async throws {
+        // Delete device token before the session ends — deleteDeviceToken requires
+        // an active session to know which user_id row to remove.
+        if let token = UserDefaults.standard.string(forKey: "apnsDeviceToken") {
+            try? await DatabaseManager.shared.deleteDeviceToken(token)
+        }
         // Clear local cache before signing out
         if let userId = currentUserId {
             CityCacheManager.shared.clearCache(for: userId)
@@ -131,6 +142,9 @@ class AuthManager: ObservableObject {
     }
 
     func deleteAccount() async throws {
+        if let token = UserDefaults.standard.string(forKey: "apnsDeviceToken") {
+            try? await DatabaseManager.shared.deleteDeviceToken(token)
+        }
         if let userId = currentUserId {
             CityCacheManager.shared.clearCache(for: userId)
             UserDefaults.standard.removeObject(forKey: "onboarding_completed_\(userId.uuidString)")
