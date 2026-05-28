@@ -18,6 +18,7 @@ struct AuthView: View {
     @State private var result: Result<Void, Error>?
     @State private var showPassword = false
     @State private var showConfirmPassword = false
+    @State private var forgotPasswordEmailSent = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -48,7 +49,39 @@ struct AuthView: View {
             // Form Section
             VStack(spacing: 20) {
                 // Show success message for sign up, replacing the form
-                if isSignUp, case .success = result {
+                if !isSignUp, forgotPasswordEmailSent {
+                    VStack(spacing: 16) {
+                        Image(systemName: "envelope.badge.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.accentColor)
+
+                        Text("Check Your Email")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("We sent a password reset link to \(email). Check your inbox and follow the link to reset your password.")
+                            .foregroundColor(.secondary)
+                            .font(.body)
+                            .multilineTextAlignment(.center)
+
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                forgotPasswordEmailSent = false
+                                result = nil
+                            }
+                        }) {
+                            Text("Back to Sign In")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                        }
+                        .padding(.top, 10)
+                    }
+                    .padding(.vertical, 20)
+                } else if isSignUp, case .success = result {
                     VStack(spacing: 16) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 60))
@@ -111,6 +144,8 @@ struct AuthView: View {
                             if showPassword {
                                 TextField("Enter your password", text: $password)
                                     .textContentType(isSignUp ? .newPassword : .password)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
                             } else {
                                 SecureField("Enter your password", text: $password)
                                     .textContentType(isSignUp ? .newPassword : .password)
@@ -138,6 +173,8 @@ struct AuthView: View {
                                 if showConfirmPassword {
                                     TextField("Confirm your password", text: $confirmPassword)
                                         .textContentType(.newPassword)
+                                        .autocorrectionDisabled()
+                                        .textInputAutocapitalization(.never)
                                 } else {
                                     SecureField("Confirm your password", text: $confirmPassword)
                                         .textContentType(.newPassword)
@@ -241,6 +278,7 @@ struct AuthView: View {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             isSignUp.toggle()
                             result = nil
+                            forgotPasswordEmailSent = false
                             password = ""
                             confirmPassword = ""
                         }
@@ -267,32 +305,34 @@ struct AuthView: View {
         Task {
             isLoading = true
             defer { isLoading = false }
-            
+
+            let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
             do {
                 try await supabase.auth.signIn(
-                    email: email,
+                    email: trimmedEmail,
                     password: password
                 )
                 result = .success(())
             } catch {
-                result = .failure(error)
+                result = .failure(mappedSignInError(error))
             }
         }
     }
-    
+
     func signUpButtonTapped() {
         guard password == confirmPassword else {
             result = .failure(AuthError.passwordMismatch)
             return
         }
-        
+
         Task {
             isLoading = true
             defer { isLoading = false }
-            
+
+            let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
             do {
                 try await supabase.auth.signUp(
-                    email: email,
+                    email: trimmedEmail,
                     password: password,
                     redirectTo: URL(string: "safar://auth-callback")
                 )
@@ -360,6 +400,20 @@ struct AuthView: View {
         }
     }
     
+    private func mappedSignInError(_ error: Error) -> Error {
+        if let authError = error as? Auth.AuthError {
+            switch authError.errorCode {
+            case .emailNotConfirmed:
+                return AuthError.emailNotConfirmed
+            case .invalidCredentials:
+                return AuthError.invalidCredentials
+            default:
+                break
+            }
+        }
+        return error
+    }
+
     func forgotPasswordTapped() {
         Task {
             isLoading = true
@@ -370,6 +424,7 @@ struct AuthView: View {
                     email,
                     redirectTo: URL(string: "safar://auth-callback")
                 )
+                forgotPasswordEmailSent = true
                 result = .success(())
             } catch {
                 result = .failure(error)
@@ -382,13 +437,19 @@ struct AuthView: View {
 enum AuthError: LocalizedError {
     case passwordMismatch
     case appleSignInFailed
-    
+    case emailNotConfirmed
+    case invalidCredentials
+
     var errorDescription: String? {
         switch self {
         case .passwordMismatch:
-            return "Passwords do not match"
+            return "Passwords do not match."
         case .appleSignInFailed:
             return "Apple Sign In failed. Please try again."
+        case .emailNotConfirmed:
+            return "Please confirm your email address before signing in. Check your inbox for the confirmation link we sent when you signed up."
+        case .invalidCredentials:
+            return "Incorrect email or password."
         }
     }
 }
