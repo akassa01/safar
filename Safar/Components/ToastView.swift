@@ -56,32 +56,41 @@ struct ToastModifier: ViewModifier {
             content
 
             if isPresented {
-                VStack {
-                    Spacer()
-                    ToastView(
-                        message: message,
-                        onTap: onTap.map { action in
-                            {
-                                withAnimation { isPresented = false }
-                                action()
+                GeometryReader { geo in
+                    // If the view's bottom still reaches the screen bottom despite keyboard being up,
+                    // SwiftUI hasn't shrunk the layout for us — offset manually.
+                    let viewMaxY = geo.frame(in: .global).maxY
+                    let screenHeight = UIScreen.main.bounds.height
+                    let extraOffset = keyboardHeight > 0 && viewMaxY > screenHeight - 50 ? keyboardHeight : 0
+
+                    VStack {
+                        Spacer()
+                        ToastView(
+                            message: message,
+                            onTap: onTap.map { action in
+                                {
+                                    withAnimation { isPresented = false }
+                                    action()
+                                }
+                            },
+                            undoAction: undoAction.map { action in
+                                {
+                                    withAnimation { isPresented = false }
+                                    action()
+                                }
                             }
-                        },
-                        undoAction: undoAction.map { action in
-                            {
-                                withAnimation { isPresented = false }
-                                action()
-                            }
-                        }
-                    )
-                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 16 : 16)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-                .animation(.easeInOut(duration: 0.3), value: isPresented)
-                .onAppear {
-                    scheduleDismiss()
-                }
-                .onChange(of: message) { _, _ in
-                    scheduleDismiss()
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, extraOffset + 16)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                    .animation(.easeInOut(duration: 0.3), value: isPresented)
+                    .onAppear {
+                        scheduleDismiss()
+                    }
+                    .onChange(of: message) { _, _ in
+                        scheduleDismiss()
+                    }
                 }
             }
         }
