@@ -3,6 +3,10 @@ import SwiftUI
 import Supabase
 import os
 
+extension Notification.Name {
+    static let userCityDataChanged = Notification.Name("userCityDataChanged")
+}
+
 @MainActor
 class UserCitiesViewModel: ObservableObject {
     @Published var visitedCities: [City] = []
@@ -15,10 +19,11 @@ class UserCitiesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
     @Published var isOfflineData = false
-    
+
     private let databaseManager = DatabaseManager.shared
     private var _currentUserId: UUID?
     var wantCountries:Bool = true
+    private var hasDoneInitialLoad = false
     
     // Expose currentUserId for external access
     var currentUserId: UUID? {
@@ -60,6 +65,7 @@ class UserCitiesViewModel: ObservableObject {
         visitedCountriesCount = 0
         error = nil
         isOfflineData = false
+        hasDoneInitialLoad = false
     }
 
     func loadUserData() async {
@@ -103,6 +109,12 @@ class UserCitiesViewModel: ObservableObject {
         }
 
         isLoading = false
+
+        if hasDoneInitialLoad {
+            NotificationCenter.default.post(name: .userCityDataChanged, object: nil)
+        } else {
+            hasDoneInitialLoad = true
+        }
     }
 
     private func loadFromCache(userId: UUID) {

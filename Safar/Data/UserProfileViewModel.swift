@@ -29,6 +29,7 @@ class UserProfileViewModel: ObservableObject {
     private let postsPageSize = 5
     private var postsOffset = 0
     let userId: String
+    private var cityDataObserver: NSObjectProtocol?
 
     /// Whether the current user is viewing their own profile
     var isOwnProfile: Bool {
@@ -38,6 +39,18 @@ class UserProfileViewModel: ObservableObject {
 
     init(userId: String) {
         self.userId = userId
+        cityDataObserver = NotificationCenter.default.addObserver(
+            forName: .userCityDataChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isOwnProfile else { return }
+            Task { [weak self] in await self?.loadProfile() }
+        }
+    }
+
+    deinit {
+        if let cityDataObserver { NotificationCenter.default.removeObserver(cityDataObserver) }
     }
 
     func loadProfile() async {

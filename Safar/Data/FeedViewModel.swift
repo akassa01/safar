@@ -25,6 +25,21 @@ class FeedViewModel: ObservableObject {
     private let databaseManager = DatabaseManager.shared
     private let pageSize = 20
     private var currentOffset = 0
+    private var cityDataObserver: NSObjectProtocol?
+
+    init() {
+        cityDataObserver = NotificationCenter.default.addObserver(
+            forName: .userCityDataChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { [weak self] in await self?.loadFeed(refresh: true) }
+        }
+    }
+
+    deinit {
+        if let cityDataObserver { NotificationCenter.default.removeObserver(cityDataObserver) }
+    }
 
     /// Load user's city ID sets so bookmark state can be derived for feed posts.
     func loadUserCityIds() async {
@@ -44,7 +59,9 @@ class FeedViewModel: ObservableObject {
             hasMorePosts = true
         }
 
-        guard !isLoading else { return }
+        // Explicit refresh always proceeds; only guard against concurrent pagination loads.
+        guard !isLoading || refresh else { return }
+        isLoading = false
 
         if refresh || posts.isEmpty {
             isLoading = true

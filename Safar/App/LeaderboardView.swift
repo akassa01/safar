@@ -51,6 +51,10 @@ struct LeaderboardView: View {
         .background(Color("Background"))
         .navigationTitle("Most Visited")
         .navigationBarTitleDisplayMode(.large)
+        .refreshable {
+            await viewModel.loadTopCities()
+            await viewModel.loadTopCountries()
+        }
         .task {
             if viewModel.topCities.isEmpty {
                 await viewModel.loadTopCities()

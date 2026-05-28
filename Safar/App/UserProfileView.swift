@@ -44,6 +44,9 @@ struct UserProfileView: View {
                         Spacer(minLength: 100)
                     }
                 }
+                .refreshable {
+                    await viewModel.loadProfile()
+                }
                 .background(Color("Background"))
             } else {
                 VStack {

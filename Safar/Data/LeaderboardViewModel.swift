@@ -25,8 +25,23 @@ class LeaderboardViewModel: ObservableObject {
     @Published var availableCountries: [String] = []
 
     private let databaseManager = DatabaseManager.shared
+    private var cityDataObserver: NSObjectProtocol?
 
     let continents = ["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]
+
+    init() {
+        cityDataObserver = NotificationCenter.default.addObserver(
+            forName: .userCityDataChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { [weak self] in await self?.refresh() }
+        }
+    }
+
+    deinit {
+        if let cityDataObserver { NotificationCenter.default.removeObserver(cityDataObserver) }
+    }
 
     var hasActiveFilters: Bool {
         !selectedContinents.isEmpty || selectedCountry != nil
