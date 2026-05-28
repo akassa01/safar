@@ -18,6 +18,8 @@ import UserNotifications
 
 extension Notification.Name {
     static let safar_notificationReceived = Notification.Name("safar_notificationReceived")
+    // Posted when the current user changes their avatar. object = new path String? (nil = deleted)
+    static let safar_avatarChanged = Notification.Name("safar_avatarChanged")
 }
 
 // MARK: - Push notification destination

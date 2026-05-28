@@ -25,6 +25,23 @@ class UserCitiesViewModel: ObservableObject {
     private var _currentUserId: UUID?
     var wantCountries:Bool = true
     private var hasDoneInitialLoad = false
+    private var avatarObserver: NSObjectProtocol?
+
+    init() {
+        avatarObserver = NotificationCenter.default.addObserver(
+            forName: .safar_avatarChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.currentUserAvatarURL = notification.object as? String
+        }
+    }
+
+    deinit {
+        if let observer = avatarObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
     
     // Expose currentUserId for external access
     var currentUserId: UUID? {

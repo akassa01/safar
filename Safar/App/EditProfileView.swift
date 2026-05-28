@@ -22,6 +22,8 @@ struct EditProfileView: View {
 
     @State var imageSelection: PhotosPickerItem?
     @State var avatarImage: AvatarImage?
+    @State private var currentAvatarPath: String?
+    @State private var showingDeleteAvatarAlert = false
 
     // Username change states
     @State private var originalUsername = ""
@@ -87,6 +89,25 @@ struct EditProfileView: View {
                                     )
                             }
                             .offset(x: 40, y: 40)
+
+                            // Delete Badge (only when a pfp exists)
+                            if avatarImage != nil {
+                                Button {
+                                    showingDeleteAvatarAlert = true
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 28, height: 28)
+                                        .background(Color.red)
+                                        .clipShape(Circle())
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color(.systemBackground), lineWidth: 2)
+                                        )
+                                }
+                                .offset(x: 40, y: -40)
+                            }
                         }
 
                         // User Info
@@ -470,6 +491,14 @@ struct EditProfileView: View {
             } message: {
                 Text(deleteAccountError ?? "An unknown error occurred")
             }
+            .alert("Remove Profile Photo", isPresented: $showingDeleteAvatarAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Remove", role: .destructive) {
+                    Task { await deleteAvatar() }
+                }
+            } message: {
+                Text("Are you sure you want to remove your profile photo?")
+            }
             .onChange(of: imageSelection) { _, newValue in
                 guard let newValue else { return }
                 loadTransferable(from: newValue)
@@ -504,6 +533,7 @@ struct EditProfileView: View {
             originalBio = profile.bio ?? ""
 
             if let avatarURL = profile.avatarURL, !avatarURL.isEmpty {
+                currentAvatarPath = avatarURL
                 try await downloadImage(path: avatarURL)
             }
 
@@ -619,15 +649,27 @@ struct EditProfileView: View {
         }
     }
 
+    private func resizedAvatarData(from data: Data, maxDimension: CGFloat = 400) -> Data {
+        guard let uiImage = UIImage(data: data) else { return data }
+        let size = uiImage.size
+        let scale = min(maxDimension / size.width, maxDimension / size.height, 1)
+        if scale >= 1 { return uiImage.jpegData(compressionQuality: 0.8) ?? data }
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resized = renderer.image { _ in uiImage.draw(in: CGRect(origin: .zero, size: newSize)) }
+        return resized.jpegData(compressionQuality: 0.8) ?? data
+    }
+
     private func saveAvatar(imageData: Data) async {
         do {
             let filePath = "\(UUID().uuidString).jpeg"
+            let uploadData = resizedAvatarData(from: imageData)
 
             try await supabase.storage
                 .from("avatars")
                 .upload(
                     filePath,
-                    data: imageData,
+                    data: uploadData,
                     options: FileOptions(contentType: "image/jpeg")
                 )
 
@@ -638,6 +680,45 @@ struct EditProfileView: View {
                 .update(["avatar_url": filePath])
                 .eq("id", value: currentUser.id)
                 .execute()
+
+            if let oldPath = currentAvatarPath {
+                AvatarCache.shared.invalidate(path: oldPath)
+                do {
+                    try await supabase.storage.from("avatars").remove(paths: [oldPath])
+                } catch {
+                    debugPrint("Storage delete failed:", error)
+                }
+            }
+            currentAvatarPath = filePath
+            NotificationCenter.default.post(name: .safar_avatarChanged, object: filePath)
+        } catch {
+            debugPrint(error)
+        }
+    }
+
+    private func deleteAvatar() async {
+        struct AvatarClear: Encodable {
+            let avatar_url: String? = nil
+        }
+        do {
+            let currentUser = try await supabase.auth.session.user
+            try await supabase
+                .from("profiles")
+                .update(AvatarClear())
+                .eq("id", value: currentUser.id)
+                .execute()
+            if let oldPath = currentAvatarPath {
+                AvatarCache.shared.invalidate(path: oldPath)
+                do {
+                    try await supabase.storage.from("avatars").remove(paths: [oldPath])
+                } catch {
+                    debugPrint("Storage delete failed:", error)
+                }
+            }
+            avatarImage = nil
+            imageSelection = nil
+            currentAvatarPath = nil
+            NotificationCenter.default.post(name: .safar_avatarChanged, object: nil)
         } catch {
             debugPrint(error)
         }

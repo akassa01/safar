@@ -85,7 +85,7 @@ class UserProfileViewModel: ObservableObject {
         }
 
         if isOwnProfile || isFollowing {
-            await loadRecentPosts()
+            await loadRecentPosts(refresh: true)
         }
 
         isLoading = false

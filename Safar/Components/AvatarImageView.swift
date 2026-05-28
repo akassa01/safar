@@ -15,6 +15,10 @@ final class AvatarCache {
 
     private init() {}
 
+    func invalidate(path: String) {
+        cache.removeValue(forKey: path)
+    }
+
     func image(for path: String) async -> UIImage? {
         if let cached = cache[path] {
             return cached
@@ -88,8 +92,7 @@ struct AvatarImageView: View {
             return
         }
 
-        if loadedImage != nil { return }
-
+        loadedImage = nil
         isLoading = true
         defer { isLoading = false }
 
