@@ -256,10 +256,11 @@ struct PostDetailView: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: currentPost.isLikedByCurrentUser ? "heart.fill" : "heart")
+                        .font(.title3)
                         .foregroundColor(currentPost.isLikedByCurrentUser ? .accentColor : .primary)
                     Text("\(currentPost.likeCount)")
+                        .font(.subheadline)
                 }
-                .font(.subheadline)
             }
             .buttonStyle(.plain)
 
@@ -281,9 +282,10 @@ struct PostDetailView: View {
             // Comment count
             HStack(spacing: 6) {
                 Image(systemName: "bubble.right")
+                    .font(.title3)
                 Text("\(viewModel.totalCommentCount)")
+                    .font(.subheadline)
             }
-            .font(.subheadline)
             .foregroundColor(.secondary)
         }
     }

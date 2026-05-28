@@ -20,9 +20,9 @@ struct FeedInteractionBar: View {
         HStack(spacing: 16) {
             // Like button
             Button(action: onLikeTapped) {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Image(systemName: isLiked ? "heart.fill" : "heart")
-                        .font(.subheadline)
+                        .font(.title3)
                         .foregroundColor(isLiked ? .accentColor : .secondary)
 
                     if likeCount > 0 {
@@ -35,9 +35,9 @@ struct FeedInteractionBar: View {
             .buttonStyle(.plain)
 
             // Comment count (not a button — entire card navigates to detail)
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Image(systemName: "bubble.right")
-                    .font(.subheadline)
+                    .font(.title3)
                     .foregroundColor(.secondary)
 
                 if commentCount > 0 {
