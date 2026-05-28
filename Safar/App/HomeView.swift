@@ -36,6 +36,7 @@ struct HomeView: View {
     @EnvironmentObject var viewModel: UserCitiesViewModel
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var pushRouter = PushNotificationRouter.shared
+    @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
         VStack(spacing: 0) {
@@ -228,6 +229,14 @@ struct HomeView: View {
         .task {
             // Seed the unread count for the badge on first load
             await notificationsViewModel.refreshUnreadCount()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await notificationsViewModel.refreshUnreadCount() }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .safar_notificationReceived)) { _ in
+            Task { await notificationsViewModel.refreshUnreadCount() }
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             if oldValue != newValue {

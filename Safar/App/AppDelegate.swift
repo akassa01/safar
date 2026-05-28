@@ -16,6 +16,10 @@
 import UIKit
 import UserNotifications
 
+extension Notification.Name {
+    static let safar_notificationReceived = Notification.Name("safar_notificationReceived")
+}
+
 // MARK: - Push notification destination
 
 enum PushNotificationDestination: Equatable {
@@ -111,6 +115,7 @@ private class SafarNotificationDelegate: NSObject, UNUserNotificationCenterDeleg
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        NotificationCenter.default.post(name: .safar_notificationReceived, object: nil)
         completionHandler([.banner, .sound, .badge])
     }
 
