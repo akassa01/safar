@@ -36,17 +36,6 @@ struct CountryBannerView: View {
                 }
 
                 Spacer()
-
-                if visitCount > 0 {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(visitCount)")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("^[\(visitCount) visit](inflect: true)")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                }
             }
             .padding()
 

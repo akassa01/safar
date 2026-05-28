@@ -46,7 +46,7 @@ struct LeaderboardCountryRow: View {
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.accentColor)
-                Text("visitors")
+                Text("visits")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }

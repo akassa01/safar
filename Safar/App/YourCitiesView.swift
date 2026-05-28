@@ -16,6 +16,7 @@ struct YourCitiesView: View {
     @State private var cityToMarkVisited: City?
     @State private var showOfflineToast = false
     @State private var friendCounts: [Int: Int] = [:]
+    @State private var searchText = ""
 
     enum CityTab: String, CaseIterable, Identifiable, IconRepresentable {
         case visited = "Visited"
@@ -38,23 +39,23 @@ struct YourCitiesView: View {
     }
 
     var body: some View {
-        VStack {
+        NavigationStack {
+            VStack {
                 TabBarView<CityTab>(
                     selectedCategory: $selectedTab,
                     iconSize: 22,
                 )
 
-                List(currentCities.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { city in
+                List(filteredCities, id: \.self) { city in
                     ZStack {
                         CityListMember(
                             city: city,
                             bucketList: selectedTab.bucketList,
                             friendCount: selectedTab == .bucketList ? friendCounts[city.id] : nil
                         )
-                        NavigationLink(destination: CityDetailView(cityId: city.id)) {
+                        NavigationLink(destination: CityDetailView(cityId: city.id).environmentObject(viewModel)) {
                             EmptyView()
                         }
-                        .opacity(0)
                     }
                     .contentShape(Rectangle())
                     .contextMenu {
@@ -93,6 +94,7 @@ struct YourCitiesView: View {
                     }
                 }
                 .onChange(of: selectedTab) { _, newTab in
+                    searchText = ""
                     if newTab == .bucketList {
                         Task { await loadFriendCounts() }
                     }
@@ -104,6 +106,9 @@ struct YourCitiesView: View {
                 }
             }
             .background(Color("Background"))
+            .navigationTitle("Your Cities")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search cities")
             .sheet(item: $cityToMarkVisited) { city in
                 AddCityView(
                     baseResult: SearchResult(
@@ -139,8 +144,7 @@ struct YourCitiesView: View {
             } message: {
                 Text("Are you sure you want to remove \(cityToDelete?.displayName ?? "this city")? This action cannot be undone.")
             }
-            .navigationTitle("Your Cities")
-            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 
     private var currentCities: [City] {
@@ -150,6 +154,12 @@ struct YourCitiesView: View {
         case .bucketList:
             return viewModel.bucketListCities
         }
+    }
+
+    private var filteredCities: [City] {
+        let sorted = currentCities.sorted(by: { $0.displayName < $1.displayName })
+        guard !searchText.isEmpty else { return sorted }
+        return sorted.filter { $0.displayName.lowercased().hasPrefix(searchText.lowercased()) }
     }
 
     private func loadFriendCounts() async {

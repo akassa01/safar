@@ -131,7 +131,7 @@ struct SearchMainView: View {
                                     result: result,
                                     onMarkVisited: { cityResultToVisit = $0 },
                                     onInstantAdd: { searchResult in
-                                        Task {
+                                        Task { @MainActor in
                                             await viewModel.markCityAsVisited(cityId: Int(searchResult.data_id) ?? 0)
                                             lastAddedCity = searchResult
                                             withAnimation {

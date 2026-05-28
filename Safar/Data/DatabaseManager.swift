@@ -833,14 +833,14 @@ extension DatabaseManager {
 extension DatabaseManager {
 
     /// Fetch most visited cities for leaderboard
-    func getMostVisitedCities(limit: Int = 50, continent: String? = nil, country: String? = nil) async throws -> [CityLeaderboardEntry] {
+    func getMostVisitedCities(limit: Int = 50, continents: [String] = [], country: String? = nil) async throws -> [CityLeaderboardEntry] {
         do {
             var query = supabase
                 .from("most_visited_cities")
                 .select("id, display_name, admin, country, continent, visit_count")
 
-            if let continent = continent {
-                query = query.eq("continent", value: continent)
+            if !continents.isEmpty {
+                query = query.in("continent", values: continents)
             }
             if let country = country {
                 query = query.eq("country", value: country)
@@ -863,14 +863,14 @@ extension DatabaseManager {
     }
 
     /// Fetch most visited countries for leaderboard
-    func getMostVisitedCountries(limit: Int = 50, continent: String? = nil) async throws -> [CountryLeaderboardEntry] {
+    func getMostVisitedCountries(limit: Int = 50, continents: [String] = []) async throws -> [CountryLeaderboardEntry] {
         do {
             var query = supabase
                 .from("most_visited_countries")
                 .select("id, name, continent, visit_count")
 
-            if let continent = continent {
-                query = query.eq("continent", value: continent)
+            if !continents.isEmpty {
+                query = query.in("continent", values: continents)
             }
 
             var entries: [CountryLeaderboardEntry] = try await query
@@ -891,7 +891,7 @@ extension DatabaseManager {
 
     /// Fetch most visited cities for a specific country
     func getTopCitiesForCountry(countryName: String, limit: Int = 50) async throws -> [CityLeaderboardEntry] {
-        return try await getMostVisitedCities(limit: limit, continent: nil, country: countryName)
+        return try await getMostVisitedCities(limit: limit, country: countryName)
     }
 
     /// Fetch all country names sorted alphabetically for filter UI

@@ -99,7 +99,7 @@ struct CityDetailView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         ShareLink(
                             item: URL(string: "https://apps.apple.com/app/id6759003685")!,
-                            message: Text("Check out \(city.displayName) on Safar!")
+                            message: Text("Check out my trip to \(city.displayName) on Safar!")
                         ) {
                             Image(systemName: "square.and.arrow.up")
                                 .foregroundColor(.white)
@@ -259,7 +259,7 @@ struct CityDetailView: View {
     
     private var mapSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "City Map", icon: "map.fill")
+            SectionHeader(title: "Your City Map", icon: "map.fill")
             if let city = city {
                 CityMapView(
                     latitude: city.latitude,
@@ -334,6 +334,7 @@ struct CityDetailView: View {
                         withAnimation { isEditingPlaces.toggle() }
                     } label: {
                         Image(systemName: isEditingPlaces ? "pencil.circle.fill" : "pencil.circle")
+                            .font(.title2)
                             .foregroundColor(isEditingPlaces ? .accentColor : .secondary)
                     }
                 }
@@ -353,6 +354,7 @@ struct CityDetailView: View {
                                 activePlaceCategory = category
                             } label: {
                                 Image(systemName: "plus.circle.fill")
+                                    .font(.title2)
                                     .foregroundColor(.accentColor)
                             }
                         }
@@ -370,23 +372,23 @@ struct CityDetailView: View {
                                         .font(.subheadline)
                                     Spacer()
                                     HStack(spacing: 8) {
-                                        Button {
-                                            Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
-                                        } label: {
-                                            Image(systemName: place.liked == true ? "heart.fill" : "heart")
-                                                .foregroundColor(place.liked == true ? .accentColor : .secondary)
-                                        }
-                                        Button {
-                                            Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
-                                        } label: {
-                                            Image(systemName: place.liked == false ? "xmark.circle.fill" : "xmark.circle")
-                                                .foregroundColor(place.liked == false ? .red : .secondary)
-                                        }
                                         Button(role: .destructive) {
                                             Task { await placesViewModel.deletePlace(userPlaceId: place.userPlaceId ?? 0, cityId: cityId) }
                                         } label: {
                                             Image(systemName: "xmark")
                                                 .foregroundColor(.red)
+                                        }
+                                        Button {
+                                            Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == true ? nil : true, cityId: cityId) }
+                                        } label: {
+                                            Image(systemName: place.liked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                                .foregroundColor(place.liked == true ? .accentColor : .secondary)
+                                        }
+                                        Button {
+                                            Task { await placesViewModel.updateLiked(for: place.userPlaceId ?? 0, liked: place.liked == false ? nil : false, cityId: cityId) }
+                                        } label: {
+                                            Image(systemName: place.liked == false ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                                                .foregroundColor(place.liked == false ? .accentColor : .secondary)
                                         }
                                     }
                                 } else {
@@ -402,12 +404,12 @@ struct CityDetailView: View {
                                                 .foregroundColor(.secondary)
                                             Spacer()
                                             if place.liked == true {
-                                                Image(systemName: "heart.fill")
+                                                Image(systemName: "hand.thumbsup.fill")
                                                     .foregroundColor(.accentColor)
                                                     .font(.caption)
                                             } else if place.liked == false {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .foregroundColor(.red)
+                                                Image(systemName: "hand.thumbsdown.fill")
+                                                    .foregroundColor(.accentColor)
                                                     .font(.caption)
                                             }
                                         }
@@ -429,7 +431,7 @@ struct CityDetailView: View {
     private var notesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                SectionHeader(title: "Notes", icon: "note.text")
+                SectionHeader(title: "Your Notes", icon: "note.text")
                 Spacer()
                 if !isOffline {
                     Button((city?.notes?.isEmpty ?? true) ? "Add Notes" : "Edit Notes") {
@@ -669,23 +671,8 @@ struct CityDetailView: View {
             if let error = viewModel.error {
                 Log.ui.error("Failed to delete city \(self.cityId): \(error)")
             }
-            // Reload data and adjust ratings for remaining cities if needed
+            await MainActor.run { dismiss() }
             await viewModel.loadUserData()
-            let remainingRatedCities = viewModel.visitedCities.filter { ($0.rating ?? 0) > 0 }
-            if let userId = viewModel.currentUserId, !remainingRatedCities.isEmpty {
-                let newRatings = computeAdjustedRatings(remainingCities: remainingRatedCities)
-                for (cityId, newRating) in newRatings {
-                    do {
-                        try await DatabaseManager.shared.updateUserCityRating(userId: userId, cityId: cityId, rating: newRating)
-                    } catch {
-                        Log.ui.error("Failed to update adjusted rating for city id \(cityId): \(error)")
-                    }
-                }
-                await viewModel.loadUserData()
-            }
-            await MainActor.run {
-                dismiss()
-            }
         }
     }
 
@@ -703,50 +690,6 @@ struct CityDetailView: View {
     //     }
     // }
 
-    // Main function to adjust ratings after deletion
-    private func computeAdjustedRatings(remainingCities: [City]) -> [Int: Double] {
-        guard !remainingCities.isEmpty else { return [:] }
-        // Work on rated cities only
-        let rated = remainingCities.compactMap { city -> (Int, Double)? in
-            if let rating = city.rating { return (city.id, rating) }
-            return nil
-        }
-        guard !rated.isEmpty else { return [:] }
-        let count = rated.count
-        var adjusted: [Int: Double] = [:]
-        
-        if count == 1 {
-            adjusted[rated[0].0] = 10.0
-            return adjusted
-        }
-        if count >= 2 && count <= 4 {
-            let sorted = rated.sorted { $0.1 < $1.1 }
-            let spacing = 9.0 / Double(count - 1)
-            for (index, item) in sorted.enumerated() {
-                let newRating = min(10.0, max(1.0, 1.0 + spacing * Double(index)))
-                adjusted[item.0] = newRating
-            }
-            return adjusted
-        }
-        // count >= 5 → scale so max becomes 10
-        if let maxRating = rated.map({ $0.1 }).max(), maxRating > 0, maxRating < 10.0 {
-            let factor = 10.0 / maxRating
-            for (id, rating) in rated {
-                adjusted[id] = min(10.0, rating * factor)
-            }
-        } else {
-            // Already at or above 10; clamp to 10
-            for (id, rating) in rated {
-                adjusted[id] = min(10.0, rating)
-            }
-        }
-        return adjusted
-    }
-
-    // Legacy comment retained, logic folded into computeAdjustedRatings
-
-
-    // Special cases handled inside computeAdjustedRatings
 }
 
 //#Preview {

@@ -20,7 +20,7 @@ class LeaderboardViewModel: ObservableObject {
     @Published var isLoadingPeopleByCities = false
     @Published var isLoadingPeopleByCountries = false
     @Published var error: Error?
-    @Published var selectedContinent: String?
+    @Published var selectedContinents: Set<String> = []
     @Published var selectedCountry: String?
     @Published var availableCountries: [String] = []
 
@@ -29,7 +29,7 @@ class LeaderboardViewModel: ObservableObject {
     let continents = ["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]
 
     var hasActiveFilters: Bool {
-        selectedContinent != nil || selectedCountry != nil
+        !selectedContinents.isEmpty || selectedCountry != nil
     }
 
     func loadTopCities(limit: Int = 50) async {
@@ -39,12 +39,12 @@ class LeaderboardViewModel: ObservableObject {
         do {
             topCities = try await databaseManager.getMostVisitedCities(
                 limit: limit,
-                continent: selectedContinent,
+                continents: Array(selectedContinents),
                 country: selectedCountry
             )
             AnalyticsManager.shared.capture("leaderboard_viewed", properties: [
                 "tab": "cities",
-                "continent_filter": selectedContinent as Any,
+                "continent_filter": Array(selectedContinents).joined(separator: ",") as Any,
                 "country_filter": selectedCountry as Any
             ])
         } catch {
@@ -62,11 +62,11 @@ class LeaderboardViewModel: ObservableObject {
         do {
             topCountries = try await databaseManager.getMostVisitedCountries(
                 limit: limit,
-                continent: selectedContinent
+                continents: Array(selectedContinents)
             )
             AnalyticsManager.shared.capture("leaderboard_viewed", properties: [
                 "tab": "countries",
-                "continent_filter": selectedContinent as Any
+                "continent_filter": Array(selectedContinents).joined(separator: ",") as Any
             ])
         } catch {
             self.error = error
@@ -91,8 +91,12 @@ class LeaderboardViewModel: ObservableObject {
         await loadTopTravelersByCountries()
     }
 
-    func selectContinent(_ continent: String?) async {
-        selectedContinent = continent
+    func toggleContinent(_ continent: String) async {
+        if selectedContinents.contains(continent) {
+            selectedContinents.remove(continent)
+        } else {
+            selectedContinents.insert(continent)
+        }
         async let cities: () = loadTopCities()
         async let countries: () = loadTopCountries()
         _ = await (cities, countries)
@@ -106,7 +110,7 @@ class LeaderboardViewModel: ObservableObject {
     }
 
     func clearAllFilters() async {
-        selectedContinent = nil
+        selectedContinents = []
         selectedCountry = nil
         async let cities: () = loadTopCities()
         async let countries: () = loadTopCountries()

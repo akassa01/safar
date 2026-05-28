@@ -125,8 +125,15 @@ struct TopSpotsSection: View {
                     .foregroundColor(.secondary)
             } else {
                 VStack(spacing: 10) {
-                    ForEach(filteredSortedPlaces, id: \.localKey) { place in
-                        TopSpotsPlaceRow(place: place, onOpenInMaps: onOpenInMaps)
+                    ForEach(Array(filteredSortedPlaces.enumerated()), id: \.element.localKey) { index, place in
+                        HStack(spacing: 8) {
+                            Text("\(index + 1)")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.secondary)
+                                .frame(width: 18, alignment: .trailing)
+                            TopSpotsPlaceRow(place: place, onOpenInMaps: onOpenInMaps)
+                        }
                     }
                 }
             }

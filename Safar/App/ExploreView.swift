@@ -83,9 +83,6 @@ struct ExploreView: View {
                     Text("Most Visited Cities")
                         .font(.title2)
                         .bold()
-                    Text("Based on visit count")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
 
                 Spacer()
@@ -127,9 +124,6 @@ struct ExploreView: View {
                     Text("Most Visited Countries")
                         .font(.title2)
                         .bold()
-                    Text("Based on visit count")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
 
                 Spacer()

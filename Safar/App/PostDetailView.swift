@@ -255,7 +255,7 @@ struct PostDetailView: View {
                 Task { await feedViewModel?.toggleLike(for: post) }
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: currentPost.isLikedByCurrentUser ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    Image(systemName: currentPost.isLikedByCurrentUser ? "heart.fill" : "heart")
                         .foregroundColor(currentPost.isLikedByCurrentUser ? .accentColor : .primary)
                     Text("\(currentPost.likeCount)")
                 }
