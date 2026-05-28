@@ -45,12 +45,14 @@ struct UserPlaceResponse: Codable {
     let id: Int
     let userId: String
     let liked: Bool?
+    let category: PlaceCategory  // per-user category stored in user_place
     let places: PlaceData
 
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
         case liked
+        case category
         case places = "place_id"
     }
 }
@@ -92,7 +94,7 @@ struct Place: Codable, Identifiable, Hashable {
         self.name = response.places.name
         self.latitude = response.places.latitude
         self.longitude = response.places.longitude
-        self.category = response.places.category
+        self.category = response.category  // per-user category from user_place
         self.cityId = response.places.cityId
         self.likes = response.places.likes
         self.userId = UUID(uuidString: response.userId)

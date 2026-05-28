@@ -119,7 +119,7 @@ let userCitySelectQuery = """
 
 /// Shared select query for user_place with nested place data
 let userPlaceSelectQuery = """
-    id, user_id, liked,
+    id, user_id, liked, category,
     place_id (
         id, name, latitude, longitude, category, city_id, likes, map_kit_id
     )
@@ -605,7 +605,7 @@ extension DatabaseManager {
         let longitude: Double
         let category: String
         let cityId: Int
-        let mapKitId: String
+        let mapKitId: String?  // nil when MapKit provides no identifier
 
         enum CodingKeys: String, CodingKey {
             case name, latitude, longitude, category
@@ -618,19 +618,22 @@ extension DatabaseManager {
         let userId: String
         let placeId: Int
         let liked: Bool?
+        let category: String  // per-user category
 
         enum CodingKeys: String, CodingKey {
             case userId = "user_id"
             case placeId = "place_id"
             case liked
+            case category
         }
     }
 
     /// Fetch all places for a user in a city (joined from user_place → places)
     func getUserPlaces(userId: UUID, cityId: Int) async throws -> [Place] {
         // Use !inner join so only user_place rows with a matching place are returned
+        // category is read from user_place (per-user); places.category is kept for community views
         let query = """
-            id, user_id, liked,
+            id, user_id, liked, category,
             place_id!inner (
                 id, name, latitude, longitude, category, city_id, likes, map_kit_id
             )
@@ -652,15 +655,16 @@ extension DatabaseManager {
         }
     }
 
-    /// Fetch top places for a city across all users, ordered by community likes
+    /// Fetch top places for a city across all users, ordered by community likes.
+    /// Category is the most popular choice across all user_place rows for each place.
     func getTopPlaces(cityId: Int, limit: Int = 50) async throws -> [Place] {
+        struct Params: Encodable {
+            let p_city_id: Int
+            let p_limit: Int
+        }
         do {
             let rawResponse = try await supabase
-                .from("places")
-                .select("id, name, latitude, longitude, category, city_id, likes, map_kit_id")
-                .eq("city_id", value: cityId)
-                .order("likes", ascending: false)
-                .limit(limit)
+                .rpc("get_top_places", params: Params(p_city_id: cityId, p_limit: limit))
                 .execute()
 
             let decoded = try JSONDecoder().decode([PlaceData].self, from: rawResponse.data)
@@ -684,23 +688,28 @@ extension DatabaseManager {
         print("🟡 insertUserPlaces: starting with \(places.count) places for cityId=\(cityId), userId=\(userId)")
 
         do {
-            var placeIds: [(placeId: Int, liked: Bool?)] = []
+            var placeIds: [(placeId: Int, liked: Bool?, category: PlaceCategory)] = []
 
             for (index, place) in places.enumerated() {
                 print("🟡 [\(index)] Upserting place: '\(place.name)' lat=\(place.latitude) lng=\(place.longitude) category=\(place.category.rawValue)")
 
+                // Nil mapKitId means no MapKit identifier — stored as NULL in DB so each
+                // such place gets its own row (NULL != NULL in SQL, no unique conflict).
+                let mapKitId: String? = place.mapKitId.isEmpty ? nil : place.mapKitId
                 let payload = PlaceInsert(
                     name: place.name,
                     latitude: place.latitude,
                     longitude: place.longitude,
                     category: place.category.rawValue,
                     cityId: cityId,
-                    mapKitId: place.mapKitId
+                    mapKitId: mapKitId
                 )
 
+                // ignoreDuplicates: true prevents overwriting an existing place row's data
+                // (name, category, coordinates) when another user upserts the same place.
                 let upserted: [PlaceData] = try await supabase
                     .from("places")
-                    .upsert(payload, onConflict: "map_kit_id")
+                    .upsert(payload, onConflict: "map_kit_id", ignoreDuplicates: true)
                     .select("id, name, latitude, longitude, category, city_id, likes, map_kit_id")
                     .execute()
                     .value
@@ -708,15 +717,15 @@ extension DatabaseManager {
                 print("🟡 [\(index)] Upsert returned \(upserted.count) rows: \(upserted.map { "id=\($0.id)" })")
 
                 if let placeData = upserted.first {
-                    placeIds.append((placeId: placeData.id, liked: place.liked))
+                    placeIds.append((placeId: placeData.id, liked: place.liked, category: place.category))
                 } else {
                     print("🟡 [\(index)] Upsert returned empty — fetching existing place")
                     let existing: [PlaceData]
-                    if !place.mapKitId.isEmpty {
+                    if let id = mapKitId {
                         existing = try await supabase
                             .from("places")
                             .select("id, name, latitude, longitude, category, city_id, likes, map_kit_id")
-                            .eq("map_kit_id", value: place.mapKitId)
+                            .eq("map_kit_id", value: id)
                             .limit(1)
                             .execute()
                             .value
@@ -727,7 +736,6 @@ extension DatabaseManager {
                             .eq("name", value: place.name)
                             .eq("latitude", value: place.latitude)
                             .eq("longitude", value: place.longitude)
-                            .eq("category", value: place.category.rawValue)
                             .eq("city_id", value: cityId)
                             .limit(1)
                             .execute()
@@ -735,7 +743,7 @@ extension DatabaseManager {
                     }
                     print("🟡 [\(index)] Fallback fetch returned \(existing.count) rows: \(existing.map { "id=\($0.id)" })")
                     if let placeData = existing.first {
-                        placeIds.append((placeId: placeData.id, liked: place.liked))
+                        placeIds.append((placeId: placeData.id, liked: place.liked, category: place.category))
                     } else {
                         print("🔴 [\(index)] Could not find or create place '\(place.name)' — skipping")
                     }
@@ -752,7 +760,8 @@ extension DatabaseManager {
                 UserPlaceInsert(
                     userId: userId.uuidString,
                     placeId: item.placeId,
-                    liked: item.liked
+                    liked: item.liked,
+                    category: item.category.rawValue
                 )
             }
             print("🟡 Inserting \(userPlacePayload.count) user_place records: \(userPlacePayload.map { "placeId=\($0.placeId), liked=\(String(describing: $0.liked))" })")
