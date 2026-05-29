@@ -10,17 +10,22 @@ import SwiftUI
 @MainActor
 final class AvatarCache {
     static let shared = AvatarCache()
-    private var cache: [String: UIImage] = [:]
+    private let cache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.countLimit = 200
+        c.totalCostLimit = 50 * 1024 * 1024 // 50 MB
+        return c
+    }()
     private var inFlight: [String: Task<UIImage?, Never>] = [:]
 
     private init() {}
 
     func invalidate(path: String) {
-        cache.removeValue(forKey: path)
+        cache.removeObject(forKey: path as NSString)
     }
 
     func image(for path: String) async -> UIImage? {
-        if let cached = cache[path] {
+        if let cached = cache.object(forKey: path as NSString) {
             return cached
         }
 
@@ -31,8 +36,9 @@ final class AvatarCache {
         let task = Task<UIImage?, Never> {
             do {
                 let data = try await supabase.storage.from("avatars").download(path: path)
-                let image = UIImage(data: data)
-                if let image { cache[path] = image }
+                guard let image = UIImage(data: data) else { return nil }
+                let cost = Int(image.size.width * image.size.height * image.scale * image.scale) * 4
+                cache.setObject(image, forKey: path as NSString, cost: cost)
                 return image
             } catch is CancellationError {
                 return nil
