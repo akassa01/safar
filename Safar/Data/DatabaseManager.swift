@@ -1378,6 +1378,44 @@ extension DatabaseManager {
         )
     }
 
+    /// Batch-fetch places for a page of feed posts in a single query.
+    /// Filters by all user IDs × all city IDs in the response, then groups client-side.
+    private func batchFetchPlaces(for items: [FeedPost.FeedPostResponse]) async throws -> [Int64: [Place]] {
+        guard !items.isEmpty else { return [:] }
+
+        let feedUserIds = Array(Set(items.map { $0.userId }))
+        let feedCityIds = Array(Set(items.map { $0.cities.id }))
+
+        let query = """
+            id, user_id, liked, category,
+            place_id!inner (
+                id, name, latitude, longitude, category, city_id, likes, map_kit_id
+            )
+        """
+        let rawResponse = try await supabase
+            .from("user_place")
+            .select(query)
+            .in("user_id", values: feedUserIds)
+            .in("place_id.city_id", values: feedCityIds)
+            .execute()
+
+        let decoded = try JSONDecoder().decode([UserPlaceResponse].self, from: rawResponse.data)
+
+        // Group by (userId, cityId) — the natural key for a feed post
+        var byUserCity: [String: [Place]] = [:]
+        for raw in decoded {
+            let key = "\(raw.userId)_\(raw.places.cityId)"
+            byUserCity[key, default: []].append(Place(from: raw))
+        }
+
+        var placesMap: [Int64: [Place]] = [:]
+        for item in items {
+            let key = "\(item.userId)_\(item.cities.id)"
+            placesMap[item.id] = byUserCity[key] ?? []
+        }
+        return placesMap
+    }
+
     /// Get feed posts from followed users
     func getFeedPosts(limit: Int = 20, offset: Int = 0) async throws -> [FeedPost] {
         let currentUser = try await getCurrentUser()
@@ -1416,14 +1454,8 @@ extension DatabaseManager {
         // Step 5: Get comment counts
         let commentCounts = try await getCommentCounts(for: postIds)
 
-        // Step 6: Fetch places for each post (batch by city)
-        var placesMap: [Int64: [Place]] = [:]
-        for item in response {
-            if let userId = UUID(uuidString: item.userId) {
-                let places = try await getUserPlaces(userId: userId, cityId: item.cities.id)
-                placesMap[item.id] = places
-            }
-        }
+        // Step 6: Fetch places for all posts in a single batched query
+        let placesMap = try await batchFetchPlaces(for: response)
 
         // Step 7: Assemble FeedPost objects
         return response.map { item in
@@ -1468,13 +1500,7 @@ extension DatabaseManager {
         let userLikes = try await getUserLikeStatus(for: postIds, userId: currentUserId)
         let commentCounts = try await getCommentCounts(for: postIds)
 
-        var placesMap: [Int64: [Place]] = [:]
-        for item in response {
-            if let uid = UUID(uuidString: item.userId) {
-                let places = try await getUserPlaces(userId: uid, cityId: item.cities.id)
-                placesMap[item.id] = places
-            }
-        }
+        let placesMap = try await batchFetchPlaces(for: response)
 
         return response.map { item in
             let profile = profileMap[item.userId]
