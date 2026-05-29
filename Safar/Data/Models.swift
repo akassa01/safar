@@ -117,7 +117,7 @@ struct UserProfile: Codable, Identifiable {
     let id: String
     let username: String?
     let fullName: String?
-    let avatarURL: String?
+    var avatarURL: String?
     let bio: String?
     let phone: String?
     let phoneHash: String?

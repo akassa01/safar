@@ -35,6 +35,7 @@ struct HomeView: View {
     @State private var profileTabImage: UIImage?
 
     @EnvironmentObject var viewModel: UserCitiesViewModel
+    @EnvironmentObject var currentUserProfileViewModel: UserProfileViewModel
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var pushRouter = PushNotificationRouter.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -213,13 +214,7 @@ struct HomeView: View {
             .tag(2)
 
             NavigationStack(path: $profileNavigationPath) {
-                if let userId = viewModel.currentUserId?.uuidString {
-                    UserProfileView(userId: userId)
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color("Background"))
-                }
+                UserProfileView(viewModel: currentUserProfileViewModel)
             }
             .tabItem { profileTabItem }
             .tag(3)

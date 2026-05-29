@@ -698,7 +698,11 @@ struct EditProfileView: View {
 
     private func deleteAvatar() async {
         struct AvatarClear: Encodable {
-            let avatar_url: String? = nil
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encodeNil(forKey: .avatar_url)
+            }
+            enum CodingKeys: String, CodingKey { case avatar_url }
         }
         do {
             let currentUser = try await supabase.auth.session.user

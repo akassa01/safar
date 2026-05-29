@@ -16,6 +16,7 @@ struct safarApp: App {
     @StateObject private var userCitiesViewModel = UserCitiesViewModel()
     @StateObject private var feedViewModel = FeedViewModel()
     @StateObject private var leaderboardViewModel = LeaderboardViewModel()
+    @StateObject private var currentUserProfileViewModel = UserProfileViewModel()
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showOfflineView = false
     @State private var isDataPreloaded = false
@@ -33,6 +34,7 @@ struct safarApp: App {
                         .environmentObject(userCitiesViewModel)
                         .environmentObject(feedViewModel)
                         .environmentObject(leaderboardViewModel)
+                        .environmentObject(currentUserProfileViewModel)
                         .opacity(isDataPreloaded ? 1 : 0)
                 }
 
@@ -73,6 +75,7 @@ struct safarApp: App {
                     leaderboardViewModel.topCountries = []
                     leaderboardViewModel.topTravelersByCities = []
                     leaderboardViewModel.topTravelersByCountries = []
+                    currentUserProfileViewModel.clearData()
                     isDataPreloaded = false
                 }
             }
@@ -157,6 +160,7 @@ struct safarApp: App {
         Task { await feedViewModel.loadFeed(refresh: true) }
         Task { await leaderboardViewModel.refresh() }
         Task { await BlockManager.shared.loadBlockedUsers() }
+        Task { await currentUserProfileViewModel.loadCurrentUserProfile() }
         Task {
             await userCitiesViewModel.initializeWithCurrentUser()
             isDataPreloaded = true

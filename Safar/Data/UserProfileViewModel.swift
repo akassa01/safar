@@ -28,8 +28,9 @@ class UserProfileViewModel: ObservableObject {
     private let databaseManager = DatabaseManager.shared
     private let postsPageSize = 5
     private var postsOffset = 0
-    let userId: String
+    var userId: String
     private var cityDataObserver: NSObjectProtocol?
+    private var avatarObserver: NSObjectProtocol?
 
     /// Whether the current user is viewing their own profile
     var isOwnProfile: Bool {
@@ -37,7 +38,7 @@ class UserProfileViewModel: ObservableObject {
         return currentUserId.lowercased() == userId.lowercased()
     }
 
-    init(userId: String) {
+    init(userId: String = "") {
         self.userId = userId
         cityDataObserver = NotificationCenter.default.addObserver(
             forName: .userCityDataChanged,
@@ -47,14 +48,45 @@ class UserProfileViewModel: ObservableObject {
             guard let self, self.isOwnProfile else { return }
             Task { [weak self] in await self?.loadProfile() }
         }
+        avatarObserver = NotificationCenter.default.addObserver(
+            forName: .safar_avatarChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self, self.isOwnProfile else { return }
+            let newPath = notification.object as? String
+            self.profile?.avatarURL = newPath
+            self.recentPosts = self.recentPosts.map { var p = $0; p.avatarURL = newPath; return p }
+        }
     }
 
     deinit {
         if let cityDataObserver { NotificationCenter.default.removeObserver(cityDataObserver) }
+        if let avatarObserver { NotificationCenter.default.removeObserver(avatarObserver) }
+    }
+
+    func loadCurrentUserProfile() async {
+        guard let currentUserId = databaseManager.getCurrentUserId() else { return }
+        userId = currentUserId
+        await loadProfile()
+    }
+
+    func clearData() {
+        userId = ""
+        profile = nil
+        cities = []
+        continentsCount = 0
+        followerCount = 0
+        followingCount = 0
+        isFollowing = false
+        recentPosts = []
+        postsOffset = 0
+        hasMorePosts = true
+        isLoading = true
     }
 
     func loadProfile() async {
-        isLoading = true
+        isLoading = profile == nil
         error = nil
 
         do {
@@ -97,9 +129,7 @@ class UserProfileViewModel: ObservableObject {
             hasMorePosts = true
         }
 
-        if refresh || recentPosts.isEmpty {
-            isLoadingPosts = true
-        }
+        isLoadingPosts = recentPosts.isEmpty
 
         do {
             let newPosts = try await databaseManager.getUserFeedPosts(

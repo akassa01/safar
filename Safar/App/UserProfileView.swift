@@ -26,6 +26,10 @@ struct UserProfileView: View {
         _viewModel = StateObject(wrappedValue: UserProfileViewModel(userId: userId))
     }
 
+    init(viewModel: UserProfileViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+
     var body: some View {
         Group {
             if viewModel.isLoading {
@@ -110,9 +114,6 @@ struct UserProfileView: View {
         }
         .sheet(isPresented: $showingEditProfile) {
             EditProfileView()
-                .onDisappear {
-                    Task { await viewModel.loadProfile() }
-                }
         }
         .sheet(isPresented: $showingFindFriends) {
             FindFriendsView()
@@ -142,7 +143,9 @@ struct UserProfileView: View {
             CityDetailView(cityId: nav.cityId)
         }
         .task {
-            await viewModel.loadProfile()
+            if viewModel.profile == nil {
+                await viewModel.loadProfile()
+            }
         }
     }
 
